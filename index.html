@@ -1,1 +1,43 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#160d08"><title>Survival — Taverne</title><style>*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#100905;color:#f5e4c3;font-family:Georgia,'Times New Roman',serif}.tavern{min-height:100svh;position:relative;overflow:hidden;background:linear-gradient(rgba(9,5,3,.16),rgba(8,4,2,.6)),url('tavern-bg.png') center/cover no-repeat}.tavern:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,transparent 0 28%,rgba(0,0,0,.18) 65%,rgba(0,0,0,.58) 100%);pointer-events:none}.ui{position:relative;z-index:2;min-height:100svh;display:flex;flex-direction:column;align-items:center;padding:22px 18px max(22px,env(safe-area-inset-bottom));text-align:center;text-shadow:0 3px 10px #000}.sound{position:absolute;right:17px;top:18px;width:50px;height:50px;border-radius:50%;border:1px solid #d6ae70;background:#1b0f08c9;color:#f5dfb6;font-size:22px;box-shadow:0 5px 20px #0008}.logo{margin-top:56px}.crest{font-size:36px;color:#d9b477;line-height:1}.title{margin:4px 0 9px;font-size:clamp(55px,18vw,84px);line-height:.9;letter-spacing:1px;color:#ead8b8;text-shadow:0 2px #8d6841,0 5px #3d2414,0 10px 25px #000}.tag{font-size:11px;line-height:1.8;letter-spacing:3.5px;color:#ead2aa}.menu{width:min(92vw,390px);display:grid;gap:12px;margin:auto 0 25px}.menu a{min-height:61px;display:flex;align-items:center;justify-content:center;border:1px solid #c89959;outline:1px solid #7c572e;outline-offset:-6px;background:linear-gradient(#5c361fe8,#28160cef);box-shadow:0 7px 20px #000b,inset 0 1px #e1b36d55;color:#f5e1bd;text-decoration:none;font-weight:700;letter-spacing:1.4px;font-size:15px;transition:.15s}.menu a:active{transform:scale(.975);filter:brightness(1.25)}.quote{font-style:italic;font-size:18px;margin:0 0 24px;color:#f0d2a2}.features{width:min(96vw,480px);display:grid;grid-template-columns:repeat(4,1fr);gap:5px;border-top:1px solid #bd986b80;padding-top:15px}.feature{font-size:20px}.feature small{display:block;font-size:8px;line-height:1.25;margin-top:6px;color:#e1c89f;letter-spacing:.4px}.welcome{font-size:9px;letter-spacing:2.4px;margin-top:17px;color:#d1b58b}@media(min-width:700px){.logo{margin-top:70px}.title{font-size:100px}.menu{margin-top:80px}}</style></head><body><main class="tavern"><div class="ui"><button id="sound" class="sound" aria-label="Activer la musique">♪</button><header class="logo"><div class="crest">✦ ◇ ✦</div><h1 class="title">SURVIVAL</h1><div class="tag">UN MONDE À EXPLORER<br>UNE HISTOIRE À VIVRE</div></header><nav class="menu"><a href="login.html">♙ &nbsp; SE CONNECTER</a><a href="login.html?mode=register">♙＋ &nbsp; S'INSCRIRE</a><a href="world.html">▶ &nbsp; APERÇU DU JEU</a></nav><p class="quote">L'aventure commence ici…</p><section class="features"><div class="feature">⛰<small>MONDE<br>OUVERT</small></div><div class="feature">⚒<small>SURVIE<br>LIBRE</small></div><div class="feature">♟<small>SOLO /<br>EN LIGNE</small></div><div class="feature">♜<small>CONSTRUIS<br>TON AVENIR</small></div></section><div class="welcome">BIENVENUE DANS TON NOUVEAU MONDE</div></div></main><script>const b=document.querySelector('#sound');let a,on=false;b.onclick=()=>{if(!a){a=new Audio('tavern-theme.mp3');a.loop=true;a.volume=.35}if(on){a.pause();b.textContent='♪';b.setAttribute('aria-label','Activer la musique')}else{a.play().catch(()=>{});b.textContent='♫';b.setAttribute('aria-label','Couper la musique')}on=!on};</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#120905">
+<title>Survival</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b0603;color:#f6dfb1;font-family:Georgia,'Times New Roman',serif}body{overflow-x:hidden}.home{position:relative;min-height:100dvh;background:url('tavern-bg.png') center center/cover no-repeat}.home:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,2,0,.30) 0%,rgba(7,3,1,.10) 35%,rgba(7,3,1,.20) 62%,rgba(5,2,0,.72) 100%),radial-gradient(circle at 50% 40%,transparent 10%,rgba(0,0,0,.15) 55%,rgba(0,0,0,.58) 100%)}.ui{position:relative;z-index:1;min-height:100dvh;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));text-shadow:0 3px 8px #000,0 1px 2px #000}.music{position:absolute;top:max(16px,env(safe-area-inset-top));right:14px;border:1px solid #c49a5a;border-radius:24px;padding:8px 11px;background:linear-gradient(#3c2417e8,#160c07ed);box-shadow:0 4px 16px #0009,inset 0 0 0 2px #6f4a2780;color:#f3d8a3;font:700 10px Georgia;letter-spacing:.6px}.music span{display:block;font-size:15px;line-height:12px}.hero{margin-top:clamp(64px,13vh,120px)}.ornament{font-size:clamp(24px,8vw,38px);color:#d6a85d;letter-spacing:5px;filter:drop-shadow(0 3px 3px #000)}h1{margin:5px 0 4px;font-size:clamp(50px,17vw,82px);line-height:.9;letter-spacing:-2px;background:linear-gradient(#fff0c9 0%,#d8b77c 36%,#9b713c 58%,#f0d298 77%,#7c5028 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px #4b2c16;filter:drop-shadow(0 3px 0 #38200f) drop-shadow(0 8px 10px #000)}.tagline{margin-top:10px;color:#e9c783;font-size:clamp(9px,2.8vw,12px);font-weight:700;line-height:1.6;letter-spacing:2.6px}.menu{width:min(88vw,390px);display:grid;gap:12px;margin-top:clamp(28px,6vh,58px)}.btn{position:relative;min-height:58px;display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;color:#ffe9bd;font-weight:700;font-size:clamp(13px,3.8vw,16px);letter-spacing:1.2px;border:2px solid #b88445;background:linear-gradient(180deg,#6b4228ef 0%,#452719f2 48%,#2b170df5 100%);box-shadow:0 7px 15px #000b,inset 0 1px #f1c47a80,inset 0 0 0 4px #211108,inset 0 0 0 5px #8d6235;clip-path:polygon(3% 0,97% 0,100% 18%,100% 82%,97% 100%,3% 100%,0 82%,0 18%)}.btn:before,.btn:after{content:"◆";position:absolute;top:50%;transform:translateY(-50%);font-size:8px;color:#d5a35d}.btn:before{left:12px}.btn:after{right:12px}.btn:active{transform:translateY(2px);filter:brightness(1.15)}.ico{font-size:19px;color:#e7bd77}.quote{margin:clamp(22px,5vh,42px) 0 0;font-style:italic;font-size:clamp(15px,4vw,19px);color:#f1d3a1}.bottom{margin-top:auto;width:min(96vw,520px);padding-top:28px}.features{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #b68a5380;padding-top:13px;gap:4px}.feature{color:#e9c98e;font-size:20px}.feature small{display:block;margin-top:5px;font-size:7px;line-height:1.25;letter-spacing:.5px;color:#ead6b1}.welcome{margin-top:14px;font-size:8px;letter-spacing:2px;color:#d8ba89}@media(max-height:700px){.hero{margin-top:50px}.menu{margin-top:20px;gap:8px}.btn{min-height:49px}.quote{margin-top:15px}.bottom{padding-top:14px}}@media(min-width:700px){.home{background-position:center 58%}.hero{margin-top:80px}.menu{margin-top:45px}}
+</style>
+</head>
+<body>
+<main class="home">
+<div class="ui">
+<button class="music" id="music" aria-label="Activer la musique"><span>♪</span>MUSIQUE OFF</button>
+<header class="hero">
+<div class="ornament">✦ ◈ ✦</div>
+<h1>SURVIVAL</h1>
+<div class="tagline">UN MONDE À EXPLORER<br>UNE HISTOIRE À VIVRE</div>
+</header>
+<nav class="menu">
+<a class="btn" href="login.html"><span class="ico">♙</span>SE CONNECTER</a>
+<a class="btn" href="login.html?mode=register"><span class="ico">♙＋</span>S'INSCRIRE</a>
+<a class="btn" href="world.html"><span class="ico">▶</span>APERÇU DU JEU</a>
+</nav>
+<p class="quote">L'aventure commence ici…</p>
+<div class="bottom">
+<section class="features">
+<div class="feature">⛰<small>MONDE<br>OUVERT</small></div>
+<div class="feature">⚒<small>SURVIE<br>LIBRE</small></div>
+<div class="feature">♟<small>SOLO OU<br>EN LIGNE</small></div>
+<div class="feature">♜<small>CONSTRUIS<br>TON AVENIR</small></div>
+</section>
+<div class="welcome">BIENVENUE DANS TON NOUVEAU MONDE</div>
+</div>
+</div>
+</main>
+<script>
+const b=document.getElementById('music');let audio=null,playing=false;
+b.addEventListener('click',async()=>{if(!audio){audio=new Audio('tavern-theme.mp3');audio.loop=true;audio.volume=.32;audio.addEventListener('error',()=>{playing=false;b.innerHTML='<span>♪</span>MUSIQUE OFF'})}try{if(playing){audio.pause();playing=false;b.innerHTML='<span>♪</span>MUSIQUE OFF'}else{await audio.play();playing=true;b.innerHTML='<span>♫</span>MUSIQUE ON'}}catch(e){playing=false;b.innerHTML='<span>♪</span>MUSIQUE OFF'}});
+</script>
+</body>
+</html>
