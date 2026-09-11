@@ -1,4 +1,11 @@
 (()=>{
+  if(!document.querySelector('script[data-auto-equip]')){
+    const s=document.createElement('script');
+    s.src='auto-equip-crafted.js?v=1';
+    s.dataset.autoEquip='1';
+    document.head.appendChild(s);
+  }
+
   const characterId=sessionStorage.getItem('survival_character_id')||'guest';
   const equippedKey='survival_equipped_'+characterId;
   const gatherBtn=document.getElementById('gatherBtn');
@@ -16,9 +23,6 @@
 
   const requiredToolFromLabel=()=>{
     const text=(gatherBtn.textContent||'').trim().toUpperCase();
-
-    // Seuls les gros arbres et gros rochers exigent un outil equipe.
-    // Les petites ressources au sol et les buissons restent ramassables a la main.
     if(text==='RÉCOLTER BOIS'||text==='HACHE REQUISE')return 'axe';
     if(text==='RÉCOLTER PIERRE'||text==='PIOCHE REQUISE')return 'pickaxe';
     return '';
@@ -27,7 +31,6 @@
   gatherBtn.addEventListener('click',e=>{
     const required=requiredToolFromLabel();
     if(!required)return;
-
     const tool=equipped();
     if(tool!==required){
       e.preventDefault();
