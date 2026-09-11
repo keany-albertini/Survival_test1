@@ -2,6 +2,7 @@
   const characterId=sessionStorage.getItem('survival_character_id')||'guest';
   const inventoryKey='survival_inventory_'+characterId;
   const equippedKey='survival_equipped_'+characterId;
+  const quickbarKey='survival_quickbar_'+characterId;
   const topinfo=document.getElementById('topinfo');
   const inventoryBtn=document.getElementById('inventoryBtn');
   const toast=document.getElementById('toast');
@@ -12,6 +13,11 @@
   const readInventory=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem(inventoryKey)||'{}')}}catch{return {...defaults}}};
   const saveInventory=inv=>localStorage.setItem(inventoryKey,JSON.stringify(inv));
   const equipped=()=>localStorage.getItem(equippedKey)||'';
+  const readQuickbar=()=>{try{const q=JSON.parse(localStorage.getItem(quickbarKey)||'[]');return Array.from({length:8},(_,i)=>q[i]||'')}catch{return Array(8).fill('')}};
+  const shovelEquipped=()=>{
+    const inv=readInventory();
+    return equipped()==='shovel' && (inv.shovel||0)>0 && readQuickbar().includes('shovel');
+  };
   const showToast=text=>{if(!toast)return;toast.textContent=text;toast.classList.add('show');clearTimeout(window.__digToast);window.__digToast=setTimeout(()=>toast.classList.remove('show'),1300)};
 
   const style=document.createElement('style');
@@ -35,7 +41,7 @@
   function ensureRows(){
     const bag=panel.querySelector('.bag-view');if(!bag)return;
     const defs=[['sand','invSand','rowSand','🏖️ Sable'],['dirt','invDirt','rowDirt','🟫 Terre'],['snow','invSnow','rowSnow','❄️ Neige']];
-    defs.forEach(([key,id,rowId,label])=>{if(!document.getElementById(id)){const r=document.createElement('div');r.className='inv-row';r.id=rowId;r.innerHTML=`<span>${label}</span><b id="${id}">0</b>`;bag.appendChild(r)}})
+    defs.forEach(([key,id,rowId,label])=>{if(!document.getElementById(id)){const r=document.createElement('div');r.className='inv-row';r.id=rowId;r.dataset.item=key;r.innerHTML=`<span>${label}</span><b id="${id}">0</b>`;bag.appendChild(r)}})
   }
   function refreshRows(){
     ensureRows();const inv=readInventory();
@@ -43,22 +49,23 @@
   }
   function updateButton(){
     const ground=groundResource();
-    digBtn.hidden=equipped()!=='shovel'||!ground;
+    digBtn.hidden=!shovelEquipped()||!ground;
     if(!digBtn.hidden)digBtn.textContent='CREUSER '+ground.label.toUpperCase();
   }
   function dig(){
-    if(equipped()!=='shovel'){showToast('Équipe la pelle');return}
+    if(!shovelEquipped()){
+      digBtn.hidden=true;
+      showToast('Équipe la pelle pour creuser');
+      return;
+    }
     const ground=groundResource();if(!ground)return;
-    const inv=readInventory();inv[ground.key]=(inv[ground.key]||0)+3;saveInventory(inv);refreshRows();window.refreshCraftInventory?.();showToast('+3 '+ground.label);
+    const inv=readInventory();inv[ground.key]=(inv[ground.key]||0)+3;saveInventory(inv);refreshRows();window.refreshCraftInventory?.();window.refreshInventoryManagement?.();showToast('+3 '+ground.label);
     const held=document.getElementById('heldTool');if(held?.classList.contains('show')){held.classList.remove('swing');void held.offsetWidth;held.classList.add('swing')}
   }
 
   digBtn.addEventListener('click',dig);
   inventoryBtn?.addEventListener('click',refreshRows);
-  window.refreshGroundInventory=refreshRows;
+  window.addEventListener('storage',updateButton);
+  window.refreshGroundInventory=()=>{refreshRows();updateButton()};
   refreshRows();updateButton();setInterval(updateButton,250);
-
-  if(!document.querySelector('script[data-quickbar-organizer]')){
-    const s=document.createElement('script');s.src='quickbar-organizer.js?v=1';s.dataset.quickbarOrganizer='1';document.body.appendChild(s);
-  }
 })();
