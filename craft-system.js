@@ -7,24 +7,24 @@
   const quickbarKey='survival_quickbar_'+characterId;
 
   const itemDefs={
-    axe:{label:'Hache',full:'Hache primitive',icon:'🪓'},
-    pickaxe:{label:'Pioche',full:'Pioche primitive',icon:'⛏️'},
-    shovel:{label:'Pelle',full:'Pelle primitive',icon:'🛠️'}
+    wood:{label:'Bois',icon:'🪵',kind:'resource'},
+    stone:{label:'Pierre',icon:'🪨',kind:'resource'},
+    berries:{label:'Baies',icon:'🫐',kind:'consumable'},
+    water:{label:'Bocal d’eau',icon:'🫙',kind:'consumable'},
+    sand:{label:'Sable',icon:'🏖️',kind:'resource'},
+    dirt:{label:'Terre',icon:'🟫',kind:'resource'},
+    snow:{label:'Neige',icon:'❄️',kind:'resource'},
+    axe:{label:'Hache',full:'Hache primitive',icon:'🪓',kind:'tool'},
+    pickaxe:{label:'Pioche',full:'Pioche primitive',icon:'⛏️',kind:'tool'},
+    shovel:{label:'Pelle',full:'Pelle primitive',icon:'🛠️',kind:'tool'}
   };
-  const recipes={
-    axe:{wood:3,stone:2},
-    pickaxe:{wood:2,stone:3},
-    shovel:{wood:3,stone:1}
-  };
+  window.survivalItemDefs=itemDefs;
 
+  const recipes={axe:{wood:3,stone:2},pickaxe:{wood:2,stone:3},shovel:{wood:3,stone:1}};
   const defaults={wood:0,stone:0,water:0,berries:0,axe:0,pickaxe:0,shovel:0,sand:0,dirt:0,snow:0};
-  const readInventory=()=>{
-    try{return {...defaults,...JSON.parse(localStorage.getItem(inventoryKey)||'{}')}}catch{return {...defaults}}
-  };
+  const readInventory=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem(inventoryKey)||'{}')}}catch{return {...defaults}}};
   const saveInventory=inv=>localStorage.setItem(inventoryKey,JSON.stringify(inv));
-  const readQuickbar=()=>{
-    try{const q=JSON.parse(localStorage.getItem(quickbarKey)||'[]');return Array.from({length:8},(_,i)=>q[i]||'')}catch{return Array(8).fill('')}
-  };
+  const readQuickbar=()=>{try{const q=JSON.parse(localStorage.getItem(quickbarKey)||'[]');return Array.from({length:8},(_,i)=>q[i]||'')}catch{return Array(8).fill('')}};
   const saveQuickbar=q=>localStorage.setItem(quickbarKey,JSON.stringify(q));
   const toast=text=>{const el=document.getElementById('toast');if(!el)return;el.textContent=text;el.classList.add('show');clearTimeout(window.__craftToastTimer);window.__craftToastTimer=setTimeout(()=>el.classList.remove('show'),1400)};
 
@@ -41,7 +41,7 @@
     .paperdoll{position:relative;height:390px;max-height:56vh;min-height:300px;margin-top:2px}.doll-person{position:absolute;left:50%;top:42px;transform:translateX(-50%);width:105px;height:250px;filter:drop-shadow(0 10px 12px #0008)}.doll-head{position:absolute;left:35px;top:0;width:36px;height:42px;border-radius:50% 50% 46% 46%;background:#b9825c;border:2px solid #d6aa82}.doll-body{position:absolute;left:23px;top:40px;width:60px;height:95px;border-radius:25px 25px 14px 14px;background:#66513f;border:2px solid #8c735d}.doll-arm{position:absolute;top:48px;width:23px;height:105px;border-radius:14px;background:#ad7957;border:2px solid #c99875}.doll-arm.l{left:3px;transform:rotate(7deg)}.doll-arm.r{right:3px;transform:rotate(-7deg)}.doll-leg{position:absolute;top:128px;width:28px;height:115px;border-radius:10px 10px 15px 15px;background:#4b4139;border:2px solid #6c5d50}.doll-leg.l{left:23px}.doll-leg.r{right:23px}
     .equip-slot{position:absolute;width:76px;min-height:49px;padding:6px;border-radius:9px;background:#0b151bbf;border:1px solid #ffffff23;color:#9fb0b5;font-size:7px;text-align:center;font-weight:900}.equip-slot strong{display:block;margin-top:4px;color:#f1d58d;font-size:9px;line-height:1.15}.equip-slot.head{left:50%;top:0;transform:translateX(-50%)}.equip-slot.chest{left:0;top:110px}.equip-slot.hand{right:0;top:110px}.equip-slot.legs{left:50%;bottom:0;transform:translateX(-50%)}.equip-slot.active{border-color:#d1aa5b99;background:#2f3526cc}.equip-slot.active strong{color:#fff0b0}
     .held-tool{position:fixed;z-index:23;right:7%;bottom:8%;width:118px;height:180px;pointer-events:none;transform-origin:75% 85%;filter:drop-shadow(0 8px 8px #0008);display:none}.held-tool.show{display:block}.held-tool.swing{animation:toolSwing .28s ease-out}.tool-handle{position:absolute;width:18px;height:140px;right:31px;bottom:0;border-radius:9px;background:linear-gradient(90deg,#5a351e,#8a5a32,#4b2b18);transform:rotate(-23deg);transform-origin:bottom}.tool-head{position:absolute;right:2px;top:20px;background:#7c8587;border:2px solid #b7c0c0;transform:rotate(-23deg)}.held-tool.axe .tool-head{width:63px;height:28px;border-radius:50% 9px 9px 50%;clip-path:polygon(0 50%,35% 0,100% 12%,100% 88%,35% 100%)}.held-tool.pickaxe .tool-head{width:88px;height:17px;border-radius:50%;clip-path:polygon(0 50%,20% 10%,50% 0,80% 10%,100% 50%,80% 90%,50% 100%,20% 90%)}.held-tool.shovel .tool-head{width:38px;height:48px;border-radius:9px 9px 18px 18px;clip-path:polygon(15% 0,85% 0,100% 65%,50% 100%,0 65%)}
-    .quickbar .slot{cursor:pointer}.quickbar .slot .item-icon{position:absolute;inset:5px 3px 9px;display:flex;align-items:center;justify-content:center;font-size:17px}.quickbar .slot .type{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quickbar .slot.empty .type{color:#ffffff38}.quickbar .slot.active{border-color:#f0cf75;box-shadow:0 0 0 1px #f0cf7544 inset}
+    .quickbar .slot{cursor:pointer}.quickbar .slot .item-icon{position:absolute;inset:5px 3px 9px;display:flex;align-items:center;justify-content:center;font-size:17px}.quickbar .slot .type{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.quickbar .slot .qty{position:absolute;right:3px;top:2px;color:#f7dda0;font-size:7px;font-weight:900}.quickbar .slot.empty .type{color:#ffffff38}.quickbar .slot.active{border-color:#f0cf75;box-shadow:0 0 0 1px #f0cf7544 inset}
     @keyframes toolSwing{0%{transform:rotate(0deg)}45%{transform:rotate(-35deg) translate(-8px,8px)}100%{transform:rotate(0deg)}}
     @media(max-width:520px){.inventory{width:96vw}.inventory-layout{grid-template-columns:42% 58%;gap:7px}.equipment-pane,.inventory-content{padding:8px}.paperdoll{min-height:280px}.equip-slot{width:66px;font-size:6px}.equip-slot strong{font-size:8px}.craft-title{flex-direction:column;align-items:flex-start}.craft-btn{width:100%}}
   `;
@@ -62,22 +62,51 @@
 
   function ensureToolRows(){
     const tools=[['axe','invAxe','rowAxe','🪓 Hache primitive'],['pickaxe','invPickaxe','rowPickaxe','⛏️ Pioche primitive'],['shovel','invShovel','rowShovel','🛠️ Pelle primitive']];
-    tools.forEach(([tool,id,rowId,label])=>{if(!document.getElementById(id)){const r=document.createElement('div');r.className='tool-row';r.id=rowId;r.innerHTML=`<div class="tool-main"><span>${label}</span><button class="equip-btn" data-tool="${tool}">METTRE BARRE</button></div><b id="${id}">0</b>`;bag.appendChild(r)}})
+    tools.forEach(([tool,id,rowId,label])=>{if(!document.getElementById(id)){const r=document.createElement('div');r.className='tool-row';r.id=rowId;r.dataset.item=tool;r.innerHTML=`<div class="tool-main"><span>${label}</span></div><b id="${id}">0</b>`;bag.appendChild(r)}})
   }
-  function setEquipped(tool){const inv=readInventory();if(tool&&!(inv[tool]>0))tool='';localStorage.setItem(equippedKey,tool||'');updateHeldTool()}
-  function updateQuickbar(){const inv=readInventory(),q=readQuickbar(),equipped=localStorage.getItem(equippedKey)||'';quickSlots.forEach((slot,i)=>{const item=q[i]&&itemDefs[q[i]]&&inv[q[i]]>0?q[i]:'';if(q[i]&&!item)q[i]='';slot.classList.toggle('active',!!item&&item===equipped);slot.classList.toggle('empty',!item);slot.classList.remove('weapon','tool','consumable');if(item)slot.classList.add('tool');slot.innerHTML=`<span class="num">${i+1}</span>${item?`<span class="item-icon">${itemDefs[item].icon}</span><span class="type">${itemDefs[item].label}</span>`:'<span class="type">VIDE</span>'}`;slot.dataset.item=item});saveQuickbar(q)}
-  function placeInQuickbar(tool,select=true){const inv=readInventory();if(!(inv[tool]>0))return false;const q=readQuickbar();let index=q.findIndex(x=>x===tool);if(index<0)index=q.findIndex(x=>!x);if(index<0){toast('Barre pleine');return false}q[index]=tool;saveQuickbar(q);if(select)setEquipped(tool);updateQuickbar();return true}
-  function updateHeldTool(){const inv=readInventory(),tool=localStorage.getItem(equippedKey)||'',valid=tool&&itemDefs[tool]&&inv[tool]>0;held.className='held-tool';if(valid)held.classList.add('show',tool);bag.querySelectorAll('.equip-btn').forEach(btn=>{const inBar=readQuickbar().includes(btn.dataset.tool);btn.textContent=inBar?'DANS LA BARRE':'METTRE BARRE'});const hand=document.getElementById('equipHand'),value=document.getElementById('equipHandValue');if(hand&&value){hand.classList.toggle('active',!!valid);value.textContent=valid?itemDefs[tool].icon+' '+itemDefs[tool].label:'Vide'}updateQuickbar()}
-  function refreshResourceRows(inv){const map={invWood:'wood',invStone:'stone',invWater:'water',invBerries:'berries'};Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el){el.textContent=inv[key]||0;const row=el.closest('.inv-row');if(row)row.hidden=!(inv[key]>0)}})}
-  function refresh(){ensureToolRows();const inv=readInventory();refreshResourceRows(inv);[['invAxe','rowAxe','axe'],['invPickaxe','rowPickaxe','pickaxe'],['invShovel','rowShovel','shovel']].forEach(([id,rowId,key])=>{const el=document.getElementById(id),row=document.getElementById(rowId);if(el)el.textContent=inv[key]||0;if(row)row.hidden=!(inv[key]>0)});craft.querySelectorAll('.craft-card').forEach(card=>{const type=card.dataset.recipe,cost=recipes[type],b=card.querySelector('.craft-btn');b.disabled=!cost||Object.entries(cost).some(([k,v])=>(inv[k]||0)<v)});updateHeldTool();window.refreshGroundInventory?.()}
-  function craftTool(type){const inv=readInventory(),cost=recipes[type];if(!cost)return;if(Object.entries(cost).some(([k,v])=>(inv[k]||0)<v)){toast('Ressources insuffisantes');refresh();return}Object.entries(cost).forEach(([k,v])=>inv[k]-=v);inv[type]=(inv[type]||0)+1;saveInventory(inv);const q=readQuickbar(),hasFree=q.some(x=>!x),already=q.includes(type);if(hasFree&&!already)placeInQuickbar(type,true);else if(!localStorage.getItem(equippedKey))setEquipped(type);refresh();window.refreshInventoryVisibility?.();toast(itemDefs[type].full+' fabriquée')}
+  function tagBaseRows(){
+    const ids={invWood:'wood',invStone:'stone',invWater:'water',invBerries:'berries'};
+    Object.entries(ids).forEach(([id,key])=>{const el=document.getElementById(id);const row=el?.closest('.inv-row');if(row)row.dataset.item=key})
+  }
+  function setEquipped(item){const inv=readInventory();if(item&&!(inv[item]>0))item='';localStorage.setItem(equippedKey,item||'');updateHeldTool()}
+  function updateQuickbar(){
+    const inv=readInventory(),q=readQuickbar(),equipped=localStorage.getItem(equippedKey)||'';
+    quickSlots.forEach((slot,i)=>{
+      const item=q[i]&&itemDefs[q[i]]&&inv[q[i]]>0?q[i]:'';if(q[i]&&!item)q[i]='';
+      const def=itemDefs[item];slot.classList.toggle('active',!!item&&item===equipped);slot.classList.toggle('empty',!item);slot.classList.remove('weapon','tool','consumable');if(def)slot.classList.add(def.kind==='tool'?'tool':def.kind==='consumable'?'consumable':'tool');
+      slot.innerHTML=`<span class="num">${i+1}</span>${item?`<span class="item-icon">${def.icon}</span><span class="type">${def.label}</span>${inv[item]>1?`<span class="qty">${inv[item]}</span>`:''}`:'<span class="type">VIDE</span>'}`;slot.dataset.item=item
+    });saveQuickbar(q)
+  }
+  function updateHeldTool(){
+    const inv=readInventory(),item=localStorage.getItem(equippedKey)||'',def=itemDefs[item],valid=item&&def&&inv[item]>0;
+    held.className='held-tool';if(valid&&def.kind==='tool')held.classList.add('show',item);
+    const hand=document.getElementById('equipHand'),value=document.getElementById('equipHandValue');if(hand&&value){hand.classList.toggle('active',!!valid);value.textContent=valid?def.icon+' '+def.label:'Vide'}
+    updateQuickbar();window.refreshQuickbarOrganizer?.()
+  }
+  function refreshResourceRows(inv){const map={invWood:'wood',invStone:'stone',invWater:'water',invBerries:'berries'};Object.entries(map).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=inv[key]||0})}
+  function applyBagVisibility(){
+    const inv=readInventory(),q=readQuickbar();
+    bag.querySelectorAll('[data-item]').forEach(row=>{const key=row.dataset.item;row.hidden=!(inv[key]>0)||q.includes(key)})
+  }
+  function refresh(){
+    ensureToolRows();tagBaseRows();const inv=readInventory();refreshResourceRows(inv);
+    [['invAxe','axe'],['invPickaxe','pickaxe'],['invShovel','shovel']].forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=inv[key]||0});
+    craft.querySelectorAll('.craft-card').forEach(card=>{const type=card.dataset.recipe,cost=recipes[type],b=card.querySelector('.craft-btn');b.disabled=!cost||Object.entries(cost).some(([k,v])=>(inv[k]||0)<v)});
+    applyBagVisibility();updateHeldTool();window.refreshGroundInventory?.();window.refreshQuickbarOrganizer?.()
+  }
+  function craftTool(type){
+    const inv=readInventory(),cost=recipes[type];if(!cost)return;
+    if(Object.entries(cost).some(([k,v])=>(inv[k]||0)<v)){toast('Ressources insuffisantes');refresh();return}
+    Object.entries(cost).forEach(([k,v])=>inv[k]-=v);inv[type]=(inv[type]||0)+1;saveInventory(inv);refresh();window.refreshInventoryVisibility?.();toast(itemDefs[type].full+' ajoutée au sac')
+  }
 
   tabs.addEventListener('click',e=>{const btn=e.target.closest('.inv-tab');if(!btn)return;tabs.querySelectorAll('.inv-tab').forEach(x=>x.classList.toggle('active',x===btn));const isCraft=btn.dataset.tab==='craft';bag.classList.toggle('hidden',isCraft);craft.classList.toggle('active',isCraft);refresh()});
   craft.addEventListener('click',e=>{const b=e.target.closest('.craft-btn');if(b&&!b.disabled)craftTool(b.closest('.craft-card').dataset.recipe)});
-  bag.addEventListener('click',e=>{const b=e.target.closest('.equip-btn');if(!b)return;placeInQuickbar(b.dataset.tool,true);refresh()});
-  quickSlots.forEach((slot,i)=>slot.addEventListener('click',()=>{const q=readQuickbar(),tool=q[i];if(!tool||!itemDefs[tool])return;setEquipped(tool);toast(itemDefs[tool].label+' équipée')}));
+  quickSlots.forEach((slot,i)=>slot.addEventListener('click',()=>{const q=readQuickbar(),item=q[i];if(!item||!itemDefs[item])return;setEquipped(item);toast(itemDefs[item].label+' sélectionné')}));
   document.getElementById('gatherBtn')?.addEventListener('click',()=>{if(held.classList.contains('show')){held.classList.remove('swing');void held.offsetWidth;held.classList.add('swing')}});
   document.getElementById('inventoryBtn')?.addEventListener('click',refresh);
   window.refreshCraftInventory=refresh;
+  window.refreshSurvivalQuickbar=updateQuickbar;
+  window.refreshSurvivalBagVisibility=applyBagVisibility;
   refresh();
 })();
