@@ -1,0 +1,23 @@
+(()=>{
+const panel=document.getElementById('inventoryPanel');if(!panel)return;
+const id=sessionStorage.getItem('survival_character_id')||'guest',invKey='survival_inventory_'+id,eqKey='survival_equipped_'+id,barKey='survival_quickbar_'+id;
+const defs=window.survivalItemDefs||{wood:{label:'Bois',icon:'🪵'},stone:{label:'Pierre',icon:'🪨'},berries:{label:'Baies',icon:'🫐'},water:{label:'Bocal d’eau',icon:'🫙'},sand:{label:'Sable',icon:'🏖️'},dirt:{label:'Terre',icon:'🟫'},snow:{label:'Neige',icon:'❄️'},axe:{label:'Hache',icon:'🪓'},pickaxe:{label:'Pioche',icon:'⛏️'},shovel:{label:'Pelle',icon:'🛠️'}};
+const ids={invWood:'wood',invStone:'stone',invBerries:'berries',invWater:'water',invSand:'sand',invDirt:'dirt',invSnow:'snow',invAxe:'axe',invPickaxe:'pickaxe',invShovel:'shovel'};
+const readInv=()=>{try{return JSON.parse(localStorage.getItem(invKey)||'{}')}catch{return{}}},saveInv=v=>localStorage.setItem(invKey,JSON.stringify(v));
+const readBar=()=>{try{const q=JSON.parse(localStorage.getItem(barKey)||'[]');return Array.from({length:8},(_,i)=>q[i]||'')}catch{return Array(8).fill('')}},saveBar=q=>localStorage.setItem(barKey,JSON.stringify(q));
+const toast=t=>{const e=document.getElementById('toast');if(!e)return;e.textContent=t;e.classList.add('show');clearTimeout(window.__invMng);window.__invMng=setTimeout(()=>e.classList.remove('show'),1300)};
+const bag=panel.querySelector('.bag-view');if(!bag)return;
+const style=document.createElement('style');style.textContent='.inv-actions{display:flex;gap:4px;margin-left:auto}.inv-action{border:1px solid #ffffff22;border-radius:7px;padding:6px 7px;font-size:7px;font-weight:900;color:#fff}.inv-equip{background:#36502e}.inv-drop{background:#643333}.inv-row[data-item],.tool-row[data-item]{gap:7px}';document.head.appendChild(style);
+let pending='';
+function rowItem(row){if(row.dataset.item)return row.dataset.item;const b=row.querySelector('b[id]');return b?ids[b.id]||'':''}
+function decorate(){bag.querySelectorAll('.inv-row,.tool-row').forEach(row=>{const item=rowItem(row);if(!item||!defs[item])return;row.dataset.item=item;if(!row.querySelector('.inv-actions')){const a=document.createElement('div');a.className='inv-actions';a.innerHTML=`<button type="button" class="inv-action inv-equip" data-item="${item}">ÉQUIPER</button><button type="button" class="inv-action inv-drop" data-item="${item}">JETER 1</button>`;const qty=row.querySelector('b');qty?row.insertBefore(a,qty):row.appendChild(a)}})}
+function visibility(){decorate();const inv=readInv(),bar=readBar();bag.querySelectorAll('[data-item]').forEach(row=>{if(row.closest('.inv-actions'))return;const item=row.dataset.item;if(item)row.hidden=!(inv[item]>0)||bar.includes(item)})}
+function refresh(){window.refreshCraftInventory?.();window.refreshGroundInventory?.();window.refreshSurvivalQuickbar?.();window.refreshQuickbarOrganizer?.();visibility()}
+function putInBar(item){const inv=readInv();if(!(inv[item]>0))return;const q=readBar();let old=q.indexOf(item);if(old>=0)q[old]='';let target=q.findIndex(x=>!x);if(target<0){toast('Barre pleine');return}q[target]=item;saveBar(q);localStorage.setItem(eqKey,item);refresh();toast(defs[item].label+' équipé en case '+(target+1))}
+function unequip(item){const q=readBar(),i=q.indexOf(item);if(i<0)return;q[i]='';saveBar(q);if(localStorage.getItem(eqKey)===item)localStorage.setItem(eqKey,'');refresh();toast(defs[item].label+' déséquipé')}
+function dropOne(item){const q=readBar();if(q.includes(item)){toast('Déséquipe d’abord cet objet');return}const inv=readInv();if(!(inv[item]>0))return;inv[item]=Math.max(0,inv[item]-1);saveInv(inv);refresh();toast('1 '+defs[item].label+' jeté')}
+bag.addEventListener('click',e=>{const equip=e.target.closest('.inv-equip');if(equip){e.preventDefault();e.stopImmediatePropagation();putInBar(equip.dataset.item);return}const drop=e.target.closest('.inv-drop');if(drop){e.preventDefault();e.stopImmediatePropagation();dropOne(drop.dataset.item)}},true);
+panel.addEventListener('click',e=>{const rem=e.target.closest('.bar-remove');if(!rem)return;const i=Number(rem.dataset.remove),q=readBar(),item=q[i];setTimeout(()=>{if(item&&!readBar().includes(item)){if(localStorage.getItem(eqKey)===item)localStorage.setItem(eqKey,'');refresh()}},0)},true);
+const ob=new MutationObserver(()=>{decorate();visibility()});ob.observe(bag,{subtree:true,childList:true});
+document.getElementById('inventoryBtn')?.addEventListener('click',()=>requestAnimationFrame(refresh));window.refreshInventoryManagement=refresh;refresh();
+})();
