@@ -57,4 +57,8 @@
   inventoryBtn?.addEventListener('click',refreshRows);
   window.refreshGroundInventory=refreshRows;
   refreshRows();updateButton();setInterval(updateButton,250);
+
+  if(!document.querySelector('script[data-quickbar-organizer]')){
+    const s=document.createElement('script');s.src='quickbar-organizer.js?v=1';s.dataset.quickbarOrganizer='1';document.body.appendChild(s);
+  }
 })();
