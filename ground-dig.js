@@ -35,5 +35,7 @@
     try{await import('./construction-workstations.js?v=1')}catch(err){console.error('Construction workstations:',err)}
     try{await import('./inventory-craft-recovery.js?v=1')}catch(err){console.error('Inventory craft recovery:',err)}
     try{await import('./all-resources-system.js?v=1')}catch(err){console.error('All resources system:',err)}
+    try{await import('./resource-tool-rules.js?v=1')}catch(err){console.error('Resource tool rules:',err)}
+    try{await import('./biome-population.js?v=1')}catch(err){console.error('Biome population:',err)}
   },{once:true});
 })();
