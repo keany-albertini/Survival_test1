@@ -29,5 +29,6 @@
     try{await import('./survival-expansion.js?v=3')}catch(err){console.error('Survival expansion:',err)}
     try{await import('./progression-system.js?v=3')}catch(err){console.error('Progression system:',err)}
     try{await import('./progression-crafting.js?v=1')}catch(err){console.error('Progression crafting:',err)}
+    try{await import('./progression-inventory.js?v=1')}catch(err){console.error('Progression inventory:',err)}
   },{once:true});
 })();
