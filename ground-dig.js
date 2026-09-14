@@ -31,5 +31,6 @@
     try{await import('./progression-crafting.js?v=1')}catch(err){console.error('Progression crafting:',err)}
     try{await import('./progression-inventory.js?v=1')}catch(err){console.error('Progression inventory:',err)}
     try{await import('./sleep-spawn-system.js?v=1')}catch(err){console.error('Sleep spawn system:',err)}
+    try{await import('./construction-snap-system.js?v=1')}catch(err){console.error('Construction snap system:',err)}
   },{once:true});
 })();
