@@ -32,5 +32,6 @@
     try{await import('./progression-inventory.js?v=1')}catch(err){console.error('Progression inventory:',err)}
     try{await import('./sleep-spawn-system.js?v=1')}catch(err){console.error('Sleep spawn system:',err)}
     try{await import('./construction-snap-system.js?v=1')}catch(err){console.error('Construction snap system:',err)}
+    try{await import('./construction-workstations.js?v=1')}catch(err){console.error('Construction workstations:',err)}
   },{once:true});
 })();
