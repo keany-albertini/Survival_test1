@@ -23,11 +23,11 @@
   function ensureRows(){const bag=panel.querySelector('.bag-view');if(!bag)return;const defs=[['sand','invSand','rowSand','🏖️ Sable'],['dirt','invDirt','rowDirt','🟫 Terre'],['snow','invSnow','rowSnow','❄️ Neige']];defs.forEach(([key,id,rowId,label])=>{if(!document.getElementById(id)){const r=document.createElement('div');r.className='inv-row';r.id=rowId;r.dataset.item=key;r.innerHTML=`<span>${label}</span><b id="${id}">0</b>`;bag.appendChild(r)}})}
   function refreshRows(){ensureRows();const inv=readInventory();[['invSand','rowSand','sand'],['invDirt','rowDirt','dirt'],['invSnow','rowSnow','snow']].forEach(([id,rowId,key])=>{const el=document.getElementById(id),row=document.getElementById(rowId);if(el)el.textContent=inv[key]||0;if(row)row.hidden=!(inv[key]>0)})}
   function updateButton(){const ground=groundResource();digBtn.hidden=!shovelEquipped()||!ground;if(!digBtn.hidden)digBtn.textContent='CREUSER '+ground.label.toUpperCase()}
-  function dig(){if(!shovelEquipped()){digBtn.hidden=true;showToast('Équipe la pelle pour creuser');return}const ground=groundResource();if(!ground)return;const inv=readInventory();inv[ground.key]=(inv[ground.key]||0)+3;saveInventory(inv);refreshRows();window.refreshCraftInventory?.();window.refreshInventoryManagement?.();showToast('+3 '+ground.label);const held=document.getElementById('heldTool');if(held?.classList.contains('show')){held.classList.remove('swing');void held.offsetWidth;held.classList.add('swing')}}
+  function dig(){if(!shovelEquipped()){digBtn.hidden=true;showToast('Équipe la pelle pour creuser');return}const ground=groundResource();if(!ground)return;const inv=readInventory();inv[ground.key]=(inv[ground.key]||0)+3;saveInventory(inv);refreshRows();window.refreshCraftInventory?.();window.refreshInventoryManagement?.();window.addSurvivalXP?.(5,'Creusage');showToast('+3 '+ground.label);const held=document.getElementById('heldTool');if(held?.classList.contains('show')){held.classList.remove('swing');void held.offsetWidth;held.classList.add('swing')}}
   digBtn.addEventListener('click',dig);inventoryBtn?.addEventListener('click',refreshRows);window.addEventListener('storage',updateButton);window.refreshGroundInventory=()=>{refreshRows();updateButton()};refreshRows();updateButton();setInterval(updateButton,250);
-  window.addEventListener('load',()=>{
-    import('./survival-expansion.js?v=2').catch(err=>console.error('Survival expansion:',err));
-    import('./spawn-system.js?v=1').catch(err=>console.error('Spawn system:',err));
-    import('./progression-system.js?v=1').catch(err=>console.error('Progression system:',err));
+  window.addEventListener('load',async()=>{
+    try{await import('./survival-expansion.js?v=3')}catch(err){console.error('Survival expansion:',err)}
+    try{await import('./progression-system.js?v=3')}catch(err){console.error('Progression system:',err)}
+    try{await import('./progression-crafting.js?v=1')}catch(err){console.error('Progression crafting:',err)}
   },{once:true});
 })();
