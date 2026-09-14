@@ -33,5 +33,6 @@
     try{await import('./sleep-spawn-system.js?v=1')}catch(err){console.error('Sleep spawn system:',err)}
     try{await import('./construction-snap-system.js?v=1')}catch(err){console.error('Construction snap system:',err)}
     try{await import('./construction-workstations.js?v=1')}catch(err){console.error('Construction workstations:',err)}
+    try{await import('./inventory-craft-recovery.js?v=1')}catch(err){console.error('Inventory craft recovery:',err)}
   },{once:true});
 })();
