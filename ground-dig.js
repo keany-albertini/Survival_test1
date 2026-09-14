@@ -25,5 +25,8 @@
   function updateButton(){const ground=groundResource();digBtn.hidden=!shovelEquipped()||!ground;if(!digBtn.hidden)digBtn.textContent='CREUSER '+ground.label.toUpperCase()}
   function dig(){if(!shovelEquipped()){digBtn.hidden=true;showToast('Équipe la pelle pour creuser');return}const ground=groundResource();if(!ground)return;const inv=readInventory();inv[ground.key]=(inv[ground.key]||0)+3;saveInventory(inv);refreshRows();window.refreshCraftInventory?.();window.refreshInventoryManagement?.();showToast('+3 '+ground.label);const held=document.getElementById('heldTool');if(held?.classList.contains('show')){held.classList.remove('swing');void held.offsetWidth;held.classList.add('swing')}}
   digBtn.addEventListener('click',dig);inventoryBtn?.addEventListener('click',refreshRows);window.addEventListener('storage',updateButton);window.refreshGroundInventory=()=>{refreshRows();updateButton()};refreshRows();updateButton();setInterval(updateButton,250);
-  window.addEventListener('load',()=>{import('./survival-expansion.js?v=1').catch(err=>console.error('Survival expansion:',err))},{once:true});
+  window.addEventListener('load',()=>{
+    import('./survival-expansion.js?v=2').catch(err=>console.error('Survival expansion:',err));
+    import('./spawn-system.js?v=1').catch(err=>console.error('Spawn system:',err));
+  },{once:true});
 })();
