@@ -18,9 +18,10 @@ const cfg={
 'Montagnes':[20,48,'pine',[['Bouquetin',0x746553,.8],['Loup',0x555b60,.8],['Ours',0x49362c,1.2]]],
 'Toundra':[15,35,'pine',[['Loup',0x666d72,.8],['Renard',0xa9683c,.6]]],
 'Neige':[20,40,'snow',[['Loup blanc',0xc7d0d2,.8],['Renard polaire',0xe4e8e7,.55],['Ours blanc',0xd9ddda,1.2]]],
-'Plage':[14,16,'normal',[['Tortue',0x526b45,.55]]]
+'Plage':[14,16,'normal',[['Tortue',0x526b45,.55]]],
+'Volcan':[3,58,'dry',[['Varan volcanique',0x4b342d,.6],['Chacal',0x6e5844,.7]]]
 };
-function current(){const t=(document.getElementById('topinfo')?.textContent||'').split('•').map(v=>v.trim());return t[1]||'Prairies'}
+function current(){if(S.camera&&Math.hypot(S.camera.position.x-430,S.camera.position.z+350)<135)return'Volcan';const t=(document.getElementById('topinfo')?.textContent||'').split('•').map(v=>v.trim());return t[1]||'Prairies'}
 function clear(){for(const o of S.objects)S.scene.remove(o);S.objects.length=0}
-function populate(){if(!S.camera)return;clear();const b=current(),c=cfg[b]||cfg.Prairies,[nt,nr,type,animals]=c,x0=S.camera.position.x,z0=S.camera.position.z;for(let i=0;i<nt;i++){const a=Math.random()*6.283,r=30+Math.random()*180;addTree(x0+Math.cos(a)*r,z0+Math.sin(a)*r,type)}for(let i=0;i<nr;i++){const a=Math.random()*6.283,r=25+Math.random()*190;addRock(x0+Math.cos(a)*r,z0+Math.sin(a)*r,b==='Montagnes'||b==='Neige')}for(let i=0;i<Math.min(14,animals.length*5);i++){const a=Math.random()*6.283,r=45+Math.random()*170,[n,col,s]=animals[i%animals.length];addAnimal(x0+Math.cos(a)*r,z0+Math.sin(a)*r,n,col,s)}}
+function populate(){if(!S.camera)return;clear();const b=current(),c=cfg[b]||cfg.Prairies,[nt,nr,type,animals]=c,x0=S.camera.position.x,z0=S.camera.position.z;for(let i=0;i<nt;i++){const a=Math.random()*6.283,r=30+Math.random()*180;addTree(x0+Math.cos(a)*r,z0+Math.sin(a)*r,type)}for(let i=0;i<nr;i++){const a=Math.random()*6.283,r=25+Math.random()*190;addRock(x0+Math.cos(a)*r,z0+Math.sin(a)*r,b==='Montagnes'||b==='Neige'||b==='Volcan')}for(let i=0;i<Math.min(14,animals.length*5);i++){const a=Math.random()*6.283,r=45+Math.random()*170,[n,col,s]=animals[i%animals.length];addAnimal(x0+Math.cos(a)*r,z0+Math.sin(a)*r,n,col,s)}}
 function init(){let last='';setInterval(()=>{const b=current();if(b!==last){last=b;populate()}},1500)}
