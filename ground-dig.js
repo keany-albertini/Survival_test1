@@ -34,5 +34,6 @@
     try{await import('./construction-snap-system.js?v=1')}catch(err){console.error('Construction snap system:',err)}
     try{await import('./construction-workstations.js?v=1')}catch(err){console.error('Construction workstations:',err)}
     try{await import('./inventory-craft-recovery.js?v=1')}catch(err){console.error('Inventory craft recovery:',err)}
+    try{await import('./all-resources-system.js?v=1')}catch(err){console.error('All resources system:',err)}
   },{once:true});
 })();
