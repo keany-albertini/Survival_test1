@@ -28,5 +28,6 @@
   window.addEventListener('load',()=>{
     import('./survival-expansion.js?v=2').catch(err=>console.error('Survival expansion:',err));
     import('./spawn-system.js?v=1').catch(err=>console.error('Spawn system:',err));
+    import('./progression-system.js?v=1').catch(err=>console.error('Progression system:',err));
   },{once:true});
 })();
