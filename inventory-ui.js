@@ -1,7 +1,6 @@
 (()=>{
   const panel=document.getElementById('inventoryPanel');
   if(!panel)return;
-
   function refreshInventoryVisibility(){
     panel.querySelectorAll('.inv-row').forEach(row=>{
       const qty=row.querySelector('b');
@@ -10,14 +9,7 @@
       row.hidden=!Number.isFinite(value)||value<=0;
     });
   }
-
-  const observer=new MutationObserver(refreshInventoryVisibility);
-  observer.observe(panel,{subtree:true,childList:true,characterData:true});
-
-  document.getElementById('inventoryBtn')?.addEventListener('click',()=>{
-    requestAnimationFrame(refreshInventoryVisibility);
-  });
-
-  refreshInventoryVisibility();
+  document.getElementById('inventoryBtn')?.addEventListener('click',()=>requestAnimationFrame(refreshInventoryVisibility));
+  window.addEventListener('survival-inventory-changed',refreshInventoryVisibility);
   window.refreshInventoryVisibility=refreshInventoryVisibility;
 })();
