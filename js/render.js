@@ -299,7 +299,7 @@ export class Renderer {
     ctx.fill();
 
     // Outil visible selon ce qui a été fabriqué
-    if (state.tools.spear) {
+    if (state.equipped === "spear") {
       ctx.strokeStyle = "#6a4728";
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -313,7 +313,7 @@ export class Renderer {
       ctx.lineTo(23 + faceX * 18, -19 + faceY * 18);
       ctx.closePath();
       ctx.fill();
-    } else if (state.tools.axe) {
+    } else if (state.equipped === "axe") {
       ctx.strokeStyle = "#6a4728";
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -328,7 +328,7 @@ export class Renderer {
       ctx.lineTo(15, -25);
       ctx.closePath();
       ctx.fill();
-    } else if (state.tools.pickaxe) {
+    } else if (state.equipped === "pickaxe") {
       ctx.strokeStyle = "#6a4728";
       ctx.lineWidth = 3;
       ctx.beginPath();
