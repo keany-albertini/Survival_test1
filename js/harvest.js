@@ -179,6 +179,8 @@ export function interact(notify) {
     return false;
   }
 
+  if (config.tool && state.player.actionTimer > .04) return false;
+
   faceResource(resource);
 
   if (!config.tool) {
