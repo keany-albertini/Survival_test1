@@ -685,11 +685,6 @@ export class Renderer {
   render() {
     this.ground();
     const chunks = getChunksForView(state.camera, this.viewW, this.viewH, 1);
-    for (const projectile of state.projectiles) {
-      if (this.visible(projectile.x, projectile.y, 80)) {
-        drawables.push({ y:projectile.y, kind:"projectile", value:projectile });
-      }
-    }
 
     for (const chunk of chunks) {
       for (const d of chunk.decor) if (this.visible(d.x,d.y,20)) this.grass(d);
@@ -697,6 +692,12 @@ export class Renderer {
     }
 
     const drawables = [];
+
+    for (const projectile of state.projectiles) {
+      if (this.visible(projectile.x, projectile.y, 80)) {
+        drawables.push({ y:projectile.y, kind:"projectile", value:projectile });
+      }
+    }
 
     for (const building of state.buildings) {
       if (!this.visible(building.x, building.y, 120)) continue;
