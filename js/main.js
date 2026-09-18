@@ -1,6 +1,6 @@
 import { state } from "./data.js";
 import { Renderer } from "./render.js";
-import { interact, craft, useItem } from "./harvest.js";
+import { interact, craft, useItem, equipTool } from "./harvest.js";
 import { hunt, updateAnimals } from "./fauna.js";
 import { getSmartTarget } from "./world.js";
 import { updateSurvival } from "./survival.js";
@@ -25,7 +25,8 @@ function refreshAction(action) {
 
 configureUI({
   useItem: id => refreshAction(() => useItem(id, showToast)),
-  craft: id => refreshAction(() => craft(id, showToast))
+  craft: id => refreshAction(() => craft(id, showToast)),
+  equipTool: id => refreshAction(() => equipTool(id, showToast))
 });
 
 function inputVector() {
@@ -123,6 +124,14 @@ addEventListener("keydown", event => {
     togglePanel(ui.craftPanel);
   } else if (event.code === "Escape") {
     closePanels();
+  } else if (/^Digit[1-7]$/.test(event.code)) {
+    const ids = ["axe","pickaxe","spear","berries","meat","water","bandage"];
+    const id = ids[Number(event.code.slice(-1)) - 1];
+    if (["axe","pickaxe","spear"].includes(id)) {
+      refreshAction(() => equipTool(id, showToast));
+    } else {
+      refreshAction(() => useItem(id, showToast));
+    }
   }
 });
 
