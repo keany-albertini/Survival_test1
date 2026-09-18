@@ -1,6 +1,6 @@
-import { state, RECIPES, ARMOR_DATA, clamp } from "./data.js?v=9";
-import { getNearestResource } from "./world.js?v=9";
-import { saveGame } from "./save.js?v=9";
+import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp, distance } from "./data.js?v=10";
+import { getNearestResource } from "./world.js?v=10";
+import { saveGame } from "./save.js?v=10";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
@@ -37,6 +37,7 @@ export function equipArmor(id, notify) {
     state.armor[slot] = id;
     notify(data.label + " équipé.");
   }
+
   saveGame();
   return true;
 }
@@ -63,7 +64,9 @@ export function craft(recipeId, notify) {
     return false;
   }
 
-  for (const [id, amount] of Object.entries(recipe.cost)) state.inventory[id] -= amount;
+  for (const [id, amount] of Object.entries(recipe.cost)) {
+    state.inventory[id] -= amount;
+  }
 
   if (recipe.tool) {
     state.tools[recipe.id] = true;
@@ -106,8 +109,51 @@ export function useItem(id, notify) {
   return true;
 }
 
+function faceResource(resource) {
+  const dx = resource.x - state.player.x;
+  const dy = resource.y - state.player.y;
+  const len = Math.hypot(dx, dy) || 1;
+  state.player.facingX = dx / len;
+  state.player.facingY = dy / len;
+}
+
+function triggerHarvestAnimation(resourceType) {
+  state.player.actionTimer = .34;
+  state.player.actionType = resourceType === "tree" ? "chop" : "mine";
+}
+
+function completeResource(resource, config, notify) {
+  for (const [id, amount] of Object.entries(config.yield || {})) {
+    addItem(id, amount);
+  }
+
+  delete state.resourceHits[resource.id];
+  state.removedResources.add(resource.id);
+
+  const rewardText = Object.entries(config.yield || {})
+    .map(([id, amount]) => {
+      const labels = {
+        branch: "branches",
+        fiber: "fibres",
+        stone: "pierre",
+        berries: "baies",
+        copper_ore: "cuivre",
+        tin_ore: "étain",
+        ore: "métal",
+        gold_ore: "or"
+      };
+      return "+" + amount + " " + (labels[id] || id);
+    })
+    .join(", ");
+
+  notify(rewardText || "Ressource récoltée.");
+  saveGame();
+  return true;
+}
+
 export function interact(notify) {
   if (state.gameOver) return false;
+
   const resource = getNearestResource();
   if (!resource) {
     notify("Rien à récolter à proximité.");
@@ -122,40 +168,37 @@ export function interact(notify) {
     return true;
   }
 
-  if (resource.type === "ore" && state.equipped !== "pickaxe") {
-    notify("Équipez la pioche.");
+  const config = RESOURCE_DATA[resource.type];
+  if (!config) {
+    notify("Cette ressource n'est pas encore récoltable.");
     return false;
   }
 
-  if (resource.type === "tree" && state.equipped !== "axe") {
-    notify("Équipez la hache.");
+  if (config.tool && state.equipped !== config.tool) {
+    notify(config.tool === "axe" ? "Équipez la hache." : "Équipez la pioche.");
     return false;
   }
 
-  if (resource.type === "branch") {
-    const n = state.equipped === "axe" ? 4 : 2;
-    addItem("branch", n);
-    notify("+" + n + " branches");
-  } else if (resource.type === "fiber") {
-    addItem("fiber", 3);
-    notify("+3 fibres");
-  } else if (resource.type === "stone") {
-    const n = state.equipped === "pickaxe" ? 3 : 1;
-    addItem("stone", n);
-    notify("+" + n + " pierre");
-  } else if (resource.type === "ore") {
-    addItem("ore", 3);
-    notify("+3 minerai");
-  } else if (resource.type === "berries") {
-    addItem("berries", 3);
-    addItem("fiber", 1);
-    notify("+3 baies, +1 fibre");
-  } else if (resource.type === "tree") {
-    addItem("branch", 7);
-    notify("+7 branches");
+  faceResource(resource);
+
+  if (!config.tool) {
+    return completeResource(resource, config, notify);
   }
 
-  state.removedResources.add(resource.id);
+  triggerHarvestAnimation(resource.type);
+
+  const currentHits = (state.resourceHits[resource.id] || 0) + 1;
+  state.resourceHits[resource.id] = currentHits;
+
+  if (currentHits >= config.hits) {
+    return completeResource(resource, config, notify);
+  }
+
+  notify(
+    (resource.type === "tree" ? "Coup de hache" : "Coup de pioche") +
+    " " + currentHits + "/" + config.hits
+  );
+
   saveGame();
   return true;
 }
