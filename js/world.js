@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=9";
+import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=10";
 
 function chunkKey(cx, cy) { return cx + ":" + cy; }
 function objectId(cx, cy, kind, i) { return cx + ":" + cy + ":" + kind + ":" + i; }
@@ -12,20 +12,30 @@ export function generateChunk(cx, cy) {
   const animals = [];
   const baseX = cx * CHUNK_SIZE;
   const baseY = cy * CHUNK_SIZE;
-  const resourceCount = 18 + Math.floor(hashRand(cx, cy, 401) * 9);
+  const resourceCount = 20 + Math.floor(hashRand(cx, cy, 401) * 10);
 
   for (let i = 0; i < resourceCount; i++) {
     const x = baseX + 30 + hashRand(cx, cy, i * 5 + 1) * (CHUNK_SIZE - 60);
     const y = baseY + 30 + hashRand(cx, cy, i * 5 + 2) * (CHUNK_SIZE - 60);
     const roll = hashRand(cx, cy, i * 5 + 3);
+
     let type = "branch";
-    if (roll < .22) type = "branch";
-    else if (roll < .43) type = "fiber";
-    else if (roll < .60) type = "stone";
-    else if (roll < .70) type = "ore";
-    else if (roll < .84) type = "berries";
-    else type = "tree";
-    resources.push({ id: objectId(cx, cy, "r", i), type, x, y, variant: Math.floor(hashRand(cx, cy, i * 5 + 4) * 4) });
+    if (roll < .18) type = "branch";
+    else if (roll < .34) type = "fiber";
+    else if (roll < .48) type = "stone";
+    else if (roll < .58) type = "berries";
+    else if (roll < .70) type = "tree";
+    else if (roll < .79) type = "large_rock";
+    else if (roll < .86) type = "copper_ore";
+    else if (roll < .91) type = "tin_ore";
+    else if (roll < .97) type = "ore";
+    else type = "gold_ore";
+
+    resources.push({
+      id: objectId(cx, cy, "r", i),
+      type, x, y,
+      variant: Math.floor(hashRand(cx, cy, i * 5 + 4) * 4)
+    });
   }
 
   if (hashRand(cx, cy, 997) > .55) {
@@ -63,7 +73,9 @@ export function generateChunk(cx, cy) {
       { id: "starter:fiber", type: "fiber", x: -94, y: 46, variant: 1 },
       { id: "starter:stone", type: "stone", x: 42, y: -96, variant: 0 },
       { id: "starter:berries", type: "berries", x: -74, y: -84, variant: 2 },
-      { id: "starter:ore", type: "ore", x: 156, y: 106, variant: 1 },
+      { id: "starter:tree", type: "tree", x: 132, y: 40, variant: 1 },
+      { id: "starter:rock", type: "large_rock", x: 160, y: 110, variant: 0 },
+      { id: "starter:copper", type: "copper_ore", x: -165, y: 112, variant: 1 },
       { id: "starter:pond", type: "pond", x: 190, y: -122, variant: 0 }
     );
   }
@@ -124,21 +136,25 @@ export function getNearestResource(maxDistance = 76) {
   const p = state.player;
   let nearest = null;
   let best = maxDistance;
+
   for (const chunk of getChunksNear(p.x, p.y, 1)) {
     for (const resource of chunk.resources) {
       if (resource.type !== "pond" && state.removedResources.has(resource.id)) continue;
       const d = distance(p.x, p.y, resource.x, resource.y);
-      if (d < best) { best = d; nearest = resource; }
+      if (d < best) {
+        best = d;
+        nearest = resource;
+      }
     }
   }
   return nearest;
 }
 
-
 export function getNearestAnimal(maxDistance = state.equipped === "bow" ? 160 : state.equipped === "spear" ? 90 : 50) {
   const p = state.player;
   let nearest = null;
   let best = maxDistance;
+
   for (const animal of getNearbyAnimals()) {
     const d = distance(p.x, p.y, animal.x, animal.y);
     if (d < best) {
