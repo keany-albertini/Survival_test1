@@ -1,1 +1,78 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Survival — Nini & Pepita Corporation</title><style>*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#080402;color:#f7dfac;font-family:Georgia,serif}.home{position:relative;min-height:100dvh;background:url('tavern-bg.png') center/cover no-repeat;overflow:hidden}.live-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.shade{position:absolute;inset:0;background:radial-gradient(circle at 50% 35%,transparent 18%,#0007 100%)}.ui{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:14px;text-align:center}.round{position:absolute;z-index:10;top:max(15px,env(safe-area-inset-top));width:46px;height:46px;border-radius:50%;border:2px solid #d6a04c;background:#0b2943;color:#ffd67b;font-size:21px}.music{left:14px}.logout{right:14px;display:none}.hero{margin-top:clamp(55px,8vh,90px)}.title-logo{width:min(96vw,500px);max-height:36vh;object-fit:contain;filter:drop-shadow(0 10px 12px #000b)}.menu{width:min(70vw,282px);display:grid;gap:11px;margin-top:18px}.btn{min-height:55px;display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;text-transform:uppercase;color:#e8c987;font-weight:800;border:2px solid #79633c;background:linear-gradient(#55564e,#1a1b18);box-shadow:0 8px 14px #000c}.studio-mark{position:fixed;z-index:8;right:max(10px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:clamp(70px,19vw,112px);height:68px;display:flex;align-items:flex-end;justify-content:flex-end;pointer-events:none}.studio-mark img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 4px 7px #000e);opacity:.92}</style></head><body><main class="home"><video class="live-bg" autoplay muted loop playsinline poster="tavern-bg.png"><source src="tavern-live.mp4" type="video/mp4"></video><div class="shade"></div><div class="ui"><button class="round music" id="music">♫</button><button class="round logout" id="logout" title="Déconnexion">↪</button><header class="hero"><img class="title-logo" src="Logo-titre.png" alt="Survival"></header><nav class="menu"><a class="btn" href="servers.html">▶ Jouer</a><a class="btn authBtn" href="login.html">♟ Connexion</a><a class="btn authBtn" href="login.html?mode=register">♟＋ Inscription</a></nav></div><footer class="studio-mark"><img src="nini-pepita-logo.png?v=2" alt="Nini & Pepita Corporation"></footer></main><audio id="theme" src="tavern-theme.mp3" loop></audio><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script>const a=document.getElementById('theme'),b=document.getElementById('music');a.volume=.32;let on=false;async function start(){try{await a.play();on=true;b.textContent='♫'}catch(e){b.textContent='♪'}}start();b.onclick=()=>{if(on){a.pause();on=false;b.textContent='♪'}else start()};const out=document.getElementById('logout'),authBtns=document.querySelectorAll('.authBtn');async function syncAuth(){const {data:{session}}=await sb.auth.getSession();authBtns.forEach(x=>x.style.display=session?'none':'flex');out.style.display=session?'block':'none'}out.onclick=async()=>{await sb.auth.signOut();sessionStorage.removeItem('survival_character_id');sessionStorage.removeItem('survival_server_id');sessionStorage.removeItem('survival_server_name');syncAuth()};syncAuth();sb.auth.onAuthStateChange(()=>syncAuth());</script></body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#18251a">
+  <title>Survie 2D — Prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="gameShell">
+    <canvas id="gameCanvas" aria-label="Jeu de survie 2D"></canvas>
+    <section id="hud">
+      <div class="top-row">
+        <div class="stats-card">
+          <div class="stat"><span>❤</span><div class="bar"><i id="healthBar"></i></div><b id="healthText">100</b></div>
+          <div class="stat"><span>🍗</span><div class="bar"><i id="hungerBar"></i></div><b id="hungerText">100</b></div>
+          <div class="stat"><span>💧</span><div class="bar"><i id="thirstBar"></i></div><b id="thirstText">100</b></div>
+          <div class="stat"><span>⚡</span><div class="bar"><i id="staminaBar"></i></div><b id="staminaText">100</b></div>
+        </div>
+        <div class="world-card">
+          <strong id="dayText">Jour 1</strong><span id="timeText">08:00</span><small id="coordsText">0, 0</small>
+        </div>
+      </div>
+      <div class="resource-strip">
+        <span>🪵 <b id="quickBranch">0</b></span><span>🌿 <b id="quickFiber">0</b></span>
+        <span>🪨 <b id="quickStone">0</b></span><span>⛏️ <b id="quickOre">0</b></span>
+        <span>🥩 <b id="quickMeat">0</b></span>
+      </div>
+      <div id="interactionPrompt" class="interaction-prompt" aria-live="polite"></div>
+      <div id="toast" class="toast" aria-live="polite"></div>
+      <div class="bottom-row">
+        <div class="tool-strip">
+          <span id="toolAxe" class="tool locked">🪓<small>Hache</small></span>
+          <span id="toolPick" class="tool locked">⛏️<small>Pioche</small></span>
+          <span id="toolSpear" class="tool locked">🔱<small>Lance</small></span>
+        </div>
+        <div class="menu-actions">
+          <button id="inventoryButton" type="button">Inventaire <kbd>I</kbd></button>
+          <button id="craftButton" type="button">Craft <kbd>C</kbd></button>
+        </div>
+      </div>
+    </section>
+
+    <aside id="inventoryPanel" class="panel" aria-hidden="true">
+      <header><div><span class="eyebrow">SAC À DOS</span><h2>Inventaire</h2></div><button class="close-panel" data-close="inventoryPanel" type="button">×</button></header>
+      <div id="inventoryGrid" class="inventory-grid"></div>
+      <p class="panel-note">Les outils fabriqués sont utilisés automatiquement.</p>
+    </aside>
+
+    <aside id="craftPanel" class="panel" aria-hidden="true">
+      <header><div><span class="eyebrow">FABRICATION</span><h2>Craft</h2></div><button class="close-panel" data-close="craftPanel" type="button">×</button></header>
+      <div id="craftList" class="craft-list"></div>
+    </aside>
+
+    <div id="deathScreen" class="death-screen" hidden>
+      <div><span class="eyebrow">FIN DE LA SURVIE</span><h1>Vous êtes mort</h1><p>Votre monde peut recommencer immédiatement.</p><button id="restartButton" type="button">Recommencer</button></div>
+    </div>
+
+    <section class="desktop-help">
+      <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> marcher</span><span><kbd>Shift</kbd> courir</span>
+      <span><kbd>E</kbd> récolter / boire</span><span><kbd>Espace</kbd> chasser</span>
+    </section>
+
+    <section class="touch-controls">
+      <div class="dpad">
+        <button type="button" data-move="up">▲</button><button type="button" data-move="left">◀</button>
+        <button type="button" data-move="down">▼</button><button type="button" data-move="right">▶</button>
+      </div>
+      <div class="touch-actions">
+        <button id="touchInteract" type="button">E<br><small>Action</small></button>
+        <button id="touchAttack" type="button">⚔<br><small>Chasser</small></button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
