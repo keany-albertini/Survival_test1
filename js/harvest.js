@@ -1,6 +1,6 @@
-import { state, RECIPES, ARMOR_DATA, clamp } from "./data.js?v=8";
-import { getNearestResource } from "./world.js?v=8";
-import { saveGame } from "./save.js?v=8";
+import { state, RECIPES, ARMOR_DATA, clamp } from "./data.js?v=9";
+import { getNearestResource } from "./world.js?v=9";
+import { saveGame } from "./save.js?v=9";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
