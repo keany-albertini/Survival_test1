@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=13";
+import { state, SAVE_KEY, clamp } from "./data.js?v=14";
 
 export function saveGame() {
   try {
@@ -115,7 +115,7 @@ export function resetGame() {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
   Object.assign(state.player, {
     x:0, y:0, health:100, hunger:100, thirst:100, stamina:100,
-    facingX:0, facingY:1, actionTimer:0, actionType:null
+    facingX:0, facingY:1, aimX:0, aimY:1, actionTimer:0, actionType:null
   });
   for (const key of Object.keys(state.inventory)) state.inventory[key] = 0;
   for (const key of Object.keys(state.tools)) state.tools[key] = false;
@@ -128,6 +128,8 @@ export function resetGame() {
     crafting: { level:1, xp:0 }
   };
   state.buildings = [];
+  state.openChestId = null;
+  state.projectiles = [];
   state.respawnPoint = null;
   state.buildMode = null;
   state.buildPreview = null;
