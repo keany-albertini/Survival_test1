@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=12";
+import { state, SAVE_KEY, clamp } from "./data.js?v=13";
 
 export function saveGame() {
   try {
@@ -13,6 +13,7 @@ export function saveGame() {
       armor: state.armor,
       skills: state.skills,
       buildings: state.buildings,
+      respawnPoint: state.respawnPoint,
       resourceHits: state.resourceHits,
       removedResources: Array.from(state.removedResources).slice(-3000),
       deadAnimals: Array.from(state.deadAnimals).slice(-1200),
@@ -69,6 +70,18 @@ export function loadGame() {
       );
     }
 
+    if (
+      data.respawnPoint &&
+      Number.isFinite(data.respawnPoint.x) &&
+      Number.isFinite(data.respawnPoint.y)
+    ) {
+      state.respawnPoint = {
+        x: data.respawnPoint.x,
+        y: data.respawnPoint.y,
+        bedId: typeof data.respawnPoint.bedId === "string" ? data.respawnPoint.bedId : null
+      };
+    }
+
     if (data.resourceHits && typeof data.resourceHits === "object") {
       for (const [id, hits] of Object.entries(data.resourceHits)) {
         if (Number.isFinite(hits) && hits > 0) state.resourceHits[id] = Math.floor(hits);
@@ -105,6 +118,7 @@ export function resetGame() {
     crafting: { level:1, xp:0 }
   };
   state.buildings = [];
+  state.respawnPoint = null;
   state.buildMode = null;
   state.buildPreview = null;
   state.resourceHits = {};
