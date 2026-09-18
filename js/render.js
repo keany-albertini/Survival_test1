@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=6";
-import { getChunksForView, getAnimalState } from "./world.js?v=6";
+import { state, hashRand, clamp } from "./data.js?v=8";
+import { getChunksForView, getAnimalState } from "./world.js?v=8";
 
 export class Renderer {
   constructor(canvas) {
@@ -152,18 +152,22 @@ export class Renderer {
     const faceX = pl.facingX || 0;
     const faceY = pl.facingY || 1;
 
+    const hasHelmet = state.armor.head === "leather_helmet";
+    const hasChest = state.armor.chest === "leather_chest";
+    const hasLegs = state.armor.legs === "leather_legs";
+    const hasBoots = state.armor.feet === "leather_boots";
+
     ctx.save();
     ctx.translate(p.x, p.y + bob);
 
-    // Ombre au sol
     ctx.fillStyle = "rgba(10,14,10,.26)";
     ctx.beginPath();
     ctx.ellipse(1, 9, 18, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Jambes et bottes
-    ctx.strokeStyle = "#29312b";
-    ctx.lineWidth = 6;
+    // Jambes
+    ctx.strokeStyle = hasLegs ? "#5b402d" : "#29312b";
+    ctx.lineWidth = hasLegs ? 7 : 6;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(-5, -2);
@@ -172,13 +176,22 @@ export class Renderer {
     ctx.lineTo(6 + step, 7);
     ctx.stroke();
 
-    ctx.fillStyle = "#3a2c20";
+    // Bottes
+    ctx.fillStyle = hasBoots ? "#6a4528" : "#3a2c20";
     ctx.beginPath();
-    ctx.ellipse(-7 - step, 8, 5.5, 3.4, -.18, 0, Math.PI * 2);
-    ctx.ellipse(7 + step, 8, 5.5, 3.4, .18, 0, Math.PI * 2);
+    ctx.ellipse(-7 - step, 8, hasBoots ? 6 : 5.5, hasBoots ? 4 : 3.4, -.18, 0, Math.PI * 2);
+    ctx.ellipse(7 + step, 8, hasBoots ? 6 : 5.5, hasBoots ? 4 : 3.4, .18, 0, Math.PI * 2);
     ctx.fill();
+    if (hasBoots) {
+      ctx.strokeStyle = "#32251b";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(-11-step,8); ctx.lineTo(-3-step,8);
+      ctx.moveTo(3+step,8); ctx.lineTo(11+step,8);
+      ctx.stroke();
+    }
 
-    // Sac à dos derrière le corps
+    // Sac à dos
     ctx.fillStyle = "#5b432d";
     ctx.beginPath();
     ctx.ellipse(-8 - faceX * 2, -10 - faceY, 7, 11, -.15, 0, Math.PI * 2);
@@ -189,17 +202,28 @@ export class Renderer {
     ctx.arc(-8 - faceX * 2, -10 - faceY, 5, .2, Math.PI - .1);
     ctx.stroke();
 
-    // Corps / veste de survivant
-    ctx.fillStyle = "#445b43";
+    // Torse
+    ctx.fillStyle = hasChest ? "#6b4b31" : "#445b43";
     ctx.beginPath();
-    ctx.ellipse(0, -10, 11.5, 14.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -10, hasChest ? 12.5 : 11.5, 14.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Gilet plus clair
-    ctx.fillStyle = "#617257";
-    ctx.beginPath();
-    ctx.ellipse(0, -12, 7.5, 11, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (hasChest) {
+      ctx.fillStyle = "#8a6544";
+      ctx.beginPath();
+      ctx.moveTo(-8,-18); ctx.lineTo(8,-18); ctx.lineTo(10,-5); ctx.lineTo(0,-1); ctx.lineTo(-10,-5); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#3c2a1c";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0,-18); ctx.lineTo(0,-3);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = "#617257";
+      ctx.beginPath();
+      ctx.ellipse(0, -12, 7.5, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Ceinture
     ctx.fillStyle = "#493a29";
@@ -207,7 +231,7 @@ export class Renderer {
     ctx.fillStyle = "#b58b4e";
     ctx.fillRect(-2, -3, 4, 3);
 
-    // Sangle du sac
+    // Sangle
     ctx.strokeStyle = "#392f24";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -215,7 +239,6 @@ export class Renderer {
     ctx.lineTo(7, -2);
     ctx.stroke();
 
-    // Bras animés
     const armSwing = pl.moving ? Math.sin(phase) * 2.5 : 0;
     ctx.strokeStyle = "#c9976d";
     ctx.lineWidth = 5;
@@ -227,8 +250,7 @@ export class Renderer {
     ctx.lineTo(12 - armSwing, -4);
     ctx.stroke();
 
-    // Manchettes
-    ctx.strokeStyle = "#3b4f3c";
+    ctx.strokeStyle = hasChest ? "#6b4b31" : "#3b4f3c";
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.moveTo(-8, -15);
@@ -237,11 +259,9 @@ export class Renderer {
     ctx.lineTo(10 - armSwing * .4, -10);
     ctx.stroke();
 
-    // Cou
     ctx.fillStyle = "#c9976d";
     ctx.fillRect(-3, -25, 6, 7);
 
-    // Tête
     const headX = faceX * 1.5;
     const headY = -29 + faceY * .7;
     ctx.fillStyle = "#d6a47a";
@@ -249,14 +269,12 @@ export class Renderer {
     ctx.arc(headX, headY, 9, 0, Math.PI * 2);
     ctx.fill();
 
-    // Oreilles
     ctx.fillStyle = "#bd8965";
     ctx.beginPath();
     ctx.arc(headX - 8.5, headY, 2.2, 0, Math.PI * 2);
     ctx.arc(headX + 8.5, headY, 2.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cheveux
     ctx.fillStyle = "#3b2b20";
     ctx.beginPath();
     ctx.arc(headX, headY - 2.5, 8.8, Math.PI, Math.PI * 2);
@@ -264,22 +282,28 @@ export class Renderer {
     ctx.quadraticCurveTo(headX + 2, headY - 8, headX - 7, headY - 3);
     ctx.fill();
 
-    // Bandeau de survivant
-    ctx.strokeStyle = "#8c493e";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(headX - 8, headY - 1);
-    ctx.lineTo(headX + 8, headY - 1);
-    ctx.stroke();
-    ctx.fillStyle = "#8c493e";
-    ctx.beginPath();
-    ctx.moveTo(headX - 8, headY);
-    ctx.lineTo(headX - 12, headY + 4);
-    ctx.lineTo(headX - 8, headY + 3);
-    ctx.closePath();
-    ctx.fill();
+    if (hasHelmet) {
+      ctx.fillStyle = "#745138";
+      ctx.beginPath();
+      ctx.arc(headX, headY - 3, 9.8, Math.PI, Math.PI * 2);
+      ctx.lineTo(headX + 9, headY - 1);
+      ctx.lineTo(headX - 9, headY - 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "#3c2a1d";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(headX-7,headY-5); ctx.lineTo(headX+7,headY-5);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = "#8c493e";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(headX - 8, headY - 1);
+      ctx.lineTo(headX + 8, headY - 1);
+      ctx.stroke();
+    }
 
-    // Visage tourné dans la direction de marche
     const eyeOffsetX = faceX * 2.2;
     const eyeOffsetY = faceY * 1.2;
     ctx.fillStyle = "#1c1d18";
@@ -288,59 +312,45 @@ export class Renderer {
     ctx.arc(headX + 2.5 + eyeOffsetX, headY + eyeOffsetY, 1, 0, Math.PI * 2);
     ctx.fill();
 
-    // Petit foulard
     ctx.fillStyle = "#7d6a43";
     ctx.beginPath();
-    ctx.moveTo(-6, -21);
-    ctx.lineTo(6, -21);
-    ctx.lineTo(2, -17);
-    ctx.lineTo(-2, -17);
-    ctx.closePath();
+    ctx.moveTo(-6, -21); ctx.lineTo(6, -21); ctx.lineTo(2, -17); ctx.lineTo(-2, -17); ctx.closePath();
     ctx.fill();
 
-    // Outil visible selon ce qui a été fabriqué
+    // Équipement en main
     if (state.equipped === "spear") {
-      ctx.strokeStyle = "#6a4728";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(9, -12);
-      ctx.lineTo(19 + faceX * 18, -22 + faceY * 18);
-      ctx.stroke();
+      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(9,-12); ctx.lineTo(19+faceX*18,-22+faceY*18); ctx.stroke();
       ctx.fillStyle = "#aab0a7";
-      ctx.beginPath();
-      ctx.moveTo(19 + faceX * 18, -26 + faceY * 18);
-      ctx.lineTo(15 + faceX * 18, -19 + faceY * 18);
-      ctx.lineTo(23 + faceX * 18, -19 + faceY * 18);
-      ctx.closePath();
-      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(19+faceX*18,-26+faceY*18); ctx.lineTo(15+faceX*18,-19+faceY*18); ctx.lineTo(23+faceX*18,-19+faceY*18); ctx.closePath(); ctx.fill();
     } else if (state.equipped === "axe") {
-      ctx.strokeStyle = "#6a4728";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(10, -12);
-      ctx.lineTo(16, -28);
-      ctx.stroke();
+      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(16,-28); ctx.stroke();
       ctx.fillStyle = "#8d9490";
-      ctx.beginPath();
-      ctx.moveTo(13, -30);
-      ctx.lineTo(22, -34);
-      ctx.lineTo(22, -28);
-      ctx.lineTo(15, -25);
-      ctx.closePath();
-      ctx.fill();
+      ctx.beginPath(); ctx.moveTo(13,-30); ctx.lineTo(22,-34); ctx.lineTo(22,-28); ctx.lineTo(15,-25); ctx.closePath(); ctx.fill();
     } else if (state.equipped === "pickaxe") {
-      ctx.strokeStyle = "#6a4728";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(10, -12);
-      ctx.lineTo(17, -29);
-      ctx.stroke();
-      ctx.strokeStyle = "#929894";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(10, -31);
-      ctx.lineTo(24, -28);
-      ctx.stroke();
+      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(17,-29); ctx.stroke();
+      ctx.strokeStyle = "#929894"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(10,-31); ctx.lineTo(24,-28); ctx.stroke();
+    } else if (state.equipped === "sword") {
+      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(10,-10); ctx.lineTo(15,-18); ctx.stroke();
+      ctx.strokeStyle = "#c7cfca"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(15,-18); ctx.lineTo(23+faceX*8,-30+faceY*8); ctx.stroke();
+      ctx.strokeStyle = "#8f6a3f"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(11,-19); ctx.lineTo(19,-15); ctx.stroke();
+    } else if (state.equipped === "bow") {
+      ctx.strokeStyle = "#8a5b31"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(15,-17,13,-1.15,1.15); ctx.stroke();
+      ctx.strokeStyle = "#d2c5a4"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(20,-29); ctx.lineTo(20,-5); ctx.stroke();
+    } else if (state.equipped === "shield") {
+      ctx.fillStyle = "#755235";
+      ctx.beginPath(); ctx.ellipse(13,-11,9,12,.15,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle = "#a88455"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(13,-11,7,10,.15,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "#a88455"; ctx.beginPath(); ctx.arc(13,-11,2,0,Math.PI*2); ctx.fill();
     }
 
     ctx.restore();
