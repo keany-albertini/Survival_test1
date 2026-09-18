@@ -1,18 +1,18 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=10";
-import { Renderer } from "./render.js?v=10";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=10";
-import { hunt, updateAnimals } from "./fauna.js?v=10";
-import { getSmartTarget } from "./world.js?v=10";
-import { updateSurvival } from "./survival.js?v=10";
-import { saveGame, loadGame, resetGame } from "./save.js?v=10";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=12";
+import { Renderer } from "./render.js?v=12";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=12";
+import { hunt, updateAnimals } from "./fauna.js?v=12";
+import { getSmartTarget } from "./world.js?v=12";
+import { updateSurvival } from "./survival.js?v=12";
+import { saveGame, loadGame, resetGame } from "./save.js?v=12";
 import {
   startPlacement, cancelPlacement, placeCurrent,
   updateBuildPreview, isBuildMode
-} from "./building.js?v=10";
+} from "./building.js?v=12";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, toggleInventory, openInventory, closePanels
-} from "./ui.js?v=10";
+} from "./ui.js?v=12";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
