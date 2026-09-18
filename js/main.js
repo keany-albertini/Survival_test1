@@ -1,18 +1,18 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=9";
-import { Renderer } from "./render.js?v=9";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=9";
-import { hunt, updateAnimals } from "./fauna.js?v=9";
-import { getSmartTarget } from "./world.js?v=9";
-import { updateSurvival } from "./survival.js?v=9";
-import { saveGame, loadGame, resetGame } from "./save.js?v=9";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=10";
+import { Renderer } from "./render.js?v=10";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=10";
+import { hunt, updateAnimals } from "./fauna.js?v=10";
+import { getSmartTarget } from "./world.js?v=10";
+import { updateSurvival } from "./survival.js?v=10";
+import { saveGame, loadGame, resetGame } from "./save.js?v=10";
 import {
   startPlacement, cancelPlacement, placeCurrent,
   updateBuildPreview, isBuildMode
-} from "./building.js?v=9";
+} from "./building.js?v=10";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, toggleInventory, openInventory, closePanels
-} from "./ui.js?v=9";
+} from "./ui.js?v=10";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
@@ -73,6 +73,11 @@ function inputVector() {
 
 function update(dt) {
   if (state.gameOver) return;
+
+  if (state.player.actionTimer > 0) {
+    state.player.actionTimer = Math.max(0, state.player.actionTimer - dt);
+    if (state.player.actionTimer <= 0) state.player.actionType = null;
+  }
 
   const v = inputVector();
   const moving = v.strength > 0;
