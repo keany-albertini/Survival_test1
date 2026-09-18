@@ -208,10 +208,11 @@ export function placeCurrent(notify) {
   return true;
 }
 
-export function getNearestBuilding(maxDistance = 64) {
+export function getNearestBuilding(maxDistance = 64, type = null) {
   let best = null;
   let bestDistance = maxDistance;
   for (const building of state.buildings) {
+    if (type && building.type !== type) continue;
     const d = distance(state.player.x, state.player.y, building.x, building.y);
     if (d < bestDistance) {
       best = building;
