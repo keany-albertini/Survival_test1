@@ -1,8 +1,9 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
-} from "./data.js?v=10";
-import { canAfford } from "./harvest.js?v=10";
-import { getSmartTarget } from "./world.js?v=10";
+} from "./data.js?v=12";
+import { canAfford } from "./harvest.js?v=12";
+import { getSmartTarget } from "./world.js?v=12";
+import { SKILL_DATA, getSkillProgress } from "./skills.js?v=12";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -23,6 +24,7 @@ export const ui = {
   inventoryGrid: document.getElementById("inventoryGrid"),
   craftList: document.getElementById("craftList"),
   equipmentSlots: document.getElementById("equipmentSlots"),
+  skillsList: document.getElementById("skillsList"),
   deathScreen: document.getElementById("deathScreen"),
   touchAction: document.getElementById("touchAction"),
   touchActionIcon: document.getElementById("touchActionIcon"),
@@ -32,7 +34,8 @@ export const ui = {
   tabPanels: {
     inventory: document.getElementById("inventoryTabInventory"),
     craft: document.getElementById("inventoryTabCraft"),
-    equipment: document.getElementById("inventoryTabEquipment")
+    equipment: document.getElementById("inventoryTabEquipment"),
+    skills: document.getElementById("inventoryTabSkills")
   }
 };
 
@@ -47,6 +50,7 @@ let quickbarSignature = "";
 let inventorySignature = "";
 let craftSignature = "";
 let equipmentSignature = "";
+let skillsSignature = "";
 
 export function configureUI(handlers) {
   useHandler = handlers.useItem;
@@ -102,6 +106,7 @@ export function setInventoryTab(tab) {
   if (tab === "inventory") inventorySignature = "";
   if (tab === "craft") craftSignature = "";
   if (tab === "equipment") equipmentSignature = "";
+  if (tab === "skills") skillsSignature = "";
   if (isPanelOpen()) updateUI();
 }
 
@@ -284,6 +289,26 @@ function renderEquipment() {
   }
 }
 
+function renderSkills() {
+  const signature = JSON.stringify(state.skills);
+  if (signature === skillsSignature) return;
+  skillsSignature = signature;
+  ui.skillsList.innerHTML = "";
+
+  for (const [id, data] of Object.entries(SKILL_DATA)) {
+    const progress = getSkillProgress(id);
+    const card = document.createElement("article");
+    card.className = "skill-card";
+    card.innerHTML =
+      '<div class="skill-head"><span class="skill-icon">' + data.icon + '</span><div><strong>' +
+      data.label + '</strong><small>Niveau ' + progress.level + '</small></div><b>' +
+      progress.xp + '/' + progress.needed + ' XP</b></div>' +
+      '<div class="skill-bar"><i style="width:' + progress.percent.toFixed(1) + '%"></i></div>' +
+      '<p>' + data.description + '</p>';
+    ui.skillsList.appendChild(card);
+  }
+}
+
 function renderQuickbar() {
   const signature = JSON.stringify({
     equipped: state.equipped,
@@ -349,6 +374,7 @@ function invalidateAll() {
   inventorySignature = "";
   craftSignature = "";
   equipmentSignature = "";
+  skillsSignature = "";
 }
 
 function resourceAction(resource) {
@@ -439,5 +465,6 @@ export function updateUI() {
     if (activeTab === "inventory") renderInventory();
     else if (activeTab === "craft") renderCraft();
     else if (activeTab === "equipment") renderEquipment();
+    else if (activeTab === "skills") renderSkills();
   }
 }
