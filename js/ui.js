@@ -1,6 +1,6 @@
-import { state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, RECIPES, RESOURCE_INFO } from "./data.js";
-import { canAfford } from "./harvest.js";
-import { getSmartTarget } from "./world.js";
+import { state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, RECIPES, RESOURCE_INFO } from "./data.js?v=6";
+import { canAfford } from "./harvest.js?v=6";
+import { getSmartTarget } from "./world.js?v=6";
 
 export const ui = {
   healthBar: document.getElementById("healthBar"),
