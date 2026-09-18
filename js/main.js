@@ -8,7 +8,7 @@ import { saveGame, loadGame, resetGame } from "./save.js?v=6";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, togglePanel, closePanels, setPanel
-} from "./ui.js?v=6";
+} from "./ui.js?v=7";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
