@@ -1,6 +1,6 @@
 export const WORLD_SEED = 73191;
 export const CHUNK_SIZE = 520;
-export const SAVE_KEY = "survie-2d-prototype-v2";
+export const SAVE_KEY = "survie-2d-prototype-v1";
 
 export const ITEM_DATA = {
   branch: { label: "Branches", icon: "🪵", description: "Bois léger de fabrication." },
