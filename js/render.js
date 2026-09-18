@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=9";
-import { getChunksForView, getAnimalState } from "./world.js?v=9";
+import { state, hashRand, clamp } from "./data.js?v=10";
+import { getChunksForView, getAnimalState } from "./world.js?v=10";
 
 export class Renderer {
   constructor(canvas) {
@@ -104,11 +104,43 @@ export class Renderer {
       ctx.strokeStyle = "#294e2b"; ctx.lineWidth = 3;
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 3, 4); ctx.quadraticCurveTo(i * 4, -10, i * 7, -18 - Math.abs(i) * 2); ctx.stroke(); }
       ctx.fillStyle = "#678d43"; ctx.beginPath(); ctx.ellipse(-7, -9, 7, 3, -.7, 0, Math.PI * 2); ctx.ellipse(8, -12, 7, 3, .6, 0, Math.PI * 2); ctx.fill();
-    } else if (item.type === "stone" || item.type === "ore") {
-      ctx.fillStyle = item.type === "ore" ? "#5b625c" : "#777b70";
-      ctx.beginPath(); ctx.moveTo(-16,6); ctx.lineTo(-11,-9); ctx.lineTo(4,-14); ctx.lineTo(16,-4); ctx.lineTo(13,8); ctx.lineTo(-5,12); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.13)"; ctx.beginPath(); ctx.moveTo(-10,-7); ctx.lineTo(4,-12); ctx.lineTo(8,-6); ctx.lineTo(-4,-3); ctx.closePath(); ctx.fill();
-      if (item.type === "ore") { ctx.fillStyle = "#b78d4d"; ctx.beginPath(); ctx.arc(-4,-4,2.5,0,Math.PI*2); ctx.arc(8,1,2,0,Math.PI*2); ctx.fill(); }
+    } else if (item.type === "stone") {
+      ctx.fillStyle = "#777b70";
+      ctx.beginPath(); ctx.moveTo(-9,4); ctx.lineTo(-6,-6); ctx.lineTo(3,-9); ctx.lineTo(10,-3); ctx.lineTo(8,6); ctx.lineTo(-3,8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.13)";
+      ctx.beginPath(); ctx.moveTo(-5,-5); ctx.lineTo(3,-8); ctx.lineTo(6,-4); ctx.lineTo(-2,-1); ctx.closePath(); ctx.fill();
+    } else if (["large_rock","copper_ore","tin_ore","ore","gold_ore"].includes(item.type)) {
+      const base = item.type === "large_rock" ? "#6f736d" : "#555d59";
+      ctx.fillStyle = base;
+      ctx.beginPath(); ctx.moveTo(-22,9); ctx.lineTo(-17,-12); ctx.lineTo(2,-19); ctx.lineTo(21,-7); ctx.lineTo(18,12); ctx.lineTo(-7,16); ctx.closePath(); ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,.12)";
+      ctx.beginPath(); ctx.moveTo(-14,-10); ctx.lineTo(2,-17); ctx.lineTo(9,-10); ctx.lineTo(-4,-5); ctx.closePath(); ctx.fill();
+
+      const veinColors = {
+        copper_ore: "#b56f45",
+        tin_ore: "#c9cfcb",
+        ore: "#9a7250",
+        gold_ore: "#d9b449"
+      };
+      if (veinColors[item.type]) {
+        ctx.strokeStyle = veinColors[item.type];
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-12,-5); ctx.lineTo(-3,0); ctx.lineTo(4,-8);
+        ctx.moveTo(2,6); ctx.lineTo(10,1); ctx.lineTo(15,6);
+        ctx.stroke();
+      }
+
+      const hits = state.resourceHits[item.id] || 0;
+      if (hits > 0) {
+        ctx.strokeStyle = "rgba(30,30,26,.65)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-2,-2); ctx.lineTo(-7,4); ctx.lineTo(-3,9);
+        if (hits > 2) { ctx.moveTo(4,-4); ctx.lineTo(8,3); ctx.lineTo(3,8); }
+        ctx.stroke();
+      }
     } else if (item.type === "berries") {
       ctx.fillStyle = "#315f34"; ctx.beginPath(); ctx.arc(-6,-7,10,0,Math.PI*2); ctx.arc(7,-8,11,0,Math.PI*2); ctx.arc(1,-16,9,0,Math.PI*2); ctx.fill();
       ctx.fillStyle = "#46519b"; [[-8,-8],[3,-14],[10,-6],[-1,-3]].forEach(b => { ctx.beginPath(); ctx.arc(b[0],b[1],2.4,0,Math.PI*2); ctx.fill(); });
@@ -345,6 +377,8 @@ export class Renderer {
     ctx.lineTo(7, -2);
     ctx.stroke();
 
+    const actionProgress = pl.actionTimer > 0 ? 1 - Math.min(1, pl.actionTimer / .34) : 0;
+    const actionSwing = pl.actionTimer > 0 ? Math.sin(actionProgress * Math.PI) * 9 : 0;
     const armSwing = pl.moving ? Math.sin(phase) * 2.5 : 0;
     ctx.strokeStyle = "#c9976d";
     ctx.lineWidth = 5;
@@ -353,7 +387,7 @@ export class Renderer {
     ctx.moveTo(-8, -15);
     ctx.lineTo(-12 + armSwing, -4);
     ctx.moveTo(8, -15);
-    ctx.lineTo(12 - armSwing, -4);
+    ctx.lineTo(12 - armSwing + actionSwing * .35, -4 - actionSwing * .55);
     ctx.stroke();
 
     ctx.strokeStyle = hasChest ? "#6b4b31" : "#3b4f3c";
@@ -362,7 +396,7 @@ export class Renderer {
     ctx.moveTo(-8, -15);
     ctx.lineTo(-10 + armSwing * .4, -10);
     ctx.moveTo(8, -15);
-    ctx.lineTo(10 - armSwing * .4, -10);
+    ctx.lineTo(10 - armSwing * .4 + actionSwing * .2, -10 - actionSwing * .3);
     ctx.stroke();
 
     ctx.fillStyle = "#c9976d";
@@ -430,15 +464,17 @@ export class Renderer {
       ctx.fillStyle = "#aab0a7";
       ctx.beginPath(); ctx.moveTo(19+faceX*18,-26+faceY*18); ctx.lineTo(15+faceX*18,-19+faceY*18); ctx.lineTo(23+faceX*18,-19+faceY*18); ctx.closePath(); ctx.fill();
     } else if (state.equipped === "axe") {
+      const swingY = actionSwing;
       ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(16,-28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(16 + swingY*.25,-28 + swingY*.8); ctx.stroke();
       ctx.fillStyle = "#8d9490";
-      ctx.beginPath(); ctx.moveTo(13,-30); ctx.lineTo(22,-34); ctx.lineTo(22,-28); ctx.lineTo(15,-25); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(13+swingY*.25,-30+swingY*.8); ctx.lineTo(22+swingY*.25,-34+swingY*.8); ctx.lineTo(22+swingY*.25,-28+swingY*.8); ctx.lineTo(15+swingY*.25,-25+swingY*.8); ctx.closePath(); ctx.fill();
     } else if (state.equipped === "pickaxe") {
+      const swingY = actionSwing;
       ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(17,-29); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(17+swingY*.25,-29+swingY*.8); ctx.stroke();
       ctx.strokeStyle = "#929894"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-31); ctx.lineTo(24,-28); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(10+swingY*.25,-31+swingY*.8); ctx.lineTo(24+swingY*.25,-28+swingY*.8); ctx.stroke();
     } else if (state.equipped === "sword") {
       ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(10,-10); ctx.lineTo(15,-18); ctx.stroke();
