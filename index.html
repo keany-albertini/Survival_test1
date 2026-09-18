@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#18251a">
   <title>Survie 2D — Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
   <main id="gameShell">
@@ -84,6 +84,24 @@
       </section>
     </aside>
 
+    <aside id="chestPanel" class="panel chest-panel" aria-hidden="true">
+      <header>
+        <div><span class="eyebrow">STOCKAGE</span><h2>Coffre</h2></div>
+        <button id="closeChestButton" class="close-panel" type="button">×</button>
+      </header>
+      <div class="chest-columns">
+        <section>
+          <h3>🎒 Inventaire</h3>
+          <div id="chestPlayerGrid" class="storage-grid"></div>
+        </section>
+        <section>
+          <h3>📦 Coffre</h3>
+          <div id="chestStorageGrid" class="storage-grid"></div>
+        </section>
+      </div>
+      <p class="panel-note">Déposer ou reprendre des objets ne les détruit pas. Le contenu reste sauvegardé dans ce coffre.</p>
+    </aside>
+
     <div id="deathScreen" class="death-screen" hidden>
       <div><span class="eyebrow">FIN DE LA SURVIE</span><h1>Vous êtes mort</h1><p id="deathMessage">Vous allez réapparaître au point de départ.</p><button id="restartButton" type="button">Réapparaître</button></div>
     </div>
@@ -120,6 +138,6 @@
     </section>
   </main>
 
-  <script type="module" src="js/main.js?v=13"></script>
+  <script type="module" src="js/main.js?v=14"></script>
 </body>
 </html>
