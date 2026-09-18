@@ -10,25 +10,44 @@
 <body>
   <main id="gameShell">
     <canvas id="gameCanvas" aria-label="Jeu de survie 2D"></canvas>
+
     <section id="hud">
       <div class="top-row">
         <div class="stats-card">
-          <div class="stat"><span>❤</span><div class="bar"><i id="healthBar"></i></div><b id="healthText">100</b></div>
-          <div class="stat"><span>🍗</span><div class="bar"><i id="hungerBar"></i></div><b id="hungerText">100</b></div>
-          <div class="stat"><span>💧</span><div class="bar"><i id="thirstBar"></i></div><b id="thirstText">100</b></div>
-          <div class="stat"><span>⚡</span><div class="bar"><i id="staminaBar"></i></div><b id="staminaText">100</b></div>
+          <div class="stat stat-health">
+            <span class="stat-icon">❤</span>
+            <div class="stat-main"><div class="stat-head"><small>VIE</small><b id="healthText">100</b></div><div class="bar"><i id="healthBar"></i></div></div>
+          </div>
+          <div class="stat stat-hunger">
+            <span class="stat-icon">🍗</span>
+            <div class="stat-main"><div class="stat-head"><small>FAIM</small><b id="hungerText">100</b></div><div class="bar"><i id="hungerBar"></i></div></div>
+          </div>
+          <div class="stat stat-thirst">
+            <span class="stat-icon">💧</span>
+            <div class="stat-main"><div class="stat-head"><small>SOIF</small><b id="thirstText">100</b></div><div class="bar"><i id="thirstBar"></i></div></div>
+          </div>
+          <div class="stat stat-stamina">
+            <span class="stat-icon">⚡</span>
+            <div class="stat-main"><div class="stat-head"><small>ENDURANCE</small><b id="staminaText">100</b></div><div class="bar"><i id="staminaBar"></i></div></div>
+          </div>
         </div>
+
         <div class="world-card">
-          <strong id="dayText">Jour 1</strong><span id="timeText">08:00</span><small id="coordsText">0, 0</small>
+          <strong id="dayText">Jour 1</strong>
+          <span id="timeText">08:00</span>
+          <small id="coordsText">0, 0</small>
         </div>
       </div>
+
       <div class="resource-strip">
         <span>🪵 <b id="quickBranch">0</b></span><span>🌿 <b id="quickFiber">0</b></span>
         <span>🪨 <b id="quickStone">0</b></span><span>⛏️ <b id="quickOre">0</b></span>
         <span>🥩 <b id="quickMeat">0</b></span>
       </div>
+
       <div id="interactionPrompt" class="interaction-prompt" aria-live="polite"></div>
       <div id="toast" class="toast" aria-live="polite"></div>
+
       <div class="bottom-row">
         <div class="tool-strip">
           <span id="toolAxe" class="tool locked">🪓<small>Hache</small></span>
@@ -36,8 +55,8 @@
           <span id="toolSpear" class="tool locked">🔱<small>Lance</small></span>
         </div>
         <div class="menu-actions">
-          <button id="inventoryButton" type="button">Inventaire <kbd>I</kbd></button>
-          <button id="craftButton" type="button">Craft <kbd>C</kbd></button>
+          <button id="inventoryButton" type="button">🎒 Inventaire <kbd>I</kbd></button>
+          <button id="craftButton" type="button">🔨 Craft <kbd>C</kbd></button>
         </div>
       </div>
     </section>
@@ -58,18 +77,30 @@
     </div>
 
     <section class="desktop-help">
-      <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> marcher</span><span><kbd>Shift</kbd> courir</span>
-      <span><kbd>E</kbd> récolter / boire</span><span><kbd>Espace</kbd> chasser</span>
+      <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> marcher</span>
+      <span><kbd>Shift</kbd> courir</span>
+      <span><kbd>E</kbd> action intelligente</span>
+      <span><kbd>I</kbd> inventaire</span>
     </section>
 
-    <section class="touch-controls">
-      <div class="dpad">
-        <button type="button" data-move="up">▲</button><button type="button" data-move="left">◀</button>
-        <button type="button" data-move="down">▼</button><button type="button" data-move="right">▶</button>
+    <section class="touch-controls" aria-label="Commandes tactiles">
+      <div class="joystick-wrap">
+        <div id="joystickBase" class="joystick-base" aria-label="Joystick de déplacement">
+          <div class="joystick-ring"></div>
+          <div id="joystickKnob" class="joystick-knob"></div>
+        </div>
+        <small>Déplacement</small>
       </div>
-      <div class="touch-actions">
-        <button id="touchInteract" type="button">E<br><small>Action</small></button>
-        <button id="touchAttack" type="button">⚔<br><small>Chasser</small></button>
+
+      <div class="touch-right">
+        <div class="touch-menu">
+          <button id="touchInventory" type="button" aria-label="Ouvrir l'inventaire">🎒</button>
+          <button id="touchCraft" type="button" aria-label="Ouvrir le craft">🔨</button>
+        </div>
+        <button id="touchAction" class="action-button" type="button">
+          <span id="touchActionIcon">✋</span>
+          <small id="touchActionLabel">Action</small>
+        </button>
       </div>
     </section>
   </main>
