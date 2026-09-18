@@ -133,3 +133,40 @@ export function getNearestResource(maxDistance = 76) {
   }
   return nearest;
 }
+
+
+export function getNearestAnimal(maxDistance = state.tools.spear ? 88 : 45) {
+  const p = state.player;
+  let nearest = null;
+  let best = maxDistance;
+  for (const animal of getNearbyAnimals()) {
+    const d = distance(p.x, p.y, animal.x, animal.y);
+    if (d < best) {
+      best = d;
+      nearest = animal;
+    }
+  }
+  return nearest;
+}
+
+export function getSmartTarget() {
+  const p = state.player;
+  const resource = getNearestResource();
+  const animal = getNearestAnimal();
+
+  if (!resource && !animal) return null;
+  if (!resource) return { type: "animal", value: animal };
+  if (!animal) return { type: "resource", value: resource };
+
+  const resourceUsable =
+    !(resource.type === "ore" && !state.tools.pickaxe) &&
+    !(resource.type === "tree" && !state.tools.axe);
+
+  if (!resourceUsable) return { type: "animal", value: animal };
+
+  const resourceDistance = distance(p.x, p.y, resource.x, resource.y);
+  const animalDistance = distance(p.x, p.y, animal.x, animal.y);
+  return animalDistance + 4 < resourceDistance
+    ? { type: "animal", value: animal }
+    : { type: "resource", value: resource };
+}
