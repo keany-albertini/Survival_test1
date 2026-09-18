@@ -1,9 +1,9 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
-} from "./data.js?v=12";
-import { canAfford } from "./harvest.js?v=12";
-import { getSmartTarget } from "./world.js?v=12";
-import { SKILL_DATA, getSkillProgress } from "./skills.js?v=12";
+} from "./data.js?v=13";
+import { canAfford } from "./harvest.js?v=13";
+import { getSmartTarget } from "./world.js?v=13";
+import { SKILL_DATA, getSkillProgress } from "./skills.js?v=13";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -26,6 +26,7 @@ export const ui = {
   equipmentSlots: document.getElementById("equipmentSlots"),
   skillsList: document.getElementById("skillsList"),
   deathScreen: document.getElementById("deathScreen"),
+  deathMessage: document.getElementById("deathMessage"),
   touchAction: document.getElementById("touchAction"),
   touchActionIcon: document.getElementById("touchActionIcon"),
   touchActionLabel: document.getElementById("touchActionLabel"),
@@ -458,6 +459,11 @@ export function updateUI() {
   ui.timeText.textContent = String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
   ui.coordsText.textContent = Math.round(state.player.x) + ", " + Math.round(state.player.y);
   ui.deathScreen.hidden = !state.gameOver;
+  if (state.gameOver && ui.deathMessage) {
+    ui.deathMessage.textContent = state.respawnPoint
+      ? "Vous réapparaîtrez au dernier lit posé."
+      : "Aucun lit posé : réapparition au point de départ.";
+  }
 
   renderQuickbar();
 
