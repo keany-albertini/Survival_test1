@@ -5,7 +5,8 @@ import { saveGame } from "./save.js";
 
 export function hunt(notify) {
   if (state.gameOver) return false;
-  const range = state.tools.spear ? 88 : 45;
+
+  const range = state.equipped === "spear" ? 88 : 48;
   let target = null;
   let best = range;
 
@@ -15,12 +16,17 @@ export function hunt(notify) {
   }
 
   if (!target) {
-    notify(state.tools.spear ? "Aucun animal à portée de lance." : "Approchez-vous davantage.");
+    notify(state.equipped === "spear" ? "Aucun animal à portée de lance." : "Approchez-vous davantage.");
     return false;
   }
 
-  target.hp -= state.tools.spear ? 2 : 1;
+  let damage = 1;
+  if (state.equipped === "spear") damage = 2;
+  else if (state.equipped === "axe" || state.equipped === "pickaxe") damage = 1.4;
+
+  target.hp -= damage;
   target.hurtTimer = .28;
+
   const dx = target.x - state.player.x;
   const dy = target.y - state.player.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -36,7 +42,7 @@ export function hunt(notify) {
     notify((target.type === "deer" ? "Petit cerf" : "Lapin") + " chassé : +" + meat + " viande.");
     saveGame();
   } else {
-    notify("Touché ! " + target.hp + "/" + target.maxHp + " PV");
+    notify("Touché ! " + Math.max(0, target.hp).toFixed(1) + "/" + target.maxHp + " PV");
   }
   return true;
 }
