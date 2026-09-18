@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=8";
-import { getChunksForView, getAnimalState } from "./world.js?v=8";
+import { state, hashRand, clamp } from "./data.js?v=9";
+import { getChunksForView, getAnimalState } from "./world.js?v=9";
 
 export class Renderer {
   constructor(canvas) {
@@ -139,6 +139,112 @@ export class Renderer {
       ctx.strokeStyle = "#b6aa91"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(7,-15); ctx.lineTo(6,-26); ctx.moveTo(12,-15); ctx.lineTo(15,-25); ctx.stroke();
       ctx.fillStyle = "#151713"; ctx.beginPath(); ctx.arc(12,-10,1.2,0,Math.PI*2); ctx.fill();
     }
+    ctx.restore();
+  }
+
+  building(building, preview = false) {
+    const ctx = this.ctx;
+    const p = this.screen(building.x, building.y);
+    const type = building.type;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    if (preview) {
+      ctx.globalAlpha = .62;
+      ctx.strokeStyle = building.valid ? "#b9ef94" : "#ef8f82";
+      ctx.fillStyle = building.valid ? "rgba(121,210,104,.18)" : "rgba(222,79,72,.18)";
+      ctx.lineWidth = 2;
+    }
+
+    if (type === "wood_foundation") {
+      if (preview) {
+        ctx.fillRect(-34, -25, 68, 50);
+        ctx.strokeRect(-34, -25, 68, 50);
+      }
+
+      ctx.fillStyle = preview ? "rgba(132,91,54,.76)" : "#765233";
+      ctx.strokeStyle = preview ? ctx.strokeStyle : "#3e2d20";
+      ctx.lineWidth = preview ? 2 : 2;
+      ctx.beginPath();
+      ctx.moveTo(-32,-23); ctx.lineTo(32,-23); ctx.lineTo(32,23); ctx.lineTo(-32,23); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+
+      ctx.strokeStyle = preview ? "rgba(230,250,215,.52)" : "#a7794c";
+      ctx.lineWidth = 1.4;
+      for (let x = -24; x <= 24; x += 12) {
+        ctx.beginPath(); ctx.moveTo(x,-22); ctx.lineTo(x,22); ctx.stroke();
+      }
+      ctx.strokeStyle = preview ? "rgba(20,30,20,.25)" : "#4a3423";
+      ctx.beginPath(); ctx.moveTo(-31,0); ctx.lineTo(31,0); ctx.stroke();
+    } else if (type === "wood_wall") {
+      if (building.orientation === "v") {
+        if (preview) {
+          ctx.fillRect(-7,-25,14,50); ctx.strokeRect(-7,-25,14,50);
+        }
+        ctx.fillStyle = preview ? "rgba(125,86,52,.78)" : "#6e4a2e";
+        ctx.fillRect(-5,-24,10,48);
+        ctx.fillStyle = preview ? "rgba(180,130,85,.78)" : "#a16f43";
+        for (let y=-20; y<=16; y+=9) ctx.fillRect(-8,y,16,4);
+        ctx.fillStyle = "#3c2a1c";
+        ctx.fillRect(-7,-26,4,52); ctx.fillRect(3,-26,4,52);
+      } else {
+        if (preview) {
+          ctx.fillRect(-34,-7,68,14); ctx.strokeRect(-34,-7,68,14);
+        }
+        ctx.fillStyle = preview ? "rgba(125,86,52,.78)" : "#6e4a2e";
+        ctx.fillRect(-32,-5,64,10);
+        ctx.fillStyle = preview ? "rgba(180,130,85,.78)" : "#a16f43";
+        for (let x=-28; x<=24; x+=11) ctx.fillRect(x,-8,4,16);
+        ctx.fillStyle = "#3c2a1c";
+        ctx.fillRect(-34,-7,5,14); ctx.fillRect(29,-7,5,14);
+      }
+    } else if (type === "campfire") {
+      if (preview) {
+        ctx.beginPath(); ctx.arc(0,0,24,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      }
+      ctx.fillStyle = "#77756b";
+      for (let i=0;i<8;i++) {
+        const a=i/8*Math.PI*2;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*13,Math.sin(a)*8,5,0,Math.PI*2); ctx.fill();
+      }
+      ctx.strokeStyle="#5d3924"; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.moveTo(-10,5);ctx.lineTo(10,-5);ctx.moveTo(-10,-5);ctx.lineTo(10,5);ctx.stroke();
+      ctx.fillStyle="#e48d32"; ctx.beginPath(); ctx.moveTo(0,-17);ctx.quadraticCurveTo(12,-2,0,6);ctx.quadraticCurveTo(-11,-3,0,-17);ctx.fill();
+      ctx.fillStyle="#f1c75c"; ctx.beginPath(); ctx.moveTo(0,-10);ctx.quadraticCurveTo(6,-1,0,3);ctx.quadraticCurveTo(-5,-1,0,-10);ctx.fill();
+    } else if (type === "workbench") {
+      if (preview) { ctx.fillRect(-28,-18,56,36); ctx.strokeRect(-28,-18,56,36); }
+      ctx.fillStyle="#65452d"; ctx.fillRect(-26,-13,52,14);
+      ctx.fillStyle="#9a7047";
+      for(let x=-24;x<24;x+=12) ctx.fillRect(x,-12,10,12);
+      ctx.fillStyle="#473121"; ctx.fillRect(-22,1,5,17);ctx.fillRect(17,1,5,17);
+      ctx.fillStyle="#8e9390"; ctx.fillRect(-5,-18,18,4);
+    } else if (type === "forge") {
+      if (preview) { ctx.fillRect(-28,-24,56,48); ctx.strokeRect(-28,-24,56,48); }
+      ctx.fillStyle="#585a55"; ctx.beginPath(); ctx.ellipse(0,0,25,18,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#343631";ctx.beginPath();ctx.arc(0,-2,13,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#d86832";ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#6b6c67";ctx.fillRect(13,-25,8,25);
+    } else if (type === "bed") {
+      if (preview) { ctx.fillRect(-29,-18,58,36); ctx.strokeRect(-29,-18,58,36); }
+      ctx.fillStyle="#5a3e2a";ctx.fillRect(-27,-15,54,30);
+      ctx.fillStyle="#a79872";ctx.fillRect(-23,-12,46,24);
+      ctx.fillStyle="#d5caa7";ctx.fillRect(-20,-10,14,20);
+      ctx.strokeStyle="#3b2a1d";ctx.lineWidth=3;ctx.strokeRect(-27,-15,54,30);
+    } else if (type === "chest") {
+      if (preview) { ctx.fillRect(-22,-18,44,36); ctx.strokeRect(-22,-18,44,36); }
+      ctx.fillStyle="#76502f";ctx.fillRect(-20,-10,40,24);
+      ctx.fillStyle="#8e6037";ctx.beginPath();ctx.ellipse(0,-10,20,9,0,Math.PI,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#3c2a1b";ctx.lineWidth=2;ctx.strokeRect(-20,-10,40,24);
+      ctx.fillStyle="#c49a4e";ctx.fillRect(-3,-1,6,8);
+    }
+
+    if (preview && type !== "wood_foundation" && type !== "wood_wall") {
+      ctx.strokeStyle = building.valid ? "#b9ef94" : "#ef8f82";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.stroke();
+    }
+
     ctx.restore();
   }
 
@@ -374,6 +480,16 @@ export class Renderer {
     }
 
     const drawables = [];
+
+    for (const building of state.buildings) {
+      if (!this.visible(building.x, building.y, 120)) continue;
+      drawables.push({
+        y: building.type === "wood_foundation" ? building.y - 12 : building.y,
+        kind: "building",
+        value: building
+      });
+    }
+
     for (const chunk of chunks) {
       for (const r of chunk.resources) {
         if (r.type === "pond" || state.removedResources.has(r.id) || !this.visible(r.x,r.y,110)) continue;
@@ -390,8 +506,14 @@ export class Renderer {
     for (const d of drawables) {
       if (d.kind === "resource") this.resource(d.value);
       else if (d.kind === "animal") this.animal(d.value);
+      else if (d.kind === "building") this.building(d.value);
       else this.player();
     }
+
+    if (state.buildPreview && this.visible(state.buildPreview.x, state.buildPreview.y, 120)) {
+      this.building(state.buildPreview, true);
+    }
+
     this.night();
   }
 }
