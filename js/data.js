@@ -128,6 +128,13 @@ export const state = {
   equipped: null,
   armor: { head: null, chest: null, legs: null, feet: null },
 
+  skills: {
+    woodcutting: { level: 1, xp: 0 },
+    gathering: { level: 1, xp: 0 },
+    mining: { level: 1, xp: 0 },
+    crafting: { level: 1, xp: 0 }
+  },
+
   buildings: [],
   buildMode: null,
   buildPreview: null,
