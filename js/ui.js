@@ -1,8 +1,8 @@
 import {
-  state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO
-} from "./data.js?v=9";
-import { canAfford } from "./harvest.js?v=9";
-import { getSmartTarget } from "./world.js?v=9";
+  state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
+} from "./data.js?v=10";
+import { canAfford } from "./harvest.js?v=10";
+import { getSmartTarget } from "./world.js?v=10";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -138,13 +138,13 @@ function renderInventory() {
   ui.inventoryGrid.innerHTML = "";
 
   for (const [id, data] of Object.entries(TOOL_DATA)) {
+    if (!state.tools[id]) continue;
     ui.inventoryGrid.appendChild(toolCard(id, data));
   }
 
   for (const [id, data] of Object.entries(ITEM_DATA)) {
     const count = state.inventory[id] || 0;
-    const baseResource = ["branch","fiber","stone","ore","arrows","hide","berries","meat","water","bandage"].includes(id);
-    if (count <= 0 && !baseResource) continue;
+    if (count <= 0) continue;
 
     const card = document.createElement("div");
     card.className = "item-card";
@@ -307,7 +307,7 @@ function renderQuickbar() {
 
     if (isTool) {
       const owned = state.tools[id];
-      if (!owned) button.classList.add("locked");
+      if (!owned) continue;
       if (state.equipped === id) button.classList.add("selected");
 
       const ammo = id === "bow"
@@ -324,7 +324,7 @@ function renderQuickbar() {
       });
     } else {
       const count = state.inventory[id] || 0;
-      if (count <= 0) button.classList.add("empty");
+      if (count <= 0) continue;
       button.innerHTML =
         '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>' +
         '<span class="quick-count">' + count + '</span>';
@@ -357,7 +357,11 @@ function resourceAction(resource) {
     branch: { icon: "🪵", label: "Ramasser" },
     fiber: { icon: "🌿", label: "Récolter" },
     stone: { icon: "🪨", label: "Ramasser" },
-    ore: { icon: "⛏️", label: "Minerai" },
+    large_rock: { icon: "⛏️", label: "Rocher" },
+    copper_ore: { icon: "🟠", label: "Cuivre" },
+    tin_ore: { icon: "⚪", label: "Étain" },
+    ore: { icon: "⛏️", label: "Métal" },
+    gold_ore: { icon: "🟡", label: "Or" },
     berries: { icon: "🫐", label: "Cueillir" },
     tree: { icon: "🌲", label: "Arbre" }
   };
@@ -399,7 +403,10 @@ export function updatePrompt() {
     ui.touchActionLabel.textContent = "Attaquer";
   } else {
     const action = resourceAction(target.value);
-    ui.prompt.textContent = "ACTION — " + action.label;
+    const config = RESOURCE_DATA[target.value.type];
+    const hits = state.resourceHits[target.value.id] || 0;
+    const progress = config?.tool && config.hits > 1 ? " " + hits + "/" + config.hits : "";
+    ui.prompt.textContent = "ACTION — " + action.label + progress;
     ui.touchActionIcon.textContent = action.icon;
     ui.touchActionLabel.textContent = action.label;
   }
