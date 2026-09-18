@@ -38,6 +38,9 @@ let toastTimer = 0;
 let useHandler = null;
 let craftHandler = null;
 let equipHandler = null;
+let quickbarSignature = "";
+let inventorySignature = "";
+let craftSignature = "";
 
 export function configureUI(handlers) {
   useHandler = handlers.useItem;
@@ -95,6 +98,9 @@ function toolCard(id, data) {
 }
 
 function renderInventory() {
+  const signature = JSON.stringify({ tools: state.tools, equipped: state.equipped, inventory: state.inventory });
+  if (signature === inventorySignature) return;
+  inventorySignature = signature;
   ui.inventoryGrid.innerHTML = "";
 
   for (const [id, data] of Object.entries(TOOL_DATA)) {
@@ -121,6 +127,9 @@ function renderInventory() {
 }
 
 function renderCraft() {
+  const signature = JSON.stringify({ tools: state.tools, inventory: state.inventory });
+  if (signature === craftSignature) return;
+  craftSignature = signature;
   ui.craftList.innerHTML = "";
 
   for (const recipe of RECIPES) {
@@ -149,6 +158,16 @@ function renderCraft() {
 }
 
 function renderQuickbar() {
+  const signature = JSON.stringify({
+    equipped: state.equipped,
+    tools: state.tools,
+    berries: state.inventory.berries,
+    meat: state.inventory.meat,
+    water: state.inventory.water,
+    bandage: state.inventory.bandage
+  });
+  if (signature === quickbarSignature) return;
+  quickbarSignature = signature;
   ui.quickbar.innerHTML = "";
 
   for (const id of QUICKBAR_ORDER) {
