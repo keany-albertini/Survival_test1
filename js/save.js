@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=9";
+import { state, SAVE_KEY, clamp } from "./data.js?v=10";
 
 export function saveGame() {
   try {
@@ -12,6 +12,7 @@ export function saveGame() {
       equipped: state.equipped,
       armor: state.armor,
       buildings: state.buildings,
+      resourceHits: state.resourceHits,
       removedResources: Array.from(state.removedResources).slice(-3000),
       deadAnimals: Array.from(state.deadAnimals).slice(-1200),
       dayCount: state.dayCount,
@@ -58,6 +59,12 @@ export function loadGame() {
       );
     }
 
+    if (data.resourceHits && typeof data.resourceHits === "object") {
+      for (const [id, hits] of Object.entries(data.resourceHits)) {
+        if (Number.isFinite(hits) && hits > 0) state.resourceHits[id] = Math.floor(hits);
+      }
+    }
+
     if (Array.isArray(data.removedResources)) data.removedResources.forEach(id => state.removedResources.add(id));
     if (Array.isArray(data.deadAnimals)) data.deadAnimals.forEach(id => state.deadAnimals.add(id));
     if (Number.isFinite(data.dayCount)) state.dayCount = Math.max(1, Math.floor(data.dayCount));
@@ -73,7 +80,10 @@ export function loadGame() {
 
 export function resetGame() {
   try { localStorage.removeItem(SAVE_KEY); } catch (_) {}
-  Object.assign(state.player, { x:0, y:0, health:100, hunger:100, thirst:100, stamina:100, facingX:0, facingY:1 });
+  Object.assign(state.player, {
+    x:0, y:0, health:100, hunger:100, thirst:100, stamina:100,
+    facingX:0, facingY:1, actionTimer:0, actionType:null
+  });
   for (const key of Object.keys(state.inventory)) state.inventory[key] = 0;
   for (const key of Object.keys(state.tools)) state.tools[key] = false;
   state.equipped = null;
@@ -81,6 +91,7 @@ export function resetGame() {
   state.buildings = [];
   state.buildMode = null;
   state.buildPreview = null;
+  state.resourceHits = {};
   state.removedResources.clear();
   state.deadAnimals.clear();
   state.animalStates.clear();
