@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, state, hashRand, distance } from "./data.js";
+import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=6";
 
 function chunkKey(cx, cy) { return cx + ":" + cy; }
 function objectId(cx, cy, kind, i) { return cx + ":" + cy + ":" + kind + ":" + i; }
