@@ -1,12 +1,14 @@
-import { state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, RECIPES, RESOURCE_INFO } from "./data.js?v=6";
-import { canAfford } from "./harvest.js?v=6";
-import { getSmartTarget } from "./world.js?v=6";
+import {
+  state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO
+} from "./data.js?v=8";
+import { canAfford } from "./harvest.js?v=8";
+import { getSmartTarget } from "./world.js?v=8";
 
 export const ui = {
-  healthBar: document.getElementById("healthBar"),
-  hungerBar: document.getElementById("hungerBar"),
-  thirstBar: document.getElementById("thirstBar"),
-  staminaBar: document.getElementById("staminaBar"),
+  healthCircle: document.getElementById("healthCircle"),
+  hungerCircle: document.getElementById("hungerCircle"),
+  thirstCircle: document.getElementById("thirstCircle"),
+  staminaCircle: document.getElementById("staminaCircle"),
   healthText: document.getElementById("healthText"),
   hungerText: document.getElementById("hungerText"),
   thirstText: document.getElementById("thirstText"),
@@ -18,34 +20,41 @@ export const ui = {
   toast: document.getElementById("toast"),
   quickbar: document.getElementById("quickbar"),
   inventoryPanel: document.getElementById("inventoryPanel"),
-  craftPanel: document.getElementById("craftPanel"),
   inventoryGrid: document.getElementById("inventoryGrid"),
   craftList: document.getElementById("craftList"),
+  equipmentSlots: document.getElementById("equipmentSlots"),
   deathScreen: document.getElementById("deathScreen"),
   touchAction: document.getElementById("touchAction"),
   touchActionIcon: document.getElementById("touchActionIcon"),
   touchActionLabel: document.getElementById("touchActionLabel"),
-  quick: {
-    branch: document.getElementById("quickBranch"),
-    fiber: document.getElementById("quickFiber"),
-    stone: document.getElementById("quickStone"),
-    ore: document.getElementById("quickOre"),
-    meat: document.getElementById("quickMeat")
+  tabs: Array.from(document.querySelectorAll(".inventory-tab")),
+  tabPanels: {
+    inventory: document.getElementById("inventoryTabInventory"),
+    craft: document.getElementById("inventoryTabCraft"),
+    equipment: document.getElementById("inventoryTabEquipment")
   }
 };
 
 let toastTimer = 0;
 let useHandler = null;
 let craftHandler = null;
-let equipHandler = null;
+let equipToolHandler = null;
+let equipArmorHandler = null;
+let activeTab = "inventory";
 let quickbarSignature = "";
 let inventorySignature = "";
 let craftSignature = "";
+let equipmentSignature = "";
 
 export function configureUI(handlers) {
   useHandler = handlers.useItem;
   craftHandler = handlers.craft;
-  equipHandler = handlers.equipTool;
+  equipToolHandler = handlers.equipTool;
+  equipArmorHandler = handlers.equipArmor;
+
+  for (const button of ui.tabs) {
+    button.addEventListener("click", () => setInventoryTab(button.dataset.tab));
+  }
 }
 
 export function showToast(message) {
@@ -56,51 +65,75 @@ export function showToast(message) {
 }
 
 export function isPanelOpen() {
-  return ui.inventoryPanel.classList.contains("open") || ui.craftPanel.classList.contains("open");
+  return ui.inventoryPanel.classList.contains("open");
 }
 
-export function setPanel(panel, open) {
-  for (const p of [ui.inventoryPanel, ui.craftPanel]) {
-    if (p !== panel) {
-      p.classList.remove("open");
-      p.setAttribute("aria-hidden", "true");
-    }
-  }
-  panel.classList.toggle("open", open);
-  panel.setAttribute("aria-hidden", open ? "false" : "true");
-  if (open) updateUI();
-}
-
-export function togglePanel(panel) {
-  setPanel(panel, !panel.classList.contains("open"));
+export function openInventory(tab = "inventory") {
+  setInventoryTab(tab);
+  ui.inventoryPanel.classList.add("open");
+  ui.inventoryPanel.setAttribute("aria-hidden", "false");
+  updateUI();
 }
 
 export function closePanels() {
-  setPanel(ui.inventoryPanel, false);
-  setPanel(ui.craftPanel, false);
+  ui.inventoryPanel.classList.remove("open");
+  ui.inventoryPanel.setAttribute("aria-hidden", "true");
+}
+
+export function toggleInventory(tab = activeTab) {
+  if (isPanelOpen() && activeTab === tab) closePanels();
+  else openInventory(tab);
+}
+
+export function setInventoryTab(tab) {
+  if (!ui.tabPanels[tab]) tab = "inventory";
+  activeTab = tab;
+
+  for (const button of ui.tabs) {
+    button.classList.toggle("active", button.dataset.tab === tab);
+  }
+  for (const [name, panel] of Object.entries(ui.tabPanels)) {
+    panel.classList.toggle("active", name === tab);
+  }
+
+  if (tab === "inventory") inventorySignature = "";
+  if (tab === "craft") craftSignature = "";
+  if (tab === "equipment") equipmentSignature = "";
+  if (isPanelOpen()) updateUI();
 }
 
 function toolCard(id, data) {
   const owned = state.tools[id];
   const card = document.createElement("div");
   card.className = "item-card";
+
   card.innerHTML =
     '<div class="item-top"><span class="icon">' + data.icon + '</span><div><strong>' +
     data.label + '</strong><small>' + (owned ? (state.equipped === id ? "En main" : "Fabriqué") : "Non fabriqué") +
-    '</small></div></div><small>Outil équipable dans la barre rapide.</small>' +
+    '</small></div></div><small>Équipement de la barre rapide.</small>' +
     (owned ? '<button type="button">' + (state.equipped === id ? "Ranger" : "Équiper") + '</button>' : "");
+
   const button = card.querySelector("button");
-  if (button) button.addEventListener("click", () => {
-    if (equipHandler) equipHandler(id);
-    updateUI();
-  });
+  if (button) {
+    button.addEventListener("click", () => {
+      equipToolHandler?.(id);
+      invalidateAll();
+      updateUI();
+    });
+  }
   return card;
 }
 
 function renderInventory() {
-  const signature = JSON.stringify({ tools: state.tools, equipped: state.equipped, inventory: state.inventory });
+  const signature = JSON.stringify({
+    tools: state.tools,
+    equipped: state.equipped,
+    inventory: state.inventory,
+    armor: state.armor
+  });
   if (signature === inventorySignature) return;
   inventorySignature = signature;
+
   ui.inventoryGrid.innerHTML = "";
 
   for (const [id, data] of Object.entries(TOOL_DATA)) {
@@ -109,19 +142,36 @@ function renderInventory() {
 
   for (const [id, data] of Object.entries(ITEM_DATA)) {
     const count = state.inventory[id] || 0;
+    if (count <= 0 && !["branch","fiber","stone","ore","hide","berries","meat","water","bandage"].includes(id)) continue;
+
     const card = document.createElement("div");
     card.className = "item-card";
+
+    let action = "";
+    if (data.usable && count > 0) {
+      action = '<button type="button" data-use="' + id + '">Utiliser</button>';
+    } else if (data.armorSlot && count > 0) {
+      const equipped = state.armor[data.armorSlot] === id;
+      action = '<button type="button" data-armor="' + id + '">' + (equipped ? "Retirer" : "Équiper") + '</button>';
+    }
+
     card.innerHTML =
       '<div class="item-top"><span class="icon">' + data.icon + '</span><div><strong>' +
       data.label + '</strong><small>x' + count + '</small></div></div><small>' +
-      data.description + '</small>' +
-      (data.usable && count > 0 ? '<button type="button" data-use="' + id + '">Utiliser</button>' : "");
+      data.description + '</small>' + action;
 
-    const button = card.querySelector("[data-use]");
-    if (button) button.addEventListener("click", () => {
-      if (useHandler) useHandler(id);
+    card.querySelector("[data-use]")?.addEventListener("click", () => {
+      useHandler?.(id);
+      invalidateAll();
       updateUI();
     });
+
+    card.querySelector("[data-armor]")?.addEventListener("click", () => {
+      equipArmorHandler?.(id);
+      invalidateAll();
+      updateUI();
+    });
+
     ui.inventoryGrid.appendChild(card);
   }
 }
@@ -132,28 +182,95 @@ function renderCraft() {
   craftSignature = signature;
   ui.craftList.innerHTML = "";
 
+  let lastCategory = "";
   for (const recipe of RECIPES) {
-    const owned = recipe.tool && state.tools[recipe.id];
+    if (recipe.category !== lastCategory) {
+      lastCategory = recipe.category;
+      const heading = document.createElement("h3");
+      heading.className = "recipe-category";
+      heading.textContent = lastCategory;
+      ui.craftList.appendChild(heading);
+    }
+
+    const ownedTool = recipe.tool && state.tools[recipe.id];
     const affordable = canAfford(recipe.cost);
     const row = document.createElement("article");
     row.className = "recipe";
 
     const cost = Object.entries(recipe.cost).map(([id, amount]) => {
       const item = ITEM_DATA[id];
-      return '<span>' + item.icon + ' ' + (state.inventory[id] || 0) + '/' + amount + '</span>';
+      const have = state.inventory[id] || 0;
+      return '<span>' + (item?.icon || "•") + ' ' + have + '/' + amount + '</span>';
     }).join("");
 
     row.innerHTML =
       '<div class="recipe-head"><span class="recipe-icon">' + recipe.icon + '</span><div><h3>' +
       recipe.label + '</h3><p>' + recipe.description + '</p></div></div>' +
       '<div class="recipe-cost">' + cost + '</div><button type="button" ' +
-      ((!affordable || owned) ? "disabled" : "") + '>' + (owned ? "Déjà fabriqué" : "Fabriquer") + '</button>';
+      ((!affordable || ownedTool) ? "disabled" : "") + '>' +
+      (ownedTool ? "Déjà fabriqué" : "Fabriquer") + '</button>';
 
     row.querySelector("button").addEventListener("click", () => {
-      if (craftHandler) craftHandler(recipe.id);
+      craftHandler?.(recipe.id);
+      invalidateAll();
       updateUI();
     });
+
     ui.craftList.appendChild(row);
+  }
+}
+
+function renderEquipment() {
+  const signature = JSON.stringify({
+    armor: state.armor,
+    inventory: {
+      leather_helmet: state.inventory.leather_helmet,
+      leather_chest: state.inventory.leather_chest,
+      leather_legs: state.inventory.leather_legs,
+      leather_boots: state.inventory.leather_boots
+    }
+  });
+  if (signature === equipmentSignature) return;
+  equipmentSignature = signature;
+  ui.equipmentSlots.innerHTML = "";
+
+  const slots = [
+    ["head","Tête","🪖"],
+    ["chest","Torse","🥋"],
+    ["legs","Jambes","👖"],
+    ["feet","Pieds","🥾"]
+  ];
+
+  for (const [slot, label, icon] of slots) {
+    const equippedId = state.armor[slot];
+    const equippedData = equippedId ? ARMOR_DATA[equippedId] : null;
+
+    const box = document.createElement("div");
+    box.className = "equipment-slot";
+
+    const available = Object.entries(ARMOR_DATA)
+      .filter(([, data]) => data.slot === slot)
+      .filter(([id]) => (state.inventory[id] || 0) > 0);
+
+    let buttons = "";
+    if (equippedData) {
+      buttons += '<button type="button" class="secondary" data-armor="' + equippedId + '">Retirer</button>';
+    } else if (available.length) {
+      const [id, data] = available[0];
+      buttons += '<button type="button" data-armor="' + id + '">Équiper ' + data.label + '</button>';
+    }
+
+    box.innerHTML =
+      '<div class="equipment-slot-head"><strong>' + icon + ' ' + label + '</strong><span>' +
+      (equippedData ? equippedData.label : "Vide") + '</span></div>' + buttons;
+
+    box.querySelector("[data-armor]")?.addEventListener("click", event => {
+      equipArmorHandler?.(event.currentTarget.dataset.armor);
+      invalidateAll();
+      updateUI();
+    });
+
+    ui.equipmentSlots.appendChild(box);
   }
 }
 
@@ -181,11 +298,10 @@ function renderQuickbar() {
       const owned = state.tools[id];
       if (!owned) button.classList.add("locked");
       if (state.equipped === id) button.classList.add("selected");
-      button.innerHTML =
-        '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>';
-      button.setAttribute("aria-label", owned ? "Équiper " + data.label : data.label + " non fabriqué");
+      button.innerHTML = '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>';
       button.addEventListener("click", () => {
-        if (equipHandler) equipHandler(id);
+        equipToolHandler?.(id);
+        invalidateAll();
         updateUI();
       });
     } else {
@@ -194,19 +310,26 @@ function renderQuickbar() {
       button.innerHTML =
         '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>' +
         '<span class="quick-count">' + count + '</span>';
-      button.setAttribute("aria-label", "Utiliser " + data.label + ", quantité " + count);
       button.addEventListener("click", () => {
         if (count <= 0) {
           showToast("Vous n'avez plus de " + data.label.toLowerCase() + ".");
           return;
         }
-        if (useHandler) useHandler(id);
+        useHandler?.(id);
+        invalidateAll();
         updateUI();
       });
     }
 
     ui.quickbar.appendChild(button);
   }
+}
+
+function invalidateAll() {
+  quickbarSignature = "";
+  inventorySignature = "";
+  craftSignature = "";
+  equipmentSignature = "";
 }
 
 function resourceAction(resource) {
@@ -219,14 +342,11 @@ function resourceAction(resource) {
     berries: { icon: "🫐", label: "Cueillir" },
     tree: { icon: "🌲", label: "Arbre" }
   };
-  const action = map[resource.type] || { icon: "✋", label: "Action" };
-  return { ...action, prompt: RESOURCE_INFO[resource.type]?.prompt || "Interagir" };
+  return map[resource.type] || { icon:"✋", label:RESOURCE_INFO[resource.type]?.prompt || "Action" };
 }
 
 export function updatePrompt() {
-  const disabled = isPanelOpen() || state.gameOver;
-  const target = disabled ? null : getSmartTarget();
-
+  const target = (!isPanelOpen() && !state.gameOver) ? getSmartTarget() : null;
   ui.touchAction.classList.toggle("ready", Boolean(target));
   ui.touchAction.classList.toggle("danger", target?.type === "animal");
 
@@ -239,8 +359,7 @@ export function updatePrompt() {
   }
 
   if (target.type === "animal") {
-    const name = target.value.type === "deer" ? "petit cerf" : "lapin";
-    ui.prompt.textContent = "ACTION — " + name;
+    ui.prompt.textContent = "ACTION — Attaquer";
     ui.touchActionIcon.textContent = "⚔️";
     ui.touchActionLabel.textContent = "Attaquer";
   } else {
@@ -249,18 +368,20 @@ export function updatePrompt() {
     ui.touchActionIcon.textContent = action.icon;
     ui.touchActionLabel.textContent = action.label;
   }
-
   ui.prompt.classList.add("visible");
 }
 
-export function updateUI() {
-  for (const id of ["health","hunger","thirst","stamina"]) {
-    const value = Math.max(0, Math.min(100, state.player[id]));
-    ui[id + "Bar"].style.width = value.toFixed(1) + "%";
-    ui[id + "Text"].textContent = Math.round(value);
-  }
+function updateCircle(id, value) {
+  const pct = Math.max(0, Math.min(100, value));
+  ui[id + "Circle"].style.setProperty("--pct", pct.toFixed(1) + "%");
+  ui[id + "Text"].textContent = Math.round(pct) + "%";
+}
 
-  for (const id of Object.keys(ui.quick)) ui.quick[id].textContent = state.inventory[id] || 0;
+export function updateUI() {
+  updateCircle("health", state.player.health);
+  updateCircle("hunger", state.player.hunger);
+  updateCircle("thirst", state.player.thirst);
+  updateCircle("stamina", state.player.stamina);
 
   const totalMinutes = Math.floor(state.dayProgress * 24 * 60);
   const hours = Math.floor(totalMinutes / 60) % 24;
@@ -271,6 +392,10 @@ export function updateUI() {
   ui.deathScreen.hidden = !state.gameOver;
 
   renderQuickbar();
-  if (ui.inventoryPanel.classList.contains("open")) renderInventory();
-  if (ui.craftPanel.classList.contains("open")) renderCraft();
+
+  if (isPanelOpen()) {
+    if (activeTab === "inventory") renderInventory();
+    else if (activeTab === "craft") renderCraft();
+    else if (activeTab === "equipment") renderEquipment();
+  }
 }
