@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#18251a">
   <title>Survie 2D — Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <main id="gameShell">
@@ -48,12 +48,9 @@
       <div id="interactionPrompt" class="interaction-prompt" aria-live="polite"></div>
       <div id="toast" class="toast" aria-live="polite"></div>
 
+      <div id="quickbar" class="quickbar" aria-label="Barre rapide"></div>
+
       <div class="bottom-row">
-        <div class="tool-strip">
-          <span id="toolAxe" class="tool locked">🪓<small>Hache</small></span>
-          <span id="toolPick" class="tool locked">⛏️<small>Pioche</small></span>
-          <span id="toolSpear" class="tool locked">🔱<small>Lance</small></span>
-        </div>
         <div class="menu-actions">
           <button id="inventoryButton" type="button">🎒 Inventaire <kbd>I</kbd></button>
           <button id="craftButton" type="button">🔨 Craft <kbd>C</kbd></button>
@@ -64,7 +61,7 @@
     <aside id="inventoryPanel" class="panel" aria-hidden="true">
       <header><div><span class="eyebrow">SAC À DOS</span><h2>Inventaire</h2></div><button class="close-panel" data-close="inventoryPanel" type="button">×</button></header>
       <div id="inventoryGrid" class="inventory-grid"></div>
-      <p class="panel-note">Les outils fabriqués sont utilisés automatiquement.</p>
+      <p class="panel-note">Touchez un outil pour l'équiper. Touchez nourriture, eau ou bandage pour les utiliser.</p>
     </aside>
 
     <aside id="craftPanel" class="panel" aria-hidden="true">
@@ -104,6 +101,6 @@
       </div>
     </section>
   </main>
-  <script type="module" src="js/main.js?v=4"></script>
+  <script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>
