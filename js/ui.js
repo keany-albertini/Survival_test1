@@ -1,9 +1,11 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
-} from "./data.js?v=13";
-import { canAfford } from "./harvest.js?v=13";
-import { getSmartTarget } from "./world.js?v=13";
-import { SKILL_DATA, getSkillProgress } from "./skills.js?v=13";
+} from "./data.js?v=14";
+import { canAfford } from "./harvest.js?v=14";
+import { getSmartTarget } from "./world.js?v=14";
+import { getNearestBuilding } from "./building.js?v=14";
+import { getOpenChest } from "./storage.js?v=14";
+import { SKILL_DATA, getSkillProgress } from "./skills.js?v=14";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -21,6 +23,9 @@ export const ui = {
   toast: document.getElementById("toast"),
   quickbar: document.getElementById("quickbar"),
   inventoryPanel: document.getElementById("inventoryPanel"),
+  chestPanel: document.getElementById("chestPanel"),
+  chestPlayerGrid: document.getElementById("chestPlayerGrid"),
+  chestStorageGrid: document.getElementById("chestStorageGrid"),
   inventoryGrid: document.getElementById("inventoryGrid"),
   craftList: document.getElementById("craftList"),
   equipmentSlots: document.getElementById("equipmentSlots"),
@@ -46,12 +51,16 @@ let craftHandler = null;
 let equipToolHandler = null;
 let equipArmorHandler = null;
 let placeItemHandler = null;
+let depositHandler = null;
+let withdrawHandler = null;
+let closeChestHandler = null;
 let activeTab = "inventory";
 let quickbarSignature = "";
 let inventorySignature = "";
 let craftSignature = "";
 let equipmentSignature = "";
 let skillsSignature = "";
+let chestSignature = "";
 
 export function configureUI(handlers) {
   useHandler = handlers.useItem;
@@ -59,6 +68,9 @@ export function configureUI(handlers) {
   equipToolHandler = handlers.equipTool;
   equipArmorHandler = handlers.equipArmor;
   placeItemHandler = handlers.placeItem;
+  depositHandler = handlers.depositItem;
+  withdrawHandler = handlers.withdrawItem;
+  closeChestHandler = handlers.closeChest;
 
   for (const button of ui.tabs) {
     button.addEventListener("click", () => setInventoryTab(button.dataset.tab));
@@ -73,19 +85,36 @@ export function showToast(message) {
 }
 
 export function isPanelOpen() {
-  return ui.inventoryPanel.classList.contains("open");
+  return ui.inventoryPanel.classList.contains("open") || ui.chestPanel.classList.contains("open");
 }
 
 export function openInventory(tab = "inventory") {
+  closeChestPanel();
   setInventoryTab(tab);
   ui.inventoryPanel.classList.add("open");
   ui.inventoryPanel.setAttribute("aria-hidden", "false");
   updateUI();
 }
 
+export function openChestPanel() {
+  ui.inventoryPanel.classList.remove("open");
+  ui.inventoryPanel.setAttribute("aria-hidden", "true");
+  ui.chestPanel.classList.add("open");
+  ui.chestPanel.setAttribute("aria-hidden", "false");
+  chestSignature = "";
+  updateUI();
+}
+
+export function closeChestPanel() {
+  ui.chestPanel.classList.remove("open");
+  ui.chestPanel.setAttribute("aria-hidden", "true");
+  closeChestHandler?.();
+}
+
 export function closePanels() {
   ui.inventoryPanel.classList.remove("open");
   ui.inventoryPanel.setAttribute("aria-hidden", "true");
+  closeChestPanel();
 }
 
 export function toggleInventory(tab = activeTab) {
@@ -310,6 +339,71 @@ function renderSkills() {
   }
 }
 
+function renderChest() {
+  const chest = getOpenChest();
+  if (!chest) {
+    closeChestPanel();
+    return;
+  }
+
+  const signature = JSON.stringify({ inventory: state.inventory, storage: chest.storage || {}, chestId: chest.id });
+  if (signature === chestSignature) return;
+  chestSignature = signature;
+
+  const makeRow = (id, count, side) => {
+    const data = ITEM_DATA[id];
+    if (!data || count <= 0) return null;
+
+    const row = document.createElement("div");
+    row.className = "storage-item";
+    row.innerHTML =
+      '<div class="storage-item-main"><span>' + data.icon + '</span><div><strong>' +
+      data.label + '</strong><small>x' + count + '</small></div></div>' +
+      '<div class="storage-actions">' +
+      '<button type="button" data-one>1</button>' +
+      '<button type="button" data-all>Tout</button>' +
+      '</div>';
+
+    row.querySelector("[data-one]").addEventListener("click", () => {
+      if (side === "player") depositHandler?.(id, 1);
+      else withdrawHandler?.(id, 1);
+      chestSignature = "";
+      updateUI();
+    });
+
+    row.querySelector("[data-all]").addEventListener("click", () => {
+      if (side === "player") depositHandler?.(id, Infinity);
+      else withdrawHandler?.(id, Infinity);
+      chestSignature = "";
+      updateUI();
+    });
+
+    return row;
+  };
+
+  ui.chestPlayerGrid.innerHTML = "";
+  ui.chestStorageGrid.innerHTML = "";
+
+  let playerCount = 0;
+  for (const [id, count] of Object.entries(state.inventory)) {
+    const row = makeRow(id, count || 0, "player");
+    if (!row) continue;
+    playerCount++;
+    ui.chestPlayerGrid.appendChild(row);
+  }
+
+  let chestCount = 0;
+  for (const [id, count] of Object.entries(chest.storage || {})) {
+    const row = makeRow(id, count || 0, "chest");
+    if (!row) continue;
+    chestCount++;
+    ui.chestStorageGrid.appendChild(row);
+  }
+
+  if (!playerCount) ui.chestPlayerGrid.innerHTML = '<div class="storage-empty">Inventaire vide</div>';
+  if (!chestCount) ui.chestStorageGrid.innerHTML = '<div class="storage-empty">Coffre vide</div>';
+}
+
 function renderQuickbar() {
   const signature = JSON.stringify({
     equipped: state.equipped,
@@ -376,6 +470,7 @@ function invalidateAll() {
   craftSignature = "";
   equipmentSignature = "";
   skillsSignature = "";
+  chestSignature = "";
 }
 
 function resourceAction(resource) {
@@ -408,6 +503,17 @@ export function updatePrompt() {
     ui.prompt.textContent = preview?.valid
       ? "CONSTRUCTION — Action pour poser"
       : "CONSTRUCTION — " + (preview?.reason || "Placement impossible");
+    ui.prompt.classList.add("visible");
+    return;
+  }
+
+  const nearbyChest = (!isPanelOpen() && !state.gameOver) ? getNearestBuilding(62, "chest") : null;
+  if (nearbyChest) {
+    ui.touchAction.classList.add("ready");
+    ui.touchAction.classList.remove("danger");
+    ui.touchActionIcon.textContent = "📦";
+    ui.touchActionLabel.textContent = "Ouvrir";
+    ui.prompt.textContent = "ACTION — Ouvrir le coffre";
     ui.prompt.classList.add("visible");
     return;
   }
@@ -467,7 +573,9 @@ export function updateUI() {
 
   renderQuickbar();
 
-  if (isPanelOpen()) {
+  if (ui.chestPanel.classList.contains("open")) renderChest();
+
+  if (ui.inventoryPanel.classList.contains("open")) {
     if (activeTab === "inventory") renderInventory();
     else if (activeTab === "craft") renderCraft();
     else if (activeTab === "equipment") renderEquipment();
