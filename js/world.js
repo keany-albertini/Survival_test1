@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=6";
+import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=8";
 
 function chunkKey(cx, cy) { return cx + ":" + cy; }
 function objectId(cx, cy, kind, i) { return cx + ":" + cy + ":" + kind + ":" + i; }
@@ -135,7 +135,7 @@ export function getNearestResource(maxDistance = 76) {
 }
 
 
-export function getNearestAnimal(maxDistance = state.equipped === "spear" ? 88 : 48) {
+export function getNearestAnimal(maxDistance = state.equipped === "bow" ? 160 : state.equipped === "spear" ? 90 : 50) {
   const p = state.player;
   let nearest = null;
   let best = maxDistance;
