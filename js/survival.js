@@ -1,4 +1,4 @@
-import { state, clamp } from "./data.js?v=6";
+import { state, clamp } from "./data.js?v=8";
 
 export function updateSurvival(dt, moving, sprinting) {
   state.dayProgress += dt / 300;
