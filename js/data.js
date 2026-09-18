@@ -5,8 +5,11 @@ export const SAVE_KEY = "survie-2d-prototype-v1";
 export const ITEM_DATA = {
   branch: { label: "Branches", icon: "🪵", description: "Bois léger de fabrication." },
   fiber: { label: "Fibres", icon: "🌿", description: "Fibres végétales souples." },
-  stone: { label: "Pierre", icon: "🪨", description: "Pierre brute pour les outils." },
-  ore: { label: "Minerai", icon: "⛏️", description: "Minerai métallique brut." },
+  stone: { label: "Pierre", icon: "🪨", description: "Pierre brute ramassée ou extraite." },
+  ore: { label: "Métal brut", icon: "⛏️", description: "Minerai métallique brut." },
+  copper_ore: { label: "Cuivre", icon: "🟠", description: "Minerai de cuivre brut." },
+  tin_ore: { label: "Étain", icon: "⚪", description: "Minerai d'étain brut." },
+  gold_ore: { label: "Or", icon: "🟡", description: "Minerai d'or brut." },
   arrows: { label: "Flèches", icon: "➶", description: "Munitions pour l'arc." },
   berries: { label: "Baies", icon: "🫐", description: "Restaure faim et un peu de soif.", usable: true },
   meat: { label: "Viande", icon: "🥩", description: "Restaure un peu de faim.", usable: true },
@@ -56,9 +59,22 @@ export const BUILDING_DATA = {
   wood_wall: { itemId: "wood_wall", label: "Mur bois", icon: "▥", snap: "foundation-edge", footprint: 60 }
 };
 
+export const RESOURCE_DATA = {
+  branch: { tool: null, hits: 1, yield: { branch: 2 }, label: "branches" },
+  fiber: { tool: null, hits: 1, yield: { fiber: 3 }, label: "fibres" },
+  stone: { tool: null, hits: 1, yield: { stone: 1 }, label: "petite pierre" },
+  berries: { tool: null, hits: 1, yield: { berries: 3, fiber: 1 }, label: "baies" },
+  tree: { tool: "axe", hits: 4, yield: { branch: 10 }, label: "arbre" },
+  large_rock: { tool: "pickaxe", hits: 4, yield: { stone: 6 }, label: "gros rocher" },
+  copper_ore: { tool: "pickaxe", hits: 4, yield: { copper_ore: 4 }, label: "filon de cuivre" },
+  tin_ore: { tool: "pickaxe", hits: 4, yield: { tin_ore: 4 }, label: "filon d'étain" },
+  ore: { tool: "pickaxe", hits: 5, yield: { ore: 4 }, label: "filon de métal" },
+  gold_ore: { tool: "pickaxe", hits: 5, yield: { gold_ore: 3 }, label: "filon d'or" }
+};
+
 export const RECIPES = [
-  { id: "axe", label: "Hache de pierre", icon: "🪓", category: "Outils", description: "Coupe les arbres et améliore le bois récolté.", cost: { branch: 5, stone: 3, fiber: 2 }, tool: true },
-  { id: "pickaxe", label: "Pioche de pierre", icon: "⛏️", category: "Outils", description: "Extrait le minerai et améliore la pierre récoltée.", cost: { branch: 5, stone: 4, fiber: 2 }, tool: true },
+  { id: "axe", label: "Hache de pierre", icon: "🪓", category: "Outils", description: "Coupe les arbres en 4 coups.", cost: { branch: 5, stone: 3, fiber: 2 }, tool: true },
+  { id: "pickaxe", label: "Pioche de pierre", icon: "⛏️", category: "Outils", description: "Extrait gros rochers, cuivre, étain, métal et or.", cost: { branch: 5, stone: 4, fiber: 2 }, tool: true },
 
   { id: "spear", label: "Lance", icon: "🔱", category: "Armes", description: "Bonne portée pour chasser.", cost: { branch: 4, stone: 2, fiber: 3 }, tool: true },
   { id: "bow", label: "Arc simple", icon: "🏹", category: "Armes", description: "Arme à distance. Nécessite des flèches.", cost: { branch: 7, fiber: 6 }, tool: true },
@@ -85,18 +101,26 @@ export const RECIPES = [
 export const RESOURCE_INFO = {
   branch: { prompt: "Ramasser les branches" },
   fiber: { prompt: "Récolter les fibres" },
-  stone: { prompt: "Ramasser la pierre" },
-  ore: { prompt: "Extraire le minerai" },
+  stone: { prompt: "Ramasser la petite pierre" },
+  large_rock: { prompt: "Casser le gros rocher" },
+  copper_ore: { prompt: "Extraire le cuivre" },
+  tin_ore: { prompt: "Extraire l'étain" },
+  ore: { prompt: "Extraire le métal" },
+  gold_ore: { prompt: "Extraire l'or" },
   berries: { prompt: "Cueillir les baies" },
-  tree: { prompt: "Couper le petit arbre" },
+  tree: { prompt: "Couper l'arbre" },
   pond: { prompt: "Boire / remplir une gourde" }
 };
 
 export const state = {
-  player: { x: 0, y: 0, health: 100, hunger: 100, thirst: 100, stamina: 100, facingX: 0, facingY: 1 },
+  player: {
+    x: 0, y: 0, health: 100, hunger: 100, thirst: 100, stamina: 100,
+    facingX: 0, facingY: 1, actionTimer: 0, actionType: null
+  },
   camera: { x: 0, y: 0 },
   inventory: {
-    branch: 0, fiber: 0, stone: 0, ore: 0, arrows: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0,
+    branch: 0, fiber: 0, stone: 0, ore: 0, copper_ore: 0, tin_ore: 0, gold_ore: 0,
+    arrows: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0,
     campfire: 0, workbench: 0, forge: 0, bed: 0, chest: 0, wood_foundation: 0, wood_wall: 0,
     leather_helmet: 0, leather_chest: 0, leather_legs: 0, leather_boots: 0
   },
@@ -108,6 +132,7 @@ export const state = {
   buildMode: null,
   buildPreview: null,
 
+  resourceHits: {},
   removedResources: new Set(),
   deadAnimals: new Set(),
   chunkCache: new Map(),
