@@ -1,28 +1,35 @@
-import { state, distance } from "./data.js?v=6";
-import { getNearbyAnimals } from "./world.js?v=6";
-import { addItem } from "./harvest.js?v=6";
-import { saveGame } from "./save.js?v=6";
+import { state, distance } from "./data.js?v=8";
+import { getNearbyAnimals } from "./world.js?v=8";
+import { addItem } from "./harvest.js?v=8";
+import { saveGame } from "./save.js?v=8";
 
 export function hunt(notify) {
   if (state.gameOver) return false;
 
-  const range = state.equipped === "spear" ? 88 : 48;
+  const range = state.equipped === "bow" ? 160 : state.equipped === "spear" ? 90 : 50;
   let target = null;
   let best = range;
 
   for (const animal of getNearbyAnimals()) {
     const d = distance(state.player.x, state.player.y, animal.x, animal.y);
-    if (d < best) { best = d; target = animal; }
+    if (d < best) {
+      best = d;
+      target = animal;
+    }
   }
 
   if (!target) {
-    notify(state.equipped === "spear" ? "Aucun animal à portée de lance." : "Approchez-vous davantage.");
+    notify(state.equipped === "bow" ? "Aucun animal à portée de l'arc." : "Approchez-vous davantage.");
     return false;
   }
 
   let damage = 1;
-  if (state.equipped === "spear") damage = 2;
-  else if (state.equipped === "axe" || state.equipped === "pickaxe") damage = 1.4;
+  if (state.equipped === "bow") damage = 2;
+  else if (state.equipped === "sword") damage = 2.5;
+  else if (state.equipped === "spear") damage = 2;
+  else if (state.equipped === "axe") damage = 1.4;
+  else if (state.equipped === "pickaxe") damage = 1.2;
+  else if (state.equipped === "shield") damage = .8;
 
   target.hp -= damage;
   target.hurtTimer = .28;
@@ -30,8 +37,9 @@ export function hunt(notify) {
   const dx = target.x - state.player.x;
   const dy = target.y - state.player.y;
   const len = Math.hypot(dx, dy) || 1;
-  target.x += dx / len * 20;
-  target.y += dy / len * 20;
+  const knockback = state.equipped === "bow" ? 8 : 20;
+  target.x += dx / len * knockback;
+  target.y += dy / len * knockback;
 
   if (target.hp <= 0) {
     state.deadAnimals.add(target.id);
@@ -39,7 +47,7 @@ export function hunt(notify) {
     const hide = target.type === "deer" ? 2 : 1;
     addItem("meat", meat);
     addItem("hide", hide);
-    notify((target.type === "deer" ? "Petit cerf" : "Lapin") + " chassé : +" + meat + " viande.");
+    notify((target.type === "deer" ? "Petit cerf" : "Lapin") + " chassé : +" + meat + " viande, +" + hide + " peau.");
     saveGame();
   } else {
     notify("Touché ! " + Math.max(0, target.hp).toFixed(1) + "/" + target.maxHp + " PV");
