@@ -1,23 +1,28 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=13";
-import { Renderer } from "./render.js?v=13";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=13";
-import { hunt, updateAnimals } from "./fauna.js?v=13";
-import { getSmartTarget } from "./world.js?v=13";
-import { updateSurvival } from "./survival.js?v=13";
-import { saveGame, loadGame } from "./save.js?v=13";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=14";
+import { Renderer } from "./render.js?v=14";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=14";
+import { hunt, updateAnimals } from "./fauna.js?v=14";
+import { getSmartTarget } from "./world.js?v=14";
+import { updateSurvival } from "./survival.js?v=14";
+import { saveGame, loadGame } from "./save.js?v=14";
 import {
   startPlacement, cancelPlacement, placeCurrent,
-  updateBuildPreview, isBuildMode
-} from "./building.js?v=13";
+  updateBuildPreview, isBuildMode, getNearestBuilding
+} from "./building.js?v=14";
+import { fireBow, setAim, updateProjectiles } from "./combat.js?v=14";
+import {
+  openChest, closeChest, depositItem, withdrawItem
+} from "./storage.js?v=14";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
-  isPanelOpen, toggleInventory, openInventory, closePanels
-} from "./ui.js?v=13";
+  isPanelOpen, toggleInventory, openInventory, openChestPanel, closePanels
+} from "./ui.js?v=14";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
 const keys = Object.create(null);
 const joystick = { x: 0, y: 0, pointerId: null };
+const aimTouch = { active: false, pointerId: null };
 let lastTime = performance.now();
 let uiClock = 0;
 
@@ -36,7 +41,10 @@ configureUI({
     const started = startPlacement(id, showToast);
     if (started) closePanels();
     updateUI();
-  }
+  },
+  depositItem: (id, amount) => refreshAction(() => depositItem(id, amount)),
+  withdrawItem: (id, amount) => refreshAction(() => withdrawItem(id, amount)),
+  closeChest
 });
 
 function inputVector() {
@@ -89,8 +97,12 @@ function update(dt) {
     state.player.y += v.y * speed * dt;
 
     if (moving) {
-      state.player.facingX = v.x;
-      state.player.facingY = v.y;
+      if (state.equipped !== "bow" || !aimTouch.active) {
+        state.player.facingX = v.x;
+        state.player.facingY = v.y;
+        state.player.aimX = v.x;
+        state.player.aimY = v.y;
+      }
       state.player.walkPhase = (state.player.walkPhase || 0) + dt * (6 + v.strength * 6);
     }
   }
@@ -99,6 +111,7 @@ function update(dt) {
 
   updateSurvival(dt, state.player.moving, sprinting && !isPanelOpen());
   updateAnimals(dt);
+  updateProjectiles(dt, showToast);
 
   const smoothing = 1 - Math.pow(.0009, dt);
   state.camera.x += (state.player.x - state.camera.x) * smoothing;
@@ -114,11 +127,26 @@ function update(dt) {
   }
 }
 
+function openNearbyChest() {
+  const chest = getNearestBuilding(62, "chest");
+  if (!chest) return false;
+  if (!openChest(chest.id)) return false;
+  openChestPanel();
+  return true;
+}
+
 function smartAction() {
   if (isPanelOpen() || state.gameOver) return;
 
   if (isBuildMode()) {
     refreshAction(() => placeCurrent(showToast));
+    return;
+  }
+
+  if (openNearbyChest()) return;
+
+  if (state.equipped === "bow") {
+    refreshAction(() => fireBow(showToast));
     return;
   }
 
@@ -167,11 +195,14 @@ addEventListener("keyup", event => { keys[event.code] = false; });
 addEventListener("blur", () => {
   for (const key of Object.keys(keys)) keys[key] = false;
   resetJoystick();
+  aimTouch.active = false;
+  aimTouch.pointerId = null;
+  ui.touchAction.classList.remove("aiming");
 });
 
 document.getElementById("inventoryButton").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("touchInventory").addEventListener("click", () => toggleInventory("inventory"));
-document.getElementById("touchAction").addEventListener("click", smartAction);
+document.getElementById("closeChestButton").addEventListener("click", closePanels);
 document.getElementById("buildCancelButton").addEventListener("click", () => {
   refreshAction(() => cancelPlacement(showToast));
 });
@@ -187,6 +218,8 @@ document.getElementById("restartButton").addEventListener("click", () => {
   state.player.stamina = 100;
   state.player.actionTimer = 0;
   state.player.actionType = null;
+  state.projectiles = [];
+  state.openChestId = null;
   state.gameOver = false;
   state.buildMode = null;
   state.buildPreview = null;
@@ -201,6 +234,7 @@ document.getElementById("restartButton").addEventListener("click", () => {
 });
 
 document.querySelectorAll(".close-panel").forEach(button => {
+  if (button.id === "closeChestButton") return;
   button.addEventListener("click", closePanels);
 });
 
@@ -254,8 +288,65 @@ for (const eventName of ["pointerup","pointercancel","lostpointercapture"]) {
   });
 }
 
+function aimFromActionPointer(event) {
+  const rect = ui.touchAction.getBoundingClientRect();
+  const dx = event.clientX - (rect.left + rect.width / 2);
+  const dy = event.clientY - (rect.top + rect.height / 2);
+  if (Math.hypot(dx, dy) < 8) return;
+  setAim(dx, dy);
+}
+
+ui.touchAction.addEventListener("pointerdown", event => {
+  event.preventDefault();
+
+  if (state.equipped === "bow" && !isBuildMode() && !isPanelOpen()) {
+    aimTouch.active = true;
+    aimTouch.pointerId = event.pointerId;
+    ui.touchAction.classList.add("aiming");
+    try { ui.touchAction.setPointerCapture(event.pointerId); } catch (_) {}
+    aimFromActionPointer(event);
+    return;
+  }
+
+  smartAction();
+});
+
+ui.touchAction.addEventListener("pointermove", event => {
+  if (!aimTouch.active || event.pointerId !== aimTouch.pointerId) return;
+  event.preventDefault();
+  aimFromActionPointer(event);
+});
+
+function finishBowAim(event) {
+  if (!aimTouch.active) return;
+  if (event.pointerId !== undefined && aimTouch.pointerId !== null && event.pointerId !== aimTouch.pointerId) return;
+
+  aimTouch.active = false;
+  aimTouch.pointerId = null;
+  ui.touchAction.classList.remove("aiming");
+  refreshAction(() => fireBow(showToast));
+}
+
+ui.touchAction.addEventListener("pointerup", finishBowAim);
+ui.touchAction.addEventListener("pointercancel", event => {
+  aimTouch.active = false;
+  aimTouch.pointerId = null;
+  ui.touchAction.classList.remove("aiming");
+});
+
+canvas.addEventListener("pointermove", event => {
+  if (event.pointerType !== "mouse" || state.equipped !== "bow" || isPanelOpen()) return;
+  const rect = canvas.getBoundingClientRect();
+  const playerScreen = renderer.screen(state.player.x, state.player.y);
+  const mx = event.clientX - rect.left;
+  const my = event.clientY - rect.top;
+  setAim(mx - playerScreen.x, my - playerScreen.y);
+});
+
 canvas.addEventListener("pointerdown", event => {
-  if (event.pointerType === "mouse" && event.button === 0) smartAction();
+  if (event.pointerType !== "mouse" || event.button !== 0) return;
+  if (state.equipped === "bow") refreshAction(() => fireBow(showToast));
+  else smartAction();
 });
 
 addEventListener("beforeunload", saveGame);
