@@ -115,7 +115,7 @@ export const RESOURCE_INFO = {
 export const state = {
   player: {
     x: 0, y: 0, health: 100, hunger: 100, thirst: 100, stamina: 100,
-    facingX: 0, facingY: 1, actionTimer: 0, actionType: null
+    facingX: 0, facingY: 1, aimX: 0, aimY: 1, actionTimer: 0, actionType: null
   },
   camera: { x: 0, y: 0 },
   inventory: {
@@ -136,6 +136,8 @@ export const state = {
   },
 
   buildings: [],
+  openChestId: null,
+  projectiles: [],
   respawnPoint: null,
   buildMode: null,
   buildPreview: null,
