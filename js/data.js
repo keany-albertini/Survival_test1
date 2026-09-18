@@ -1,17 +1,26 @@
 export const WORLD_SEED = 73191;
 export const CHUNK_SIZE = 520;
-export const SAVE_KEY = "survie-2d-prototype-v1";
+export const SAVE_KEY = "survie-2d-prototype-v2";
 
 export const ITEM_DATA = {
   branch: { label: "Branches", icon: "🪵", description: "Bois léger de fabrication." },
   fiber: { label: "Fibres", icon: "🌿", description: "Fibres végétales souples." },
   stone: { label: "Pierre", icon: "🪨", description: "Pierre brute pour les outils." },
   ore: { label: "Minerai", icon: "⛏️", description: "Minerai métallique brut." },
-  berries: { label: "Baies", icon: "🫐", description: "Restaure un peu faim et soif.", usable: true },
-  meat: { label: "Viande", icon: "🥩", description: "Viande crue issue de la chasse.", usable: true },
+  berries: { label: "Baies", icon: "🫐", description: "Restaure faim et un peu de soif.", usable: true },
+  meat: { label: "Viande", icon: "🥩", description: "Restaure un peu de faim.", usable: true },
+  water: { label: "Eau", icon: "💧", description: "Restaure fortement la soif.", usable: true },
   hide: { label: "Peau", icon: "🟫", description: "Peau animale pour les futurs crafts." },
   bandage: { label: "Bandage", icon: "🩹", description: "Restaure 25 points de vie.", usable: true }
 };
+
+export const TOOL_DATA = {
+  axe: { label: "Hache", icon: "🪓" },
+  pickaxe: { label: "Pioche", icon: "⛏️" },
+  spear: { label: "Lance", icon: "🔱" }
+};
+
+export const QUICKBAR_ORDER = ["axe","pickaxe","spear","berries","meat","water","bandage"];
 
 export const RECIPES = [
   { id: "axe", label: "Hache de pierre", icon: "🪓", description: "Coupe les petits arbres et augmente le bois récolté.", cost: { branch: 5, stone: 3, fiber: 2 }, tool: true },
@@ -27,14 +36,15 @@ export const RESOURCE_INFO = {
   ore: { prompt: "Extraire le minerai" },
   berries: { prompt: "Cueillir les baies" },
   tree: { prompt: "Couper le petit arbre" },
-  pond: { prompt: "Boire" }
+  pond: { prompt: "Boire / remplir une gourde" }
 };
 
 export const state = {
   player: { x: 0, y: 0, health: 100, hunger: 100, thirst: 100, stamina: 100, facingX: 0, facingY: 1 },
   camera: { x: 0, y: 0 },
-  inventory: { branch: 0, fiber: 0, stone: 0, ore: 0, berries: 0, meat: 0, hide: 0, bandage: 0 },
+  inventory: { branch: 0, fiber: 0, stone: 0, ore: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0 },
   tools: { axe: false, pickaxe: false, spear: false },
+  equipped: null,
   removedResources: new Set(),
   deadAnimals: new Set(),
   chunkCache: new Map(),
