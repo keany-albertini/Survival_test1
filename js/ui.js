@@ -518,6 +518,16 @@ export function updatePrompt() {
     return;
   }
 
+  if (!isPanelOpen() && !state.gameOver && state.equipped === "bow") {
+    ui.touchAction.classList.add("ready");
+    ui.touchAction.classList.remove("danger");
+    ui.touchActionIcon.textContent = "🏹";
+    ui.touchActionLabel.textContent = "Tirer";
+    ui.prompt.textContent = "ARC — Visez puis tirez";
+    ui.prompt.classList.add("visible");
+    return;
+  }
+
   const target = (!isPanelOpen() && !state.gameOver) ? getSmartTarget() : null;
   ui.touchAction.classList.toggle("ready", Boolean(target));
   ui.touchAction.classList.toggle("danger", target?.type === "animal");
