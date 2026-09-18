@@ -1,14 +1,18 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=8";
-import { Renderer } from "./render.js?v=8";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=8";
-import { hunt, updateAnimals } from "./fauna.js?v=8";
-import { getSmartTarget } from "./world.js?v=8";
-import { updateSurvival } from "./survival.js?v=8";
-import { saveGame, loadGame, resetGame } from "./save.js?v=8";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=9";
+import { Renderer } from "./render.js?v=9";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=9";
+import { hunt, updateAnimals } from "./fauna.js?v=9";
+import { getSmartTarget } from "./world.js?v=9";
+import { updateSurvival } from "./survival.js?v=9";
+import { saveGame, loadGame, resetGame } from "./save.js?v=9";
+import {
+  startPlacement, cancelPlacement, placeCurrent,
+  updateBuildPreview, isBuildMode
+} from "./building.js?v=9";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, toggleInventory, openInventory, closePanels
-} from "./ui.js?v=8";
+} from "./ui.js?v=9";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
@@ -27,7 +31,12 @@ configureUI({
   useItem: id => refreshAction(() => useItem(id, showToast)),
   craft: id => refreshAction(() => craft(id, showToast)),
   equipTool: id => refreshAction(() => equipTool(id, showToast)),
-  equipArmor: id => refreshAction(() => equipArmor(id, showToast))
+  equipArmor: id => refreshAction(() => equipArmor(id, showToast)),
+  placeItem: id => {
+    const started = startPlacement(id, showToast);
+    if (started) closePanels();
+    updateUI();
+  }
 });
 
 function inputVector() {
@@ -90,6 +99,8 @@ function update(dt) {
   state.camera.x += (state.player.x - state.camera.x) * smoothing;
   state.camera.y += (state.player.y - state.camera.y) * smoothing;
 
+  if (isBuildMode()) updateBuildPreview();
+
   updatePrompt();
   uiClock += dt;
   if (uiClock > .12 || state.gameOver) {
@@ -100,8 +111,13 @@ function update(dt) {
 
 function smartAction() {
   if (isPanelOpen() || state.gameOver) return;
-  const target = getSmartTarget();
 
+  if (isBuildMode()) {
+    refreshAction(() => placeCurrent(showToast));
+    return;
+  }
+
+  const target = getSmartTarget();
   if (!target) {
     showToast("Rien à portée.");
     return;
@@ -132,7 +148,8 @@ addEventListener("keydown", event => {
     event.preventDefault();
     openInventory("craft");
   } else if (event.code === "Escape") {
-    closePanels();
+    if (isBuildMode()) refreshAction(() => cancelPlacement(showToast));
+    else closePanels();
   } else if (/^Digit[1-9]$/.test(event.code)) {
     activateQuickbarIndex(Number(event.code.slice(-1)) - 1);
   } else if (event.code === "Digit0") {
@@ -150,6 +167,9 @@ addEventListener("blur", () => {
 document.getElementById("inventoryButton").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("touchInventory").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("touchAction").addEventListener("click", smartAction);
+document.getElementById("buildCancelButton").addEventListener("click", () => {
+  refreshAction(() => cancelPlacement(showToast));
+});
 
 document.getElementById("restartButton").addEventListener("click", () => {
   resetGame();
@@ -229,5 +249,5 @@ function loop(now) {
 
 const loaded = loadGame();
 updateUI();
-showToast(loaded ? "Sauvegarde chargée." : "Explorez, récoltez et équipez-vous.");
+showToast(loaded ? "Sauvegarde chargée." : "Explorez, récoltez et construisez.");
 requestAnimationFrame(loop);
