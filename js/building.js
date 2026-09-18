@@ -48,11 +48,12 @@ function foundationEdges(foundation) {
   ];
 }
 
-function wallEdgeOccupied(foundationId, edge) {
+function wallEdgeOccupied(foundationId, edge, x, y, orientation) {
   return state.buildings.some(b =>
-    b.type === "wood_wall" &&
-    b.parentId === foundationId &&
-    b.edge === edge
+    b.type === "wood_wall" && (
+      (b.parentId === foundationId && b.edge === edge) ||
+      (b.orientation === orientation && distance(b.x, b.y, x, y) < 8)
+    )
   );
 }
 
@@ -62,7 +63,7 @@ function nearestFoundationEdge(x, y, maxDistance = 76) {
 
   for (const foundation of state.buildings.filter(b => b.type === "wood_foundation")) {
     for (const edge of foundationEdges(foundation)) {
-      if (wallEdgeOccupied(foundation.id, edge.edge)) continue;
+      if (wallEdgeOccupied(foundation.id, edge.edge, edge.x, edge.y, edge.orientation)) continue;
       const d = distance(x, y, edge.x, edge.y);
       if (d < bestDistance) {
         bestDistance = d;
@@ -105,7 +106,16 @@ export function updateBuildPreview() {
   if (data.snap === "grid") {
     x = Math.round(x / FOUNDATION_W) * FOUNDATION_W;
     y = Math.round(y / FOUNDATION_H) * FOUNDATION_H;
-    if (overlapsBuilding(x, y, data.footprint)) {
+    const sameFoundationCell = state.buildings.some(b =>
+      b.type === "wood_foundation" &&
+      Math.abs(b.x - x) < 8 &&
+      Math.abs(b.y - y) < 8
+    );
+    const blockedByObject = state.buildings.some(b =>
+      !["wood_foundation","wood_wall"].includes(b.type) &&
+      distance(b.x, b.y, x, y) < 30
+    );
+    if (sameFoundationCell || blockedByObject) {
       valid = false;
       reason = "Une construction occupe déjà cet emplacement.";
     }
