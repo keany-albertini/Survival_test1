@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=8";
+import { state, SAVE_KEY, clamp } from "./data.js?v=9";
 
 export function saveGame() {
   try {
@@ -11,6 +11,7 @@ export function saveGame() {
       tools: state.tools,
       equipped: state.equipped,
       armor: state.armor,
+      buildings: state.buildings,
       removedResources: Array.from(state.removedResources).slice(-3000),
       deadAnimals: Array.from(state.deadAnimals).slice(-1200),
       dayCount: state.dayCount,
@@ -50,6 +51,13 @@ export function loadGame() {
       }
     }
 
+    if (Array.isArray(data.buildings)) {
+      state.buildings = data.buildings.filter(b =>
+        b && typeof b.id === "string" && typeof b.type === "string" &&
+        Number.isFinite(b.x) && Number.isFinite(b.y)
+      );
+    }
+
     if (Array.isArray(data.removedResources)) data.removedResources.forEach(id => state.removedResources.add(id));
     if (Array.isArray(data.deadAnimals)) data.deadAnimals.forEach(id => state.deadAnimals.add(id));
     if (Number.isFinite(data.dayCount)) state.dayCount = Math.max(1, Math.floor(data.dayCount));
@@ -70,6 +78,9 @@ export function resetGame() {
   for (const key of Object.keys(state.tools)) state.tools[key] = false;
   state.equipped = null;
   state.armor = { head:null, chest:null, legs:null, feet:null };
+  state.buildings = [];
+  state.buildMode = null;
+  state.buildPreview = null;
   state.removedResources.clear();
   state.deadAnimals.clear();
   state.animalStates.clear();
