@@ -1,6 +1,6 @@
-import { state, RECIPES, clamp } from "./data.js?v=6";
-import { getNearestResource } from "./world.js?v=6";
-import { saveGame } from "./save.js?v=6";
+import { state, RECIPES, ARMOR_DATA, clamp } from "./data.js?v=8";
+import { getNearestResource } from "./world.js?v=8";
+import { saveGame } from "./save.js?v=8";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
@@ -12,7 +12,7 @@ export function canAfford(cost) {
 
 export function equipTool(id, notify) {
   if (!state.tools[id]) {
-    notify("Cet outil n'est pas encore fabriqué.");
+    notify("Cet équipement n'est pas encore fabriqué.");
     return false;
   }
 
@@ -22,29 +22,58 @@ export function equipTool(id, notify) {
   return true;
 }
 
+export function equipArmor(id, notify) {
+  const data = ARMOR_DATA[id];
+  if (!data || (state.inventory[id] || 0) <= 0) {
+    notify("Cette pièce d'armure n'est pas dans votre inventaire.");
+    return false;
+  }
+
+  const slot = data.slot;
+  if (state.armor[slot] === id) {
+    state.armor[slot] = null;
+    notify(data.label + " retiré.");
+  } else {
+    state.armor[slot] = id;
+    notify(data.label + " équipé.");
+  }
+  saveGame();
+  return true;
+}
+
 function idLabel(id) {
-  if (id === "axe") return "hache";
-  if (id === "pickaxe") return "pioche";
-  if (id === "spear") return "lance";
-  return id;
+  const labels = {
+    axe: "hache", pickaxe: "pioche", spear: "lance",
+    bow: "arc", sword: "épée", shield: "bouclier"
+  };
+  return labels[id] || id;
 }
 
 export function craft(recipeId, notify) {
   const recipe = RECIPES.find(r => r.id === recipeId);
   if (!recipe) return false;
-  if (recipe.tool && state.tools[recipe.id]) { notify("Outil déjà fabriqué."); return false; }
-  if (!canAfford(recipe.cost)) { notify("Il manque des ressources."); return false; }
+
+  if (recipe.tool && state.tools[recipe.id]) {
+    notify("Déjà fabriqué.");
+    return false;
+  }
+
+  if (!canAfford(recipe.cost)) {
+    notify("Il manque des ressources.");
+    return false;
+  }
 
   for (const [id, amount] of Object.entries(recipe.cost)) state.inventory[id] -= amount;
 
   if (recipe.tool) {
     state.tools[recipe.id] = true;
     state.equipped = recipe.id;
-    notify(recipe.label + " fabriquée et équipée !");
+    notify(recipe.label + " fabriqué et équipé !");
   } else if (recipe.output) {
     for (const [id, amount] of Object.entries(recipe.output)) addItem(id, amount);
     notify(recipe.label + " fabriqué.");
   }
+
   saveGame();
   return true;
 }
@@ -64,7 +93,7 @@ export function useItem(id, notify) {
   } else if (id === "water") {
     state.inventory.water -= 1;
     state.player.thirst = clamp(state.player.thirst + 35, 0, 100);
-    notify("Vous buvez une dose d'eau.");
+    notify("Vous buvez de l'eau.");
   } else if (id === "bandage") {
     state.inventory.bandage -= 1;
     state.player.health = clamp(state.player.health + 25, 0, 100);
@@ -80,7 +109,10 @@ export function useItem(id, notify) {
 export function interact(notify) {
   if (state.gameOver) return false;
   const resource = getNearestResource();
-  if (!resource) { notify("Rien à récolter à proximité."); return false; }
+  if (!resource) {
+    notify("Rien à récolter à proximité.");
+    return false;
+  }
 
   if (resource.type === "pond") {
     state.player.thirst = clamp(state.player.thirst + 24, 0, 100);
@@ -91,12 +123,12 @@ export function interact(notify) {
   }
 
   if (resource.type === "ore" && state.equipped !== "pickaxe") {
-    notify("Sélectionnez la pioche dans la barre.");
+    notify("Équipez la pioche.");
     return false;
   }
 
   if (resource.type === "tree" && state.equipped !== "axe") {
-    notify("Sélectionnez la hache dans la barre.");
+    notify("Équipez la hache.");
     return false;
   }
 
