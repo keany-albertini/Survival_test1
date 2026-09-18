@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=10";
-import { getChunksForView, getAnimalState } from "./world.js?v=10";
+import { state, hashRand, clamp } from "./data.js?v=12";
+import { getChunksForView, getAnimalState } from "./world.js?v=12";
 
 export class Renderer {
   constructor(canvas) {
