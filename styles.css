@@ -334,3 +334,18 @@ kbd{display:inline-block;padding:2px 5px;border-radius:5px;border:1px solid rgba
 @media(prefers-reduced-motion:reduce){
   .panel,.toast,.interaction-prompt,.joystick-knob{transition:none}
 }
+.build-action-stack{display:grid;justify-items:center;gap:7px}
+.build-cancel-button{
+  min-width:78px;
+  min-height:32px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:10px;
+  background:rgba(82,43,39,.88);
+  color:#f7e8e2;
+  font-size:9px;
+  font-weight:900;
+  box-shadow:0 7px 18px rgba(0,0,0,.24);
+  touch-action:manipulation
+}
+.build-cancel-button[hidden]{display:none}
+.action-button.danger{box-shadow:0 0 0 5px rgba(220,88,78,.09),0 12px 26px rgba(0,0,0,.30)}
