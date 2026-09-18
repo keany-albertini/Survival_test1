@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=13";
-import { getChunksForView, getAnimalState } from "./world.js?v=13";
+import { state, hashRand, clamp } from "./data.js?v=14";
+import { getChunksForView, getAnimalState } from "./world.js?v=14";
 
 export class Renderer {
   constructor(canvas) {
@@ -265,8 +265,19 @@ export class Renderer {
       ctx.strokeStyle="#3b2a1d";ctx.lineWidth=3;ctx.strokeRect(-27,-15,54,30);
     } else if (type === "chest") {
       if (preview) { ctx.fillRect(-22,-18,44,36); ctx.strokeRect(-22,-18,44,36); }
-      ctx.fillStyle="#76502f";ctx.fillRect(-20,-10,40,24);
-      ctx.fillStyle="#8e6037";ctx.beginPath();ctx.ellipse(0,-10,20,9,0,Math.PI,Math.PI*2);ctx.fill();
+      const opened = state.openChestId === building.id && !preview;
+      ctx.fillStyle="#76502f";
+      ctx.fillRect(-20,-10,40,24);
+      ctx.fillStyle="#8e6037";
+      if (opened) {
+        ctx.save();
+        ctx.translate(0,-11);
+        ctx.rotate(-.35);
+        ctx.fillRect(-20,-7,40,9);
+        ctx.restore();
+      } else {
+        ctx.beginPath();ctx.ellipse(0,-10,20,9,0,Math.PI,Math.PI*2);ctx.fill();
+      }
       ctx.strokeStyle="#3c2a1b";ctx.lineWidth=2;ctx.strokeRect(-20,-10,40,24);
       ctx.fillStyle="#c49a4e";ctx.fillRect(-3,-1,6,8);
     }
@@ -280,15 +291,71 @@ export class Renderer {
     ctx.restore();
   }
 
+  projectile(projectile) {
+    const ctx = this.ctx;
+    const p = this.screen(projectile.x, projectile.y);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(projectile.rotation);
+
+    ctx.strokeStyle = "#6a4728";
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.lineTo(10, 0);
+    ctx.stroke();
+
+    ctx.fillStyle = "#c7cfca";
+    ctx.beginPath();
+    ctx.moveTo(12, 0);
+    ctx.lineTo(6, -3.5);
+    ctx.lineTo(7, 0);
+    ctx.lineTo(6, 3.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "#d9d2b5";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-9, 0);
+    ctx.lineTo(-13, -3);
+    ctx.moveTo(-9, 0);
+    ctx.lineTo(-13, 3);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   player() {
     const ctx = this.ctx;
     const p = this.screen(state.player.x, state.player.y);
     const pl = state.player;
     const phase = pl.walkPhase || 0;
-    const step = pl.moving ? Math.sin(phase) * 3.2 : 0;
-    const bob = pl.moving ? Math.abs(Math.sin(phase)) * -1.2 : 0;
     const faceX = pl.facingX || 0;
     const faceY = pl.facingY || 1;
+    const absX = Math.abs(faceX);
+    const absY = Math.abs(faceY);
+    const direction = absX > absY
+      ? (faceX < 0 ? "left" : "right")
+      : (faceY < 0 ? "up" : "down");
+
+    const side = direction === "left" || direction === "right";
+    const back = direction === "up";
+    const flip = direction === "left" ? -1 : 1;
+
+    const walk = pl.moving ? Math.sin(phase) : 0;
+    const step = walk * 3.4;
+    const bob = pl.moving ? -Math.abs(Math.sin(phase)) * 1.3 : 0;
+
+    const actionDuration = pl.actionType === "shoot" ? .38 : pl.actionType === "gather" ? .30 : .34;
+    const actionProgress = pl.actionTimer > 0
+      ? 1 - Math.min(1, pl.actionTimer / actionDuration)
+      : 0;
+    const actionPulse = pl.actionTimer > 0 ? Math.sin(actionProgress * Math.PI) : 0;
+    const toolSwing = ["chop","mine"].includes(pl.actionType) ? actionPulse * 11 : 0;
+    const gatherReach = pl.actionType === "gather" ? actionPulse : 0;
+    const shootKick = pl.actionType === "shoot" ? actionPulse : 0;
 
     const hasHelmet = state.armor.head === "leather_helmet";
     const hasChest = state.armor.chest === "leather_chest";
@@ -296,132 +363,148 @@ export class Renderer {
     const hasBoots = state.armor.feet === "leather_boots";
 
     ctx.save();
-    ctx.translate(p.x, p.y + bob);
+    ctx.translate(p.x, p.y + bob + gatherReach * 4);
 
+    if (side && flip < 0) ctx.scale(-1, 1);
+
+    // Ombre
     ctx.fillStyle = "rgba(10,14,10,.26)";
     ctx.beginPath();
-    ctx.ellipse(1, 9, 18, 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 9, side ? 15 : 18, 6.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Jambes
     ctx.strokeStyle = hasLegs ? "#5b402d" : "#29312b";
-    ctx.lineWidth = hasLegs ? 7 : 6;
     ctx.lineCap = "round";
+    ctx.lineWidth = hasLegs ? 7 : 6;
     ctx.beginPath();
-    ctx.moveTo(-5, -2);
-    ctx.lineTo(-6 - step, 7);
-    ctx.moveTo(5, -2);
-    ctx.lineTo(6 + step, 7);
+    if (side) {
+      ctx.moveTo(-2, -1);
+      ctx.lineTo(-3 - step, 8);
+      ctx.moveTo(4, -1);
+      ctx.lineTo(7 + step, 7);
+    } else {
+      ctx.moveTo(-5, -2);
+      ctx.lineTo(-6 - step, 7);
+      ctx.moveTo(5, -2);
+      ctx.lineTo(6 + step, 7);
+    }
     ctx.stroke();
 
     // Bottes
     ctx.fillStyle = hasBoots ? "#6a4528" : "#3a2c20";
     ctx.beginPath();
-    ctx.ellipse(-7 - step, 8, hasBoots ? 6 : 5.5, hasBoots ? 4 : 3.4, -.18, 0, Math.PI * 2);
-    ctx.ellipse(7 + step, 8, hasBoots ? 6 : 5.5, hasBoots ? 4 : 3.4, .18, 0, Math.PI * 2);
-    ctx.fill();
-    if (hasBoots) {
-      ctx.strokeStyle = "#32251b";
-      ctx.lineWidth = 1.3;
-      ctx.beginPath();
-      ctx.moveTo(-11-step,8); ctx.lineTo(-3-step,8);
-      ctx.moveTo(3+step,8); ctx.lineTo(11+step,8);
-      ctx.stroke();
+    if (side) {
+      ctx.ellipse(-4-step, 8, 5.5, 3.4, -.1, 0, Math.PI * 2);
+      ctx.ellipse(8+step, 7, 5.5, 3.4, .1, 0, Math.PI * 2);
+    } else {
+      ctx.ellipse(-7-step, 8, 5.5, 3.4, -.18, 0, Math.PI * 2);
+      ctx.ellipse(7+step, 8, 5.5, 3.4, .18, 0, Math.PI * 2);
     }
+    ctx.fill();
 
-    // Sac à dos
+    // Sac à dos : plus visible quand on regarde vers le haut
     ctx.fillStyle = "#5b432d";
     ctx.beginPath();
-    ctx.ellipse(-8 - faceX * 2, -10 - faceY, 7, 11, -.15, 0, Math.PI * 2);
+    if (back) {
+      ctx.ellipse(0, -11, 10, 13, 0, 0, Math.PI * 2);
+    } else if (side) {
+      ctx.ellipse(-8, -10, 6.5, 11, -.12, 0, Math.PI * 2);
+    } else {
+      ctx.ellipse(-8, -10, 7, 11, -.15, 0, Math.PI * 2);
+    }
     ctx.fill();
-    ctx.strokeStyle = "#2d251d";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(-8 - faceX * 2, -10 - faceY, 5, .2, Math.PI - .1);
-    ctx.stroke();
 
     // Torse
     ctx.fillStyle = hasChest ? "#6b4b31" : "#445b43";
     ctx.beginPath();
-    ctx.ellipse(0, -10, hasChest ? 12.5 : 11.5, 14.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -10, side ? 9.5 : 11.5, 14.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     if (hasChest) {
       ctx.fillStyle = "#8a6544";
       ctx.beginPath();
-      ctx.moveTo(-8,-18); ctx.lineTo(8,-18); ctx.lineTo(10,-5); ctx.lineTo(0,-1); ctx.lineTo(-10,-5); ctx.closePath();
+      ctx.moveTo(side ? -6 : -8,-18);
+      ctx.lineTo(side ? 6 : 8,-18);
+      ctx.lineTo(side ? 7 : 10,-5);
+      ctx.lineTo(0,-1);
+      ctx.lineTo(side ? -7 : -10,-5);
+      ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = "#3c2a1c";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0,-18); ctx.lineTo(0,-3);
-      ctx.stroke();
     } else {
       ctx.fillStyle = "#617257";
       ctx.beginPath();
-      ctx.ellipse(0, -12, 7.5, 11, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -12, side ? 6 : 7.5, 11, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // Ceinture
     ctx.fillStyle = "#493a29";
-    ctx.fillRect(-10, -3, 20, 3);
+    ctx.fillRect(side ? -8 : -10, -3, side ? 16 : 20, 3);
     ctx.fillStyle = "#b58b4e";
     ctx.fillRect(-2, -3, 4, 3);
 
-    // Sangle
-    ctx.strokeStyle = "#392f24";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-7, -19);
-    ctx.lineTo(7, -2);
-    ctx.stroke();
-
-    const actionProgress = pl.actionTimer > 0 ? 1 - Math.min(1, pl.actionTimer / .34) : 0;
-    const actionSwing = pl.actionTimer > 0 ? Math.sin(actionProgress * Math.PI) * 9 : 0;
-    const armSwing = pl.moving ? Math.sin(phase) * 2.5 : 0;
+    // Bras
+    const armWalk = pl.moving ? walk * 2.4 : 0;
     ctx.strokeStyle = "#c9976d";
     ctx.lineWidth = 5;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(-8, -15);
-    ctx.lineTo(-12 + armSwing, -4);
-    ctx.moveTo(8, -15);
-    ctx.lineTo(12 - armSwing + actionSwing * .35, -4 - actionSwing * .55);
+
+    if (gatherReach > 0) {
+      // Les deux mains descendent vers l'objet ramassé
+      ctx.moveTo(-7, -15);
+      ctx.lineTo(-7 + gatherReach * 5, -4 + gatherReach * 8);
+      ctx.moveTo(7, -15);
+      ctx.lineTo(7 - gatherReach * 5, -4 + gatherReach * 8);
+    } else if (side) {
+      ctx.moveTo(-5, -15);
+      ctx.lineTo(-8 + armWalk, -4);
+      ctx.moveTo(5, -15);
+      ctx.lineTo(10 - armWalk + toolSwing * .25, -5 - toolSwing * .55);
+    } else {
+      ctx.moveTo(-8, -15);
+      ctx.lineTo(-12 + armWalk, -4);
+      ctx.moveTo(8, -15);
+      ctx.lineTo(12 - armWalk + toolSwing * .25, -4 - toolSwing * .55);
+    }
     ctx.stroke();
 
+    // Manches
     ctx.strokeStyle = hasChest ? "#6b4b31" : "#3b4f3c";
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(-8, -15);
-    ctx.lineTo(-10 + armSwing * .4, -10);
-    ctx.moveTo(8, -15);
-    ctx.lineTo(10 - armSwing * .4 + actionSwing * .2, -10 - actionSwing * .3);
+    ctx.moveTo(side ? -5 : -8, -15);
+    ctx.lineTo(side ? -7 : -10, -10 + gatherReach * 2);
+    ctx.moveTo(side ? 5 : 8, -15);
+    ctx.lineTo(side ? 7 : 10, -10 - toolSwing * .25 + gatherReach * 2);
     ctx.stroke();
 
+    // Cou + tête
     ctx.fillStyle = "#c9976d";
     ctx.fillRect(-3, -25, 6, 7);
 
-    const headX = faceX * 1.5;
-    const headY = -29 + faceY * .7;
+    const headX = side ? 2 : 0;
+    const headY = -29;
     ctx.fillStyle = "#d6a47a";
     ctx.beginPath();
     ctx.arc(headX, headY, 9, 0, Math.PI * 2);
     ctx.fill();
 
+    // Oreilles
     ctx.fillStyle = "#bd8965";
-    ctx.beginPath();
-    ctx.arc(headX - 8.5, headY, 2.2, 0, Math.PI * 2);
-    ctx.arc(headX + 8.5, headY, 2.2, 0, Math.PI * 2);
-    ctx.fill();
+    if (!side) {
+      ctx.beginPath();
+      ctx.arc(headX - 8.5, headY, 2.2, 0, Math.PI * 2);
+      ctx.arc(headX + 8.5, headY, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(headX + 7.5, headY, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    ctx.fillStyle = "#3b2b20";
-    ctx.beginPath();
-    ctx.arc(headX, headY - 2.5, 8.8, Math.PI, Math.PI * 2);
-    ctx.lineTo(headX + 7, headY - 2);
-    ctx.quadraticCurveTo(headX + 2, headY - 8, headX - 7, headY - 3);
-    ctx.fill();
-
+    // Cheveux / casque
     if (hasHelmet) {
       ctx.fillStyle = "#745138";
       ctx.beginPath();
@@ -430,69 +513,161 @@ export class Renderer {
       ctx.lineTo(headX - 9, headY - 1);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = "#3c2a1d";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(headX-7,headY-5); ctx.lineTo(headX+7,headY-5);
-      ctx.stroke();
     } else {
-      ctx.strokeStyle = "#8c493e";
-      ctx.lineWidth = 2.5;
+      ctx.fillStyle = "#3b2b20";
       ctx.beginPath();
-      ctx.moveTo(headX - 8, headY - 1);
-      ctx.lineTo(headX + 8, headY - 1);
-      ctx.stroke();
+      ctx.arc(headX, headY - 2.5, 8.8, Math.PI, Math.PI * 2);
+      ctx.lineTo(headX + 7, headY - 2);
+      ctx.quadraticCurveTo(headX + 2, headY - 8, headX - 7, headY - 3);
+      ctx.fill();
     }
 
-    const eyeOffsetX = faceX * 2.2;
-    const eyeOffsetY = faceY * 1.2;
+    // Visage directionnel
     ctx.fillStyle = "#1c1d18";
-    ctx.beginPath();
-    ctx.arc(headX - 2.5 + eyeOffsetX, headY + eyeOffsetY, 1, 0, Math.PI * 2);
-    ctx.arc(headX + 2.5 + eyeOffsetX, headY + eyeOffsetY, 1, 0, Math.PI * 2);
-    ctx.fill();
+    if (!back && !side) {
+      ctx.beginPath();
+      ctx.arc(-2.5, headY + 1, 1, 0, Math.PI * 2);
+      ctx.arc(2.5, headY + 1, 1, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (side) {
+      ctx.beginPath();
+      ctx.arc(headX + 4.5, headY, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#a16f55";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(headX + 7, headY + 2);
+      ctx.lineTo(headX + 9, headY + 3);
+      ctx.stroke();
+    } else {
+      // Dos de la tête : mèche basse
+      ctx.fillStyle = "#3b2b20";
+      ctx.beginPath();
+      ctx.arc(0, headY + 2, 7.5, 0, Math.PI);
+      ctx.fill();
+    }
 
+    // Foulard
     ctx.fillStyle = "#7d6a43";
     ctx.beginPath();
-    ctx.moveTo(-6, -21); ctx.lineTo(6, -21); ctx.lineTo(2, -17); ctx.lineTo(-2, -17); ctx.closePath();
+    ctx.moveTo(-6, -21);
+    ctx.lineTo(6, -21);
+    ctx.lineTo(2, -17);
+    ctx.lineTo(-2, -17);
+    ctx.closePath();
     ctx.fill();
 
     // Équipement en main
     if (state.equipped === "spear") {
-      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(9,-12); ctx.lineTo(19+faceX*18,-22+faceY*18); ctx.stroke();
+      ctx.strokeStyle = "#6a4728";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(8,-12);
+      ctx.lineTo(18 + toolSwing*.2,-24 + toolSwing*.5);
+      ctx.stroke();
       ctx.fillStyle = "#aab0a7";
-      ctx.beginPath(); ctx.moveTo(19+faceX*18,-26+faceY*18); ctx.lineTo(15+faceX*18,-19+faceY*18); ctx.lineTo(23+faceX*18,-19+faceY*18); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(18,-28);
+      ctx.lineTo(14,-21);
+      ctx.lineTo(22,-21);
+      ctx.closePath();
+      ctx.fill();
     } else if (state.equipped === "axe") {
-      const swingY = actionSwing;
-      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(16 + swingY*.25,-28 + swingY*.8); ctx.stroke();
+      ctx.strokeStyle = "#6a4728";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(9,-12);
+      ctx.lineTo(15 + toolSwing*.28,-28 + toolSwing*.85);
+      ctx.stroke();
       ctx.fillStyle = "#8d9490";
-      ctx.beginPath(); ctx.moveTo(13+swingY*.25,-30+swingY*.8); ctx.lineTo(22+swingY*.25,-34+swingY*.8); ctx.lineTo(22+swingY*.25,-28+swingY*.8); ctx.lineTo(15+swingY*.25,-25+swingY*.8); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(12+toolSwing*.28,-30+toolSwing*.85);
+      ctx.lineTo(21+toolSwing*.28,-34+toolSwing*.85);
+      ctx.lineTo(21+toolSwing*.28,-28+toolSwing*.85);
+      ctx.lineTo(14+toolSwing*.28,-25+toolSwing*.85);
+      ctx.closePath();
+      ctx.fill();
     } else if (state.equipped === "pickaxe") {
-      const swingY = actionSwing;
-      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-12); ctx.lineTo(17+swingY*.25,-29+swingY*.8); ctx.stroke();
-      ctx.strokeStyle = "#929894"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10+swingY*.25,-31+swingY*.8); ctx.lineTo(24+swingY*.25,-28+swingY*.8); ctx.stroke();
+      ctx.strokeStyle = "#6a4728";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(9,-12);
+      ctx.lineTo(16+toolSwing*.28,-29+toolSwing*.85);
+      ctx.stroke();
+      ctx.strokeStyle = "#929894";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(9+toolSwing*.28,-31+toolSwing*.85);
+      ctx.lineTo(23+toolSwing*.28,-28+toolSwing*.85);
+      ctx.stroke();
     } else if (state.equipped === "sword") {
-      ctx.strokeStyle = "#6a4728"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(10,-10); ctx.lineTo(15,-18); ctx.stroke();
-      ctx.strokeStyle = "#c7cfca"; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.moveTo(15,-18); ctx.lineTo(23+faceX*8,-30+faceY*8); ctx.stroke();
-      ctx.strokeStyle = "#8f6a3f"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(11,-19); ctx.lineTo(19,-15); ctx.stroke();
+      ctx.strokeStyle = "#6a4728";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(8,-10);
+      ctx.lineTo(14,-18);
+      ctx.stroke();
+      ctx.strokeStyle = "#c7cfca";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(14,-18);
+      ctx.lineTo(25,-31);
+      ctx.stroke();
     } else if (state.equipped === "bow") {
-      ctx.strokeStyle = "#8a5b31"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(15,-17,13,-1.15,1.15); ctx.stroke();
-      ctx.strokeStyle = "#d2c5a4"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(20,-29); ctx.lineTo(20,-5); ctx.stroke();
+      // Arc orienté exactement vers la visée
+      const angle = Math.atan2(pl.aimY || faceY, pl.aimX || faceX);
+      ctx.save();
+
+      // Annule le miroir latéral avant rotation monde
+      if (side && flip < 0) ctx.scale(-1,1);
+
+      ctx.translate(0, -13);
+      ctx.rotate(angle);
+      const recoil = shootKick * 4;
+
+      ctx.strokeStyle = "#8a5b31";
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(13,-13);
+      ctx.quadraticCurveTo(24-recoil,0,13,13);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#d2c5a4";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(13,-13);
+      ctx.lineTo(8-recoil,0);
+      ctx.lineTo(13,13);
+      ctx.stroke();
+
+      // Flèche encoched pendant l'animation de tir
+      if (pl.actionType === "shoot" && pl.actionTimer > .20) {
+        ctx.strokeStyle = "#6a4728";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(7-recoil,0);
+        ctx.lineTo(25,0);
+        ctx.stroke();
+        ctx.fillStyle = "#c7cfca";
+        ctx.beginPath();
+        ctx.moveTo(28,0);
+        ctx.lineTo(23,-3);
+        ctx.lineTo(23,3);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
     } else if (state.equipped === "shield") {
       ctx.fillStyle = "#755235";
-      ctx.beginPath(); ctx.ellipse(13,-11,9,12,.15,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle = "#a88455"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.ellipse(13,-11,7,10,.15,0,Math.PI*2); ctx.stroke();
-      ctx.fillStyle = "#a88455"; ctx.beginPath(); ctx.arc(13,-11,2,0,Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(12,-11,9,12,.15,0,Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = "#a88455";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(12,-11,7,10,.15,0,Math.PI*2);
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -510,6 +685,12 @@ export class Renderer {
   render() {
     this.ground();
     const chunks = getChunksForView(state.camera, this.viewW, this.viewH, 1);
+    for (const projectile of state.projectiles) {
+      if (this.visible(projectile.x, projectile.y, 80)) {
+        drawables.push({ y:projectile.y, kind:"projectile", value:projectile });
+      }
+    }
+
     for (const chunk of chunks) {
       for (const d of chunk.decor) if (this.visible(d.x,d.y,20)) this.grass(d);
       for (const r of chunk.resources) if (r.type === "pond" && this.visible(r.x,r.y,80)) this.pond(r);
@@ -543,6 +724,7 @@ export class Renderer {
       if (d.kind === "resource") this.resource(d.value);
       else if (d.kind === "animal") this.animal(d.value);
       else if (d.kind === "building") this.building(d.value);
+      else if (d.kind === "projectile") this.projectile(d.value);
       else this.player();
     }
 
