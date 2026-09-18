@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#18251a">
   <title>Survie 2D — Prototype</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
   <main id="gameShell">
@@ -13,22 +13,18 @@
 
     <section id="hud">
       <div class="top-row">
-        <div class="stats-card">
-          <div class="stat stat-health">
-            <span class="stat-icon">❤</span>
-            <div class="stat-main"><div class="stat-head"><small>VIE</small><b id="healthText">100</b></div><div class="bar"><i id="healthBar"></i></div></div>
+        <div class="status-circles" aria-label="Statistiques du survivant">
+          <div class="status-circle status-health" id="healthCircle" title="Vie">
+            <span class="status-icon">❤</span><b id="healthText">100%</b>
           </div>
-          <div class="stat stat-hunger">
-            <span class="stat-icon">🍗</span>
-            <div class="stat-main"><div class="stat-head"><small>FAIM</small><b id="hungerText">100</b></div><div class="bar"><i id="hungerBar"></i></div></div>
+          <div class="status-circle status-hunger" id="hungerCircle" title="Faim">
+            <span class="status-icon">🍗</span><b id="hungerText">100%</b>
           </div>
-          <div class="stat stat-thirst">
-            <span class="stat-icon">💧</span>
-            <div class="stat-main"><div class="stat-head"><small>SOIF</small><b id="thirstText">100</b></div><div class="bar"><i id="thirstBar"></i></div></div>
+          <div class="status-circle status-thirst" id="thirstCircle" title="Soif">
+            <span class="status-icon">💧</span><b id="thirstText">100%</b>
           </div>
-          <div class="stat stat-stamina">
-            <span class="stat-icon">⚡</span>
-            <div class="stat-main"><div class="stat-head"><small>ENDURANCE</small><b id="staminaText">100</b></div><div class="bar"><i id="staminaBar"></i></div></div>
+          <div class="status-circle status-stamina" id="staminaCircle" title="Endurance">
+            <span class="status-icon">⚡</span><b id="staminaText">100%</b>
           </div>
         </div>
 
@@ -39,12 +35,6 @@
         </div>
       </div>
 
-      <div class="resource-strip">
-        <span>🪵 <b id="quickBranch">0</b></span><span>🌿 <b id="quickFiber">0</b></span>
-        <span>🪨 <b id="quickStone">0</b></span><span>⛏️ <b id="quickOre">0</b></span>
-        <span>🥩 <b id="quickMeat">0</b></span>
-      </div>
-
       <div id="interactionPrompt" class="interaction-prompt" aria-live="polite"></div>
       <div id="toast" class="toast" aria-live="polite"></div>
 
@@ -53,20 +43,40 @@
       <div class="bottom-row">
         <div class="menu-actions">
           <button id="inventoryButton" type="button">🎒 Inventaire <kbd>I</kbd></button>
-          <button id="craftButton" type="button">🔨 Craft <kbd>C</kbd></button>
         </div>
       </div>
     </section>
 
-    <aside id="inventoryPanel" class="panel" aria-hidden="true">
-      <header><div><span class="eyebrow">SAC À DOS</span><h2>Inventaire</h2></div><button class="close-panel" data-close="inventoryPanel" type="button">×</button></header>
-      <div id="inventoryGrid" class="inventory-grid"></div>
-      <p class="panel-note">Touchez un outil pour l'équiper. Touchez nourriture, eau ou bandage pour les utiliser.</p>
-    </aside>
+    <aside id="inventoryPanel" class="panel inventory-panel" aria-hidden="true">
+      <header>
+        <div><span class="eyebrow">SURVIVANT</span><h2>Inventaire</h2></div>
+        <button class="close-panel" data-close="inventoryPanel" type="button">×</button>
+      </header>
 
-    <aside id="craftPanel" class="panel" aria-hidden="true">
-      <header><div><span class="eyebrow">FABRICATION</span><h2>Craft</h2></div><button class="close-panel" data-close="craftPanel" type="button">×</button></header>
-      <div id="craftList" class="craft-list"></div>
+      <nav class="inventory-tabs" aria-label="Onglets inventaire">
+        <button type="button" class="inventory-tab active" data-tab="inventory">🎒 Inventaire</button>
+        <button type="button" class="inventory-tab" data-tab="craft">🔨 Craft</button>
+        <button type="button" class="inventory-tab" data-tab="equipment">🛡️ Équipement</button>
+      </nav>
+
+      <section id="inventoryTabInventory" class="inventory-tab-panel active">
+        <div id="inventoryGrid" class="inventory-grid"></div>
+        <p class="panel-note">Touchez un outil pour l'équiper. Touchez nourriture, eau ou bandage pour les utiliser.</p>
+      </section>
+
+      <section id="inventoryTabCraft" class="inventory-tab-panel">
+        <div id="craftList" class="craft-list"></div>
+      </section>
+
+      <section id="inventoryTabEquipment" class="inventory-tab-panel">
+        <div class="equipment-layout">
+          <div class="equipment-preview">
+            <div class="equipment-silhouette">🧍</div>
+            <small>Les armures équipées apparaissent aussi sur le personnage en jeu.</small>
+          </div>
+          <div id="equipmentSlots" class="equipment-slots"></div>
+        </div>
+      </section>
     </aside>
 
     <div id="deathScreen" class="death-screen" hidden>
@@ -76,8 +86,9 @@
     <section class="desktop-help">
       <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> marcher</span>
       <span><kbd>Shift</kbd> courir</span>
-      <span><kbd>E</kbd> action intelligente</span>
+      <span><kbd>E</kbd> action</span>
       <span><kbd>I</kbd> inventaire</span>
+      <span><kbd>C</kbd> craft</span>
     </section>
 
     <section class="touch-controls" aria-label="Commandes tactiles">
@@ -92,7 +103,6 @@
       <div class="touch-right">
         <div class="touch-menu">
           <button id="touchInventory" type="button" aria-label="Ouvrir l'inventaire">🎒</button>
-          <button id="touchCraft" type="button" aria-label="Ouvrir le craft">🔨</button>
         </div>
         <button id="touchAction" class="action-button" type="button">
           <span id="touchActionIcon">✋</span>
@@ -101,6 +111,7 @@
       </div>
     </section>
   </main>
-  <script type="module" src="js/main.js?v=7"></script>
+
+  <script type="module" src="js/main.js?v=8"></script>
 </body>
 </html>
