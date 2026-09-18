@@ -1,6 +1,6 @@
 import { state, ITEM_DATA, RECIPES, RESOURCE_INFO } from "./data.js";
 import { canAfford } from "./harvest.js";
-import { getNearestResource } from "./world.js";
+import { getSmartTarget } from "./world.js";
 
 export const ui = {
   healthBar: document.getElementById("healthBar"),
@@ -21,6 +21,9 @@ export const ui = {
   inventoryGrid: document.getElementById("inventoryGrid"),
   craftList: document.getElementById("craftList"),
   deathScreen: document.getElementById("deathScreen"),
+  touchAction: document.getElementById("touchAction"),
+  touchActionIcon: document.getElementById("touchActionIcon"),
+  touchActionLabel: document.getElementById("touchActionLabel"),
   quick: {
     branch: document.getElementById("quickBranch"),
     fiber: document.getElementById("quickFiber"),
@@ -122,24 +125,52 @@ function renderCraft() {
   }
 }
 
+function resourceAction(resource) {
+  if (resource.type === "ore" && !state.tools.pickaxe) {
+    return { icon: "⛏️", label: "Pioche", prompt: "Pioche requise pour extraire le minerai" };
+  }
+  if (resource.type === "tree" && !state.tools.axe) {
+    return { icon: "🪓", label: "Hache", prompt: "Hache requise pour couper cet arbre" };
+  }
+  const map = {
+    pond: { icon: "💧", label: "Boire" },
+    branch: { icon: "🪵", label: "Ramasser" },
+    fiber: { icon: "🌿", label: "Récolter" },
+    stone: { icon: "🪨", label: "Ramasser" },
+    ore: { icon: "⛏️", label: "Extraire" },
+    berries: { icon: "🫐", label: "Cueillir" },
+    tree: { icon: "🪓", label: "Couper" }
+  };
+  const action = map[resource.type] || { icon: "✋", label: "Action" };
+  return { ...action, prompt: RESOURCE_INFO[resource.type]?.prompt || "Interagir" };
+}
+
 export function updatePrompt() {
-  if (isPanelOpen() || state.gameOver) {
+  const disabled = isPanelOpen() || state.gameOver;
+  const target = disabled ? null : getSmartTarget();
+
+  ui.touchAction.classList.toggle("ready", Boolean(target));
+  ui.touchAction.classList.toggle("danger", target?.type === "animal");
+
+  if (!target) {
     ui.prompt.classList.remove("visible");
     ui.prompt.textContent = "";
+    ui.touchActionIcon.textContent = "✋";
+    ui.touchActionLabel.textContent = "Action";
     return;
   }
 
-  const resource = getNearestResource();
-  if (!resource) {
-    ui.prompt.classList.remove("visible");
-    ui.prompt.textContent = "";
-    return;
+  if (target.type === "animal") {
+    const name = target.value.type === "deer" ? "petit cerf" : "lapin";
+    ui.prompt.textContent = "ACTION — Attaquer le " + name;
+    ui.touchActionIcon.textContent = "⚔️";
+    ui.touchActionLabel.textContent = "Attaquer";
+  } else {
+    const action = resourceAction(target.value);
+    ui.prompt.textContent = "ACTION — " + action.prompt;
+    ui.touchActionIcon.textContent = action.icon;
+    ui.touchActionLabel.textContent = action.label;
   }
-
-  let text = "E — " + RESOURCE_INFO[resource.type].prompt;
-  if (resource.type === "ore" && !state.tools.pickaxe) text = "⛏️ Pioche requise pour le minerai";
-  if (resource.type === "tree" && !state.tools.axe) text = "🪓 Hache requise pour cet arbre";
-  ui.prompt.textContent = text;
   ui.prompt.classList.add("visible");
 }
 
