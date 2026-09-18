@@ -1,14 +1,14 @@
-import { state } from "./data.js";
-import { Renderer } from "./render.js";
-import { interact, craft, useItem, equipTool } from "./harvest.js";
-import { hunt, updateAnimals } from "./fauna.js";
-import { getSmartTarget } from "./world.js";
-import { updateSurvival } from "./survival.js";
-import { saveGame, loadGame, resetGame } from "./save.js";
+import { state } from "./data.js?v=6";
+import { Renderer } from "./render.js?v=6";
+import { interact, craft, useItem, equipTool } from "./harvest.js?v=6";
+import { hunt, updateAnimals } from "./fauna.js?v=6";
+import { getSmartTarget } from "./world.js?v=6";
+import { updateSurvival } from "./survival.js?v=6";
+import { saveGame, loadGame, resetGame } from "./save.js?v=6";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, togglePanel, closePanels, setPanel
-} from "./ui.js";
+} from "./ui.js?v=6";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
