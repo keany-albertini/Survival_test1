@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=10";
+import { state, SAVE_KEY, clamp } from "./data.js?v=12";
 
 export function saveGame() {
   try {
@@ -11,6 +11,7 @@ export function saveGame() {
       tools: state.tools,
       equipped: state.equipped,
       armor: state.armor,
+      skills: state.skills,
       buildings: state.buildings,
       resourceHits: state.resourceHits,
       removedResources: Array.from(state.removedResources).slice(-3000),
@@ -52,6 +53,15 @@ export function loadGame() {
       }
     }
 
+    if (data.skills && typeof data.skills === "object") {
+      for (const id of Object.keys(state.skills)) {
+        const saved = data.skills[id];
+        if (!saved || typeof saved !== "object") continue;
+        if (Number.isFinite(saved.level)) state.skills[id].level = Math.max(1, Math.floor(saved.level));
+        if (Number.isFinite(saved.xp)) state.skills[id].xp = Math.max(0, Math.floor(saved.xp));
+      }
+    }
+
     if (Array.isArray(data.buildings)) {
       state.buildings = data.buildings.filter(b =>
         b && typeof b.id === "string" && typeof b.type === "string" &&
@@ -88,6 +98,12 @@ export function resetGame() {
   for (const key of Object.keys(state.tools)) state.tools[key] = false;
   state.equipped = null;
   state.armor = { head:null, chest:null, legs:null, feet:null };
+  state.skills = {
+    woodcutting: { level:1, xp:0 },
+    gathering: { level:1, xp:0 },
+    mining: { level:1, xp:0 },
+    crafting: { level:1, xp:0 }
+  };
   state.buildings = [];
   state.buildMode = null;
   state.buildPreview = null;
