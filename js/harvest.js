@@ -1,7 +1,7 @@
-import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp } from "./data.js?v=13";
-import { getNearestResource } from "./world.js?v=13";
-import { saveGame } from "./save.js?v=13";
-import { addSkillXP, SKILL_DATA } from "./skills.js?v=13";
+import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp } from "./data.js?v=14";
+import { getNearestResource } from "./world.js?v=14";
+import { saveGame } from "./save.js?v=14";
+import { addSkillXP, SKILL_DATA } from "./skills.js?v=14";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
@@ -207,6 +207,8 @@ export function interact(notify) {
   faceResource(resource);
 
   if (!config.tool) {
+    state.player.actionTimer = .30;
+    state.player.actionType = "gather";
     return completeResource(resource, config, notify, "gathering", 8);
   }
 
