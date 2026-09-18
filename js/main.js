@@ -299,7 +299,8 @@ function aimFromActionPointer(event) {
 ui.touchAction.addEventListener("pointerdown", event => {
   event.preventDefault();
 
-  if (state.equipped === "bow" && !isBuildMode() && !isPanelOpen()) {
+  const nearbyChest = getNearestBuilding(62, "chest");
+  if (state.equipped === "bow" && !nearbyChest && !isBuildMode() && !isPanelOpen()) {
     aimTouch.active = true;
     aimTouch.pointerId = event.pointerId;
     ui.touchAction.classList.add("aiming");
