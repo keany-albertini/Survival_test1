@@ -349,3 +349,36 @@ kbd{display:inline-block;padding:2px 5px;border-radius:5px;border:1px solid rgba
 }
 .build-cancel-button[hidden]{display:none}
 .action-button.danger{box-shadow:0 0 0 5px rgba(220,88,78,.09),0 12px 26px rgba(0,0,0,.30)}
+
+/* V11 — mobile controls layout */
+@media(max-width:900px){
+  .quickbar{
+    bottom:max(8px,env(safe-area-inset-bottom));
+    z-index:10;
+  }
+
+  .touch-controls{
+    bottom:calc(max(8px,env(safe-area-inset-bottom)) + 56px);
+    align-items:center;
+  }
+
+  .joystick-wrap{
+    display:block;
+  }
+
+  .joystick-wrap>small{
+    display:none;
+  }
+
+  .touch-right{
+    align-items:center;
+  }
+
+  .build-action-stack{
+    align-content:center;
+  }
+
+  .interaction-prompt{
+    display:none !important;
+  }
+}
