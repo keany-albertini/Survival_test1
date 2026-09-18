@@ -1,7 +1,7 @@
-import { state, distance } from "./data.js?v=13";
-import { getNearbyAnimals } from "./world.js?v=13";
-import { addItem } from "./harvest.js?v=13";
-import { saveGame } from "./save.js?v=13";
+import { state, distance } from "./data.js?v=14";
+import { getNearbyAnimals } from "./world.js?v=14";
+import { addItem } from "./harvest.js?v=14";
+import { saveGame } from "./save.js?v=14";
 
 export function hunt(notify) {
   if (state.gameOver) return false;
