@@ -1,5 +1,5 @@
-import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=13";
-import { saveGame } from "./save.js?v=13";
+import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=14";
+import { saveGame } from "./save.js?v=14";
 
 const FOUNDATION_W = 64;
 const FOUNDATION_H = 46;
@@ -176,7 +176,8 @@ export function placeCurrent(notify) {
     y: preview.y,
     orientation: preview.orientation,
     parentId: preview.parentId,
-    edge: preview.edge
+    edge: preview.edge,
+    storage: preview.type === "chest" ? {} : undefined
   };
 
   state.buildings.push(building);
