@@ -1,18 +1,18 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=12";
-import { Renderer } from "./render.js?v=12";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=12";
-import { hunt, updateAnimals } from "./fauna.js?v=12";
-import { getSmartTarget } from "./world.js?v=12";
-import { updateSurvival } from "./survival.js?v=12";
-import { saveGame, loadGame, resetGame } from "./save.js?v=12";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=13";
+import { Renderer } from "./render.js?v=13";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=13";
+import { hunt, updateAnimals } from "./fauna.js?v=13";
+import { getSmartTarget } from "./world.js?v=13";
+import { updateSurvival } from "./survival.js?v=13";
+import { saveGame, loadGame } from "./save.js?v=13";
 import {
   startPlacement, cancelPlacement, placeCurrent,
   updateBuildPreview, isBuildMode
-} from "./building.js?v=12";
+} from "./building.js?v=13";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, toggleInventory, openInventory, closePanels
-} from "./ui.js?v=12";
+} from "./ui.js?v=13";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
@@ -177,10 +177,27 @@ document.getElementById("buildCancelButton").addEventListener("click", () => {
 });
 
 document.getElementById("restartButton").addEventListener("click", () => {
-  resetGame();
+  const point = state.respawnPoint || { x: 0, y: 0 };
+
+  state.player.x = point.x;
+  state.player.y = point.y;
+  state.player.health = 75;
+  state.player.hunger = 60;
+  state.player.thirst = 60;
+  state.player.stamina = 100;
+  state.player.actionTimer = 0;
+  state.player.actionType = null;
+  state.gameOver = false;
+  state.buildMode = null;
+  state.buildPreview = null;
+
+  state.camera.x = point.x;
+  state.camera.y = point.y;
+
   closePanels();
+  saveGame();
   updateUI();
-  showToast("Nouveau monde créé.");
+  showToast(state.respawnPoint ? "Réapparition au lit." : "Réapparition au point de départ.");
 });
 
 document.querySelectorAll(".close-panel").forEach(button => {
