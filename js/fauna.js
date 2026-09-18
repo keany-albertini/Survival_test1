@@ -1,10 +1,15 @@
-import { state, distance } from "./data.js?v=8";
-import { getNearbyAnimals } from "./world.js?v=8";
-import { addItem } from "./harvest.js?v=8";
-import { saveGame } from "./save.js?v=8";
+import { state, distance } from "./data.js?v=9";
+import { getNearbyAnimals } from "./world.js?v=9";
+import { addItem } from "./harvest.js?v=9";
+import { saveGame } from "./save.js?v=9";
 
 export function hunt(notify) {
   if (state.gameOver) return false;
+
+  if (state.equipped === "bow" && (state.inventory.arrows || 0) <= 0) {
+    notify("L'arc est vide : fabriquez des flèches.");
+    return false;
+  }
 
   const range = state.equipped === "bow" ? 160 : state.equipped === "spear" ? 90 : 50;
   let target = null;
@@ -21,6 +26,10 @@ export function hunt(notify) {
   if (!target) {
     notify(state.equipped === "bow" ? "Aucun animal à portée de l'arc." : "Approchez-vous davantage.");
     return false;
+  }
+
+  if (state.equipped === "bow") {
+    state.inventory.arrows -= 1;
   }
 
   let damage = 1;
@@ -48,10 +57,13 @@ export function hunt(notify) {
     addItem("meat", meat);
     addItem("hide", hide);
     notify((target.type === "deer" ? "Petit cerf" : "Lapin") + " chassé : +" + meat + " viande, +" + hide + " peau.");
-    saveGame();
+  } else if (state.equipped === "bow") {
+    notify("Flèche tirée — " + state.inventory.arrows + " restantes.");
   } else {
     notify("Touché ! " + Math.max(0, target.hp).toFixed(1) + "/" + target.maxHp + " PV");
   }
+
+  saveGame();
   return true;
 }
 
