@@ -1,6 +1,7 @@
-import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp, distance } from "./data.js?v=10";
-import { getNearestResource } from "./world.js?v=10";
-import { saveGame } from "./save.js?v=10";
+import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp } from "./data.js?v=12";
+import { getNearestResource } from "./world.js?v=12";
+import { saveGame } from "./save.js?v=12";
+import { addSkillXP, SKILL_DATA } from "./skills.js?v=12";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
@@ -50,6 +51,11 @@ function idLabel(id) {
   return labels[id] || id;
 }
 
+function skillLevelSuffix(skillId, leveled) {
+  if (!leveled) return "";
+  return " · " + SKILL_DATA[skillId].label + " niv. " + state.skills[skillId].level;
+}
+
 export function craft(recipeId, notify) {
   const recipe = RECIPES.find(r => r.id === recipeId);
   if (!recipe) return false;
@@ -71,11 +77,17 @@ export function craft(recipeId, notify) {
   if (recipe.tool) {
     state.tools[recipe.id] = true;
     state.equipped = recipe.id;
-    notify(recipe.label + " fabriqué et équipé !");
   } else if (recipe.output) {
     for (const [id, amount] of Object.entries(recipe.output)) addItem(id, amount);
-    notify(recipe.label + " fabriqué.");
   }
+
+  const craftXp = 10 + Math.min(10, Object.values(recipe.cost).reduce((sum, amount) => sum + amount, 0));
+  const leveled = addSkillXP("crafting", craftXp);
+
+  notify(
+    recipe.label + (recipe.tool ? " fabriqué et équipé !" : " fabriqué.") +
+    skillLevelSuffix("crafting", leveled)
+  );
 
   saveGame();
   return true;
@@ -122,15 +134,8 @@ function triggerHarvestAnimation(resourceType) {
   state.player.actionType = resourceType === "tree" ? "chop" : "mine";
 }
 
-function completeResource(resource, config, notify) {
-  for (const [id, amount] of Object.entries(config.yield || {})) {
-    addItem(id, amount);
-  }
-
-  delete state.resourceHits[resource.id];
-  state.removedResources.add(resource.id);
-
-  const rewardText = Object.entries(config.yield || {})
+function rewardText(config) {
+  return Object.entries(config.yield || {})
     .map(([id, amount]) => {
       const labels = {
         branch: "branches",
@@ -145,8 +150,26 @@ function completeResource(resource, config, notify) {
       return "+" + amount + " " + (labels[id] || id);
     })
     .join(", ");
+}
 
-  notify(rewardText || "Ressource récoltée.");
+function completeResource(resource, config, notify, skillId = null, skillXp = 0) {
+  for (const [id, amount] of Object.entries(config.yield || {})) {
+    addItem(id, amount);
+  }
+
+  delete state.resourceHits[resource.id];
+  state.removedResources.add(resource.id);
+
+  let leveled = false;
+  if (skillId && skillXp > 0) {
+    leveled = addSkillXP(skillId, skillXp);
+  }
+
+  notify(
+    (rewardText(config) || "Ressource récoltée.") +
+    skillLevelSuffix(skillId, leveled)
+  );
+
   saveGame();
   return true;
 }
@@ -184,21 +207,37 @@ export function interact(notify) {
   faceResource(resource);
 
   if (!config.tool) {
-    return completeResource(resource, config, notify);
+    return completeResource(resource, config, notify, "gathering", 8);
   }
 
   triggerHarvestAnimation(resource.type);
+
+  const skillId = config.tool === "axe" ? "woodcutting" : "mining";
+  const leveled = addSkillXP(skillId, 6);
 
   const currentHits = (state.resourceHits[resource.id] || 0) + 1;
   state.resourceHits[resource.id] = currentHits;
 
   if (currentHits >= config.hits) {
-    return completeResource(resource, config, notify);
+    for (const [id, amount] of Object.entries(config.yield || {})) {
+      addItem(id, amount);
+    }
+    delete state.resourceHits[resource.id];
+    state.removedResources.add(resource.id);
+
+    notify(
+      (rewardText(config) || "Ressource récoltée.") +
+      skillLevelSuffix(skillId, leveled)
+    );
+
+    saveGame();
+    return true;
   }
 
   notify(
     (resource.type === "tree" ? "Coup de hache" : "Coup de pioche") +
-    " " + currentHits + "/" + config.hits
+    " " + currentHits + "/" + config.hits +
+    skillLevelSuffix(skillId, leveled)
   );
 
   saveGame();
