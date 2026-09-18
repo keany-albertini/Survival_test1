@@ -7,13 +7,21 @@ export const ITEM_DATA = {
   fiber: { label: "Fibres", icon: "🌿", description: "Fibres végétales souples." },
   stone: { label: "Pierre", icon: "🪨", description: "Pierre brute pour les outils." },
   ore: { label: "Minerai", icon: "⛏️", description: "Minerai métallique brut." },
+  arrows: { label: "Flèches", icon: "➶", description: "Munitions pour l'arc." },
   berries: { label: "Baies", icon: "🫐", description: "Restaure faim et un peu de soif.", usable: true },
   meat: { label: "Viande", icon: "🥩", description: "Restaure un peu de faim.", usable: true },
   water: { label: "Eau", icon: "💧", description: "Restaure fortement la soif.", usable: true },
   hide: { label: "Peau", icon: "🟫", description: "Peau animale utile pour les armures." },
   bandage: { label: "Bandage", icon: "🩹", description: "Restaure 25 points de vie.", usable: true },
-  campfire: { label: "Feu de camp", icon: "🔥", description: "Objet à placer plus tard dans le monde." },
-  workbench: { label: "Atelier", icon: "🛠️", description: "Établi de fabrication avancée, prêt à être placé plus tard." },
+
+  campfire: { label: "Feu de camp", icon: "🔥", description: "Permettra de cuire les aliments.", placeable: "campfire" },
+  workbench: { label: "Atelier", icon: "🛠️", description: "Établi pour les futurs crafts avancés.", placeable: "workbench" },
+  forge: { label: "Forge", icon: "⚒️", description: "Forge pour le travail du métal.", placeable: "forge" },
+  bed: { label: "Lit", icon: "🛏️", description: "Lit de survie pour une future réapparition.", placeable: "bed" },
+  chest: { label: "Coffre", icon: "📦", description: "Coffre de stockage.", placeable: "chest" },
+  wood_foundation: { label: "Fondation bois", icon: "▰", description: "Base de construction en bois.", placeable: "wood_foundation" },
+  wood_wall: { label: "Mur bois", icon: "▥", description: "Mur en bois qui s'accroche aux fondations.", placeable: "wood_wall" },
+
   leather_helmet: { label: "Coiffe en cuir", icon: "🪖", description: "Protection légère pour la tête.", armorSlot: "head" },
   leather_chest: { label: "Plastron en cuir", icon: "🥋", description: "Protection légère pour le torse.", armorSlot: "chest" },
   leather_legs: { label: "Jambières en cuir", icon: "👖", description: "Protection légère pour les jambes.", armorSlot: "legs" },
@@ -38,16 +46,36 @@ export const ARMOR_DATA = {
   leather_boots: { label: "Bottes en cuir", icon: "🥾", slot: "feet" }
 };
 
+export const BUILDING_DATA = {
+  campfire: { itemId: "campfire", label: "Feu de camp", icon: "🔥", snap: "free", footprint: 34 },
+  workbench: { itemId: "workbench", label: "Atelier", icon: "🛠️", snap: "free", footprint: 46 },
+  forge: { itemId: "forge", label: "Forge", icon: "⚒️", snap: "free", footprint: 48 },
+  bed: { itemId: "bed", label: "Lit", icon: "🛏️", snap: "free", footprint: 48 },
+  chest: { itemId: "chest", label: "Coffre", icon: "📦", snap: "free", footprint: 36 },
+  wood_foundation: { itemId: "wood_foundation", label: "Fondation bois", icon: "▰", snap: "grid", footprint: 62 },
+  wood_wall: { itemId: "wood_wall", label: "Mur bois", icon: "▥", snap: "foundation-edge", footprint: 60 }
+};
+
 export const RECIPES = [
-  { id: "axe", label: "Hache de pierre", icon: "🪓", category: "Outils", description: "Coupe les petits arbres et améliore le bois récolté.", cost: { branch: 5, stone: 3, fiber: 2 }, tool: true },
+  { id: "axe", label: "Hache de pierre", icon: "🪓", category: "Outils", description: "Coupe les arbres et améliore le bois récolté.", cost: { branch: 5, stone: 3, fiber: 2 }, tool: true },
   { id: "pickaxe", label: "Pioche de pierre", icon: "⛏️", category: "Outils", description: "Extrait le minerai et améliore la pierre récoltée.", cost: { branch: 5, stone: 4, fiber: 2 }, tool: true },
+
   { id: "spear", label: "Lance", icon: "🔱", category: "Armes", description: "Bonne portée pour chasser.", cost: { branch: 4, stone: 2, fiber: 3 }, tool: true },
-  { id: "bow", label: "Arc simple", icon: "🏹", category: "Armes", description: "Permet de chasser à plus longue distance.", cost: { branch: 7, fiber: 6 }, tool: true },
-  { id: "sword", label: "Épée rudimentaire", icon: "🗡️", category: "Armes", description: "Arme de mêlée plus puissante.", cost: { branch: 3, stone: 4, ore: 5 }, tool: true },
-  { id: "shield", label: "Bouclier", icon: "🛡️", category: "Armes", description: "Bouclier de fortune pour la défense future.", cost: { branch: 8, hide: 2, fiber: 3 }, tool: true },
-  { id: "bandage", label: "Bandage", icon: "🩹", category: "Survie", description: "Un soin simple fabriqué avec des fibres.", cost: { fiber: 5 }, output: { bandage: 1 } },
-  { id: "campfire", label: "Feu de camp", icon: "🔥", category: "Survie", description: "Premier objet de camp. La pose dans le monde viendra ensuite.", cost: { branch: 8, stone: 6 }, output: { campfire: 1 } },
-  { id: "workbench", label: "Atelier", icon: "🛠️", category: "Structures", description: "Établi pour les futurs crafts avancés.", cost: { branch: 14, stone: 8, fiber: 5 }, output: { workbench: 1 } },
+  { id: "bow", label: "Arc simple", icon: "🏹", category: "Armes", description: "Arme à distance. Nécessite des flèches.", cost: { branch: 7, fiber: 6 }, tool: true },
+  { id: "arrows", label: "Flèches x5", icon: "➶", category: "Armes", description: "Fabrique 5 flèches pour l'arc.", cost: { branch: 2, stone: 1, fiber: 2 }, output: { arrows: 5 } },
+  { id: "sword", label: "Épée rudimentaire", icon: "🗡️", category: "Armes", description: "Arme de mêlée puissante.", cost: { branch: 3, stone: 4, ore: 5 }, tool: true },
+  { id: "shield", label: "Bouclier", icon: "🛡️", category: "Armes", description: "Bouclier de fortune.", cost: { branch: 8, hide: 2, fiber: 3 }, tool: true },
+
+  { id: "bandage", label: "Bandage", icon: "🩹", category: "Survie", description: "Restaure de la vie.", cost: { fiber: 5 }, output: { bandage: 1 } },
+  { id: "campfire", label: "Feu de camp", icon: "🔥", category: "Survie", description: "À crafter puis placer dans le monde.", cost: { branch: 8, stone: 6 }, output: { campfire: 1 } },
+  { id: "bed", label: "Lit", icon: "🛏️", category: "Survie", description: "Lit simple à placer.", cost: { branch: 8, fiber: 10, hide: 3 }, output: { bed: 1 } },
+
+  { id: "chest", label: "Coffre", icon: "📦", category: "Structures", description: "Coffre à poser dans votre base.", cost: { branch: 12, fiber: 4 }, output: { chest: 1 } },
+  { id: "workbench", label: "Atelier", icon: "🛠️", category: "Structures", description: "Atelier à poser dans votre base.", cost: { branch: 14, stone: 8, fiber: 5 }, output: { workbench: 1 } },
+  { id: "forge", label: "Forge", icon: "⚒️", category: "Structures", description: "Forge à poser pour le futur travail du métal.", cost: { stone: 16, ore: 8, branch: 6 }, output: { forge: 1 } },
+  { id: "wood_foundation", label: "Fondation bois", icon: "▰", category: "Construction", description: "Première fondation de votre base.", cost: { branch: 12, fiber: 3 }, output: { wood_foundation: 1 } },
+  { id: "wood_wall", label: "Mur bois", icon: "▥", category: "Construction", description: "Se fixe sur un bord libre d'une fondation.", cost: { branch: 9, fiber: 3 }, output: { wood_wall: 1 } },
+
   { id: "leather_helmet", label: "Coiffe en cuir", icon: "🪖", category: "Armures", description: "Armure légère de tête.", cost: { hide: 2, fiber: 2 }, output: { leather_helmet: 1 } },
   { id: "leather_chest", label: "Plastron en cuir", icon: "🥋", category: "Armures", description: "Armure légère du torse.", cost: { hide: 4, fiber: 4 }, output: { leather_chest: 1 } },
   { id: "leather_legs", label: "Jambières en cuir", icon: "👖", category: "Armures", description: "Armure légère pour les jambes.", cost: { hide: 3, fiber: 3 }, output: { leather_legs: 1 } },
@@ -68,13 +96,18 @@ export const state = {
   player: { x: 0, y: 0, health: 100, hunger: 100, thirst: 100, stamina: 100, facingX: 0, facingY: 1 },
   camera: { x: 0, y: 0 },
   inventory: {
-    branch: 0, fiber: 0, stone: 0, ore: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0,
-    campfire: 0, workbench: 0,
+    branch: 0, fiber: 0, stone: 0, ore: 0, arrows: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0,
+    campfire: 0, workbench: 0, forge: 0, bed: 0, chest: 0, wood_foundation: 0, wood_wall: 0,
     leather_helmet: 0, leather_chest: 0, leather_legs: 0, leather_boots: 0
   },
   tools: { axe: false, pickaxe: false, spear: false, bow: false, sword: false, shield: false },
   equipped: null,
   armor: { head: null, chest: null, legs: null, feet: null },
+
+  buildings: [],
+  buildMode: null,
+  buildPreview: null,
+
   removedResources: new Set(),
   deadAnimals: new Set(),
   chunkCache: new Map(),
