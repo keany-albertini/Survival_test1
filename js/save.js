@@ -80,6 +80,16 @@ export function loadGame() {
         y: data.respawnPoint.y,
         bedId: typeof data.respawnPoint.bedId === "string" ? data.respawnPoint.bedId : null
       };
+    } else {
+      const beds = state.buildings.filter(b => b.type === "bed");
+      const lastBed = beds[beds.length - 1];
+      if (lastBed) {
+        state.respawnPoint = {
+          x: lastBed.x,
+          y: lastBed.y + 42,
+          bedId: lastBed.id
+        };
+      }
     }
 
     if (data.resourceHits && typeof data.resourceHits === "object") {
