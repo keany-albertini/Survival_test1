@@ -1,8 +1,8 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO
-} from "./data.js?v=8";
-import { canAfford } from "./harvest.js?v=8";
-import { getSmartTarget } from "./world.js?v=8";
+} from "./data.js?v=9";
+import { canAfford } from "./harvest.js?v=9";
+import { getSmartTarget } from "./world.js?v=9";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -27,6 +27,7 @@ export const ui = {
   touchAction: document.getElementById("touchAction"),
   touchActionIcon: document.getElementById("touchActionIcon"),
   touchActionLabel: document.getElementById("touchActionLabel"),
+  buildCancelButton: document.getElementById("buildCancelButton"),
   tabs: Array.from(document.querySelectorAll(".inventory-tab")),
   tabPanels: {
     inventory: document.getElementById("inventoryTabInventory"),
@@ -40,6 +41,7 @@ let useHandler = null;
 let craftHandler = null;
 let equipToolHandler = null;
 let equipArmorHandler = null;
+let placeItemHandler = null;
 let activeTab = "inventory";
 let quickbarSignature = "";
 let inventorySignature = "";
@@ -51,6 +53,7 @@ export function configureUI(handlers) {
   craftHandler = handlers.craft;
   equipToolHandler = handlers.equipTool;
   equipArmorHandler = handlers.equipArmor;
+  placeItemHandler = handlers.placeItem;
 
   for (const button of ui.tabs) {
     button.addEventListener("click", () => setInventoryTab(button.dataset.tab));
@@ -113,14 +116,11 @@ function toolCard(id, data) {
     '</small></div></div><small>Équipement de la barre rapide.</small>' +
     (owned ? '<button type="button">' + (state.equipped === id ? "Ranger" : "Équiper") + '</button>' : "");
 
-  const button = card.querySelector("button");
-  if (button) {
-    button.addEventListener("click", () => {
-      equipToolHandler?.(id);
-      invalidateAll();
-      updateUI();
-    });
-  }
+  card.querySelector("button")?.addEventListener("click", () => {
+    equipToolHandler?.(id);
+    invalidateAll();
+    updateUI();
+  });
   return card;
 }
 
@@ -129,7 +129,8 @@ function renderInventory() {
     tools: state.tools,
     equipped: state.equipped,
     inventory: state.inventory,
-    armor: state.armor
+    armor: state.armor,
+    buildMode: state.buildMode
   });
   if (signature === inventorySignature) return;
   inventorySignature = signature;
@@ -142,7 +143,8 @@ function renderInventory() {
 
   for (const [id, data] of Object.entries(ITEM_DATA)) {
     const count = state.inventory[id] || 0;
-    if (count <= 0 && !["branch","fiber","stone","ore","hide","berries","meat","water","bandage"].includes(id)) continue;
+    const baseResource = ["branch","fiber","stone","ore","arrows","hide","berries","meat","water","bandage"].includes(id);
+    if (count <= 0 && !baseResource) continue;
 
     const card = document.createElement("div");
     card.className = "item-card";
@@ -153,6 +155,8 @@ function renderInventory() {
     } else if (data.armorSlot && count > 0) {
       const equipped = state.armor[data.armorSlot] === id;
       action = '<button type="button" data-armor="' + id + '">' + (equipped ? "Retirer" : "Équiper") + '</button>';
+    } else if (data.placeable && count > 0) {
+      action = '<button type="button" data-place="' + id + '">Placer</button>';
     }
 
     card.innerHTML =
@@ -168,6 +172,12 @@ function renderInventory() {
 
     card.querySelector("[data-armor]")?.addEventListener("click", () => {
       equipArmorHandler?.(id);
+      invalidateAll();
+      updateUI();
+    });
+
+    card.querySelector("[data-place]")?.addEventListener("click", () => {
+      placeItemHandler?.(id);
       invalidateAll();
       updateUI();
     });
@@ -254,10 +264,10 @@ function renderEquipment() {
 
     let buttons = "";
     if (equippedData) {
-      buttons += '<button type="button" class="secondary" data-armor="' + equippedId + '">Retirer</button>';
+      buttons = '<button type="button" class="secondary" data-armor="' + equippedId + '">Retirer</button>';
     } else if (available.length) {
       const [id, data] = available[0];
-      buttons += '<button type="button" data-armor="' + id + '">Équiper ' + data.label + '</button>';
+      buttons = '<button type="button" data-armor="' + id + '">Équiper ' + data.label + '</button>';
     }
 
     box.innerHTML =
@@ -278,6 +288,7 @@ function renderQuickbar() {
   const signature = JSON.stringify({
     equipped: state.equipped,
     tools: state.tools,
+    arrows: state.inventory.arrows,
     berries: state.inventory.berries,
     meat: state.inventory.meat,
     water: state.inventory.water,
@@ -298,7 +309,14 @@ function renderQuickbar() {
       const owned = state.tools[id];
       if (!owned) button.classList.add("locked");
       if (state.equipped === id) button.classList.add("selected");
-      button.innerHTML = '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>';
+
+      const ammo = id === "bow"
+        ? '<span class="quick-count">' + (state.inventory.arrows || 0) + '</span>'
+        : "";
+
+      button.innerHTML =
+        '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>' + ammo;
+
       button.addEventListener("click", () => {
         equipToolHandler?.(id);
         invalidateAll();
@@ -310,6 +328,7 @@ function renderQuickbar() {
       button.innerHTML =
         '<span class="quick-icon">' + data.icon + '</span><small>' + data.label + '</small>' +
         '<span class="quick-count">' + count + '</span>';
+
       button.addEventListener("click", () => {
         if (count <= 0) {
           showToast("Vous n'avez plus de " + data.label.toLowerCase() + ".");
@@ -346,6 +365,22 @@ function resourceAction(resource) {
 }
 
 export function updatePrompt() {
+  const buildMode = Boolean(state.buildMode);
+  ui.buildCancelButton.hidden = !buildMode;
+
+  if (buildMode) {
+    const preview = state.buildPreview;
+    ui.touchAction.classList.toggle("ready", Boolean(preview?.valid));
+    ui.touchAction.classList.toggle("danger", Boolean(preview && !preview.valid));
+    ui.touchActionIcon.textContent = preview?.valid ? "🔨" : "⛔";
+    ui.touchActionLabel.textContent = preview?.valid ? "Poser" : "Bloqué";
+    ui.prompt.textContent = preview?.valid
+      ? "CONSTRUCTION — Action pour poser"
+      : "CONSTRUCTION — " + (preview?.reason || "Placement impossible");
+    ui.prompt.classList.add("visible");
+    return;
+  }
+
   const target = (!isPanelOpen() && !state.gameOver) ? getSmartTarget() : null;
   ui.touchAction.classList.toggle("ready", Boolean(target));
   ui.touchAction.classList.toggle("danger", target?.type === "animal");
