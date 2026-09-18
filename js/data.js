@@ -20,7 +20,7 @@ export const ITEM_DATA = {
   campfire: { label: "Feu de camp", icon: "🔥", description: "Permettra de cuire les aliments.", placeable: "campfire" },
   workbench: { label: "Atelier", icon: "🛠️", description: "Établi pour les futurs crafts avancés.", placeable: "workbench" },
   forge: { label: "Forge", icon: "⚒️", description: "Forge pour le travail du métal.", placeable: "forge" },
-  bed: { label: "Lit", icon: "🛏️", description: "Lit de survie pour une future réapparition.", placeable: "bed" },
+  bed: { label: "Lit", icon: "🛏️", description: "Point de réapparition : le dernier lit posé devient votre respawn.", placeable: "bed" },
   chest: { label: "Coffre", icon: "📦", description: "Coffre de stockage.", placeable: "chest" },
   wood_foundation: { label: "Fondation bois", icon: "▰", description: "Base de construction en bois.", placeable: "wood_foundation" },
   wood_wall: { label: "Mur bois", icon: "▥", description: "Mur en bois qui s'accroche aux fondations.", placeable: "wood_wall" },
@@ -84,7 +84,7 @@ export const RECIPES = [
 
   { id: "bandage", label: "Bandage", icon: "🩹", category: "Survie", description: "Restaure de la vie.", cost: { fiber: 5 }, output: { bandage: 1 } },
   { id: "campfire", label: "Feu de camp", icon: "🔥", category: "Survie", description: "À crafter puis placer dans le monde.", cost: { branch: 8, stone: 6 }, output: { campfire: 1 } },
-  { id: "bed", label: "Lit", icon: "🛏️", category: "Survie", description: "Lit simple à placer.", cost: { branch: 8, fiber: 10, hide: 3 }, output: { bed: 1 } },
+  { id: "bed", label: "Lit", icon: "🛏️", category: "Survie", description: "Une fois posé, il devient votre point de réapparition.", cost: { branch: 8, fiber: 10, hide: 3 }, output: { bed: 1 } },
 
   { id: "chest", label: "Coffre", icon: "📦", category: "Structures", description: "Coffre à poser dans votre base.", cost: { branch: 12, fiber: 4 }, output: { chest: 1 } },
   { id: "workbench", label: "Atelier", icon: "🛠️", category: "Structures", description: "Atelier à poser dans votre base.", cost: { branch: 14, stone: 8, fiber: 5 }, output: { workbench: 1 } },
@@ -136,6 +136,7 @@ export const state = {
   },
 
   buildings: [],
+  respawnPoint: null,
   buildMode: null,
   buildPreview: null,
 
