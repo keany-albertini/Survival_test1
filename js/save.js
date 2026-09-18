@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=6";
+import { state, SAVE_KEY, clamp } from "./data.js?v=8";
 
 export function saveGame() {
   try {
@@ -10,6 +10,7 @@ export function saveGame() {
       inventory: state.inventory,
       tools: state.tools,
       equipped: state.equipped,
+      armor: state.armor,
       removedResources: Array.from(state.removedResources).slice(-3000),
       deadAnimals: Array.from(state.deadAnimals).slice(-1200),
       dayCount: state.dayCount,
@@ -39,10 +40,14 @@ export function loadGame() {
       if (data.tools) state.tools[key] = Boolean(data.tools[key]);
     }
 
-    if (typeof data.equipped === "string" && state.tools[data.equipped]) {
-      state.equipped = data.equipped;
-    } else {
-      state.equipped = null;
+    if (typeof data.equipped === "string" && state.tools[data.equipped]) state.equipped = data.equipped;
+    else state.equipped = null;
+
+    if (data.armor && typeof data.armor === "object") {
+      for (const slot of Object.keys(state.armor)) {
+        const id = data.armor[slot];
+        if (typeof id === "string" && (state.inventory[id] || 0) > 0) state.armor[slot] = id;
+      }
     }
 
     if (Array.isArray(data.removedResources)) data.removedResources.forEach(id => state.removedResources.add(id));
@@ -64,6 +69,7 @@ export function resetGame() {
   for (const key of Object.keys(state.inventory)) state.inventory[key] = 0;
   for (const key of Object.keys(state.tools)) state.tools[key] = false;
   state.equipped = null;
+  state.armor = { head:null, chest:null, legs:null, feet:null };
   state.removedResources.clear();
   state.deadAnimals.clear();
   state.animalStates.clear();
