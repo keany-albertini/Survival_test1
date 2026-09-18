@@ -1,5 +1,5 @@
-import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=12";
-import { saveGame } from "./save.js?v=12";
+import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=13";
+import { saveGame } from "./save.js?v=13";
 
 const FOUNDATION_W = 64;
 const FOUNDATION_H = 46;
@@ -181,9 +181,22 @@ export function placeCurrent(notify) {
 
   state.buildings.push(building);
   state.inventory[preview.itemId] -= 1;
+
+  if (building.type === "bed") {
+    state.respawnPoint = {
+      x: building.x,
+      y: building.y + 42,
+      bedId: building.id
+    };
+  }
+
   saveGame();
 
-  notify(BUILDING_DATA[preview.type].label + " placé.");
+  notify(
+    building.type === "bed"
+      ? "Lit placé — nouveau point de réapparition enregistré."
+      : BUILDING_DATA[preview.type].label + " placé."
+  );
 
   if ((state.inventory[preview.itemId] || 0) <= 0) {
     state.buildMode = null;
