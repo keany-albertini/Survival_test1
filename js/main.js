@@ -1,14 +1,14 @@
-import { state } from "./data.js?v=6";
-import { Renderer } from "./render.js?v=6";
-import { interact, craft, useItem, equipTool } from "./harvest.js?v=6";
-import { hunt, updateAnimals } from "./fauna.js?v=6";
-import { getSmartTarget } from "./world.js?v=6";
-import { updateSurvival } from "./survival.js?v=6";
-import { saveGame, loadGame, resetGame } from "./save.js?v=6";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=8";
+import { Renderer } from "./render.js?v=8";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=8";
+import { hunt, updateAnimals } from "./fauna.js?v=8";
+import { getSmartTarget } from "./world.js?v=8";
+import { updateSurvival } from "./survival.js?v=8";
+import { saveGame, loadGame, resetGame } from "./save.js?v=8";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
-  isPanelOpen, togglePanel, closePanels, setPanel
-} from "./ui.js?v=7";
+  isPanelOpen, toggleInventory, openInventory, closePanels
+} from "./ui.js?v=8";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
@@ -26,7 +26,8 @@ function refreshAction(action) {
 configureUI({
   useItem: id => refreshAction(() => useItem(id, showToast)),
   craft: id => refreshAction(() => craft(id, showToast)),
-  equipTool: id => refreshAction(() => equipTool(id, showToast))
+  equipTool: id => refreshAction(() => equipTool(id, showToast)),
+  equipArmor: id => refreshAction(() => equipArmor(id, showToast))
 });
 
 function inputVector() {
@@ -47,6 +48,7 @@ function inputVector() {
     x = joystick.x;
     y = joystick.y;
     strength = Math.min(1, Math.hypot(x, y));
+
     if (strength > .08) {
       x /= strength;
       y /= strength;
@@ -71,6 +73,7 @@ function update(dt) {
   if (!isPanelOpen()) {
     state.player.x += v.x * speed * dt;
     state.player.y += v.y * speed * dt;
+
     if (moving) {
       state.player.facingX = v.x;
       state.player.facingY = v.y;
@@ -104,47 +107,48 @@ function smartAction() {
     return;
   }
 
-  if (target.type === "animal") {
-    refreshAction(() => hunt(showToast));
-  } else {
-    refreshAction(() => interact(showToast));
-  }
+  if (target.type === "animal") refreshAction(() => hunt(showToast));
+  else refreshAction(() => interact(showToast));
+}
+
+function activateQuickbarIndex(index) {
+  const id = QUICKBAR_ORDER[index];
+  if (!id) return;
+
+  if (TOOL_DATA[id]) refreshAction(() => equipTool(id, showToast));
+  else refreshAction(() => useItem(id, showToast));
 }
 
 addEventListener("keydown", event => {
   keys[event.code] = true;
+
   if (event.code === "KeyE" || event.code === "Space") {
     event.preventDefault();
     smartAction();
   } else if (event.code === "KeyI") {
     event.preventDefault();
-    togglePanel(ui.inventoryPanel);
+    toggleInventory("inventory");
   } else if (event.code === "KeyC") {
     event.preventDefault();
-    togglePanel(ui.craftPanel);
+    openInventory("craft");
   } else if (event.code === "Escape") {
     closePanels();
-  } else if (/^Digit[1-7]$/.test(event.code)) {
-    const ids = ["axe","pickaxe","spear","berries","meat","water","bandage"];
-    const id = ids[Number(event.code.slice(-1)) - 1];
-    if (["axe","pickaxe","spear"].includes(id)) {
-      refreshAction(() => equipTool(id, showToast));
-    } else {
-      refreshAction(() => useItem(id, showToast));
-    }
+  } else if (/^Digit[1-9]$/.test(event.code)) {
+    activateQuickbarIndex(Number(event.code.slice(-1)) - 1);
+  } else if (event.code === "Digit0") {
+    activateQuickbarIndex(9);
   }
 });
 
 addEventListener("keyup", event => { keys[event.code] = false; });
+
 addEventListener("blur", () => {
   for (const key of Object.keys(keys)) keys[key] = false;
   resetJoystick();
 });
 
-document.getElementById("inventoryButton").addEventListener("click", () => togglePanel(ui.inventoryPanel));
-document.getElementById("craftButton").addEventListener("click", () => togglePanel(ui.craftPanel));
-document.getElementById("touchInventory").addEventListener("click", () => togglePanel(ui.inventoryPanel));
-document.getElementById("touchCraft").addEventListener("click", () => togglePanel(ui.craftPanel));
+document.getElementById("inventoryButton").addEventListener("click", () => toggleInventory("inventory"));
+document.getElementById("touchInventory").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("touchAction").addEventListener("click", smartAction);
 
 document.getElementById("restartButton").addEventListener("click", () => {
@@ -155,7 +159,7 @@ document.getElementById("restartButton").addEventListener("click", () => {
 });
 
 document.querySelectorAll(".close-panel").forEach(button => {
-  button.addEventListener("click", () => setPanel(document.getElementById(button.dataset.close), false));
+  button.addEventListener("click", closePanels);
 });
 
 const joystickBase = document.getElementById("joystickBase");
@@ -200,9 +204,11 @@ joystickBase.addEventListener("pointermove", event => {
   setJoystick(event.clientX, event.clientY);
 });
 
-for (const eventName of ["pointerup", "pointercancel", "lostpointercapture"]) {
+for (const eventName of ["pointerup","pointercancel","lostpointercapture"]) {
   joystickBase.addEventListener(eventName, event => {
-    if (joystick.pointerId === null || event.pointerId === joystick.pointerId || eventName === "lostpointercapture") resetJoystick();
+    if (joystick.pointerId === null || event.pointerId === joystick.pointerId || eventName === "lostpointercapture") {
+      resetJoystick();
+    }
   });
 }
 
@@ -223,5 +229,5 @@ function loop(now) {
 
 const loaded = loadGame();
 updateUI();
-showToast(loaded ? "Sauvegarde chargée." : "Approchez-vous puis utilisez ACTION.");
+showToast(loaded ? "Sauvegarde chargée." : "Explorez, récoltez et équipez-vous.");
 requestAnimationFrame(loop);
