@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 import { createPlayer, makeGhost } from "./models.js?v=25";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=25";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=263";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -9,22 +9,22 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.24;
+renderer.toneMappingExposure=1.16;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8b994);
 scene.fog=new THREE.Fog(0x9eb38d,30,88);
 
-const hemi=new THREE.HemisphereLight(0xe0ead4,0x4a4033,1.20);
+const hemi=new THREE.HemisphereLight(0xd9e4d1,0x42382d,1.05);
 scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffdfae,2.28);
+const sun=new THREE.DirectionalLight(0xffddb0,2.42);
 sun.castShadow=true;
 sun.shadow.mapSize.set(1536,1536);
 sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
 sun.shadow.camera.near=.5;sun.shadow.camera.far=90;
 sun.shadow.bias=-.00035;
 scene.add(sun);
-const fill=new THREE.DirectionalLight(0xa8bfda,.46);fill.position.set(-20,14,-18);scene.add(fill);
+const fill=new THREE.DirectionalLight(0x9fb6cf,.34);fill.position.set(-20,14,-18);scene.add(fill);
 
 let viewSize=18;
 const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,.1,160);
@@ -43,7 +43,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=262");
+    const premiumModule=await import("../v26/premiumZone.js?v=263");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -52,7 +52,7 @@ async function bootPremiumZone(){
     );
 
     const timeout=new Promise((_,reject)=>
-      setTimeout(()=>reject(new Error("premium-timeout")),6500)
+      setTimeout(()=>reject(new Error("premium-timeout")),9000)
     );
 
     premiumZone=await Promise.race([premiumPromise,timeout]);
