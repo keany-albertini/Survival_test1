@@ -1,12 +1,13 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
-} from "./data.js?v=17";
-import { canAfford } from "./harvest.js?v=17";
-import { getSmartTarget } from "./world.js?v=17";
-import { getNearestBuilding } from "./building.js?v=17";
-import { getOpenChest } from "./storage.js?v=17";
-import { getOpenCampfire } from "./cooking.js?v=17";
-import { SKILL_DATA, getSkillProgress } from "./skills.js?v=17";
+} from "./data.js?v=19";
+import { canAfford } from "./harvest.js?v=19";
+import { getSmartTarget } from "./world.js?v=19";
+import { getNearestBuilding } from "./building.js?v=19";
+import { getOpenChest } from "./storage.js?v=19";
+import { getOpenCampfire } from "./cooking.js?v=19";
+import { SKILL_DATA, getSkillProgress } from "./skills.js?v=19";
+import { getSeasonState, getSeasonDay } from "./seasons.js?v=19";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -20,6 +21,7 @@ export const ui = {
   dayText: document.getElementById("dayText"),
   timeText: document.getElementById("timeText"),
   coordsText: document.getElementById("coordsText"),
+  seasonText: document.getElementById("seasonText"),
   prompt: document.getElementById("interactionPrompt"),
   toast: document.getElementById("toast"),
   quickbar: document.getElementById("quickbar"),
@@ -660,6 +662,8 @@ export function updateUI() {
   ui.dayText.textContent = "Jour " + state.dayCount;
   ui.timeText.textContent = String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
   ui.coordsText.textContent = Math.round(state.player.x) + ", " + Math.round(state.player.y);
+  const season = getSeasonState();
+  ui.seasonText.textContent = season.icon + " " + season.label + " · " + getSeasonDay() + "/3";
   ui.deathScreen.hidden = !state.gameOver;
   if (state.gameOver && ui.deathMessage) {
     ui.deathMessage.textContent = state.respawnPoint
