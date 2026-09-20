@@ -64,25 +64,138 @@ export class Renderer {
     animal(animal) {
     const ctx = this.ctx;
     const p = this.screen(animal.x, animal.y);
-    ctx.save(); ctx.translate(p.x, p.y);
-    if (animal.hurtTimer > 0) ctx.globalAlpha = .6;
-    ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.beginPath();
-    ctx.ellipse(0,5,animal.type === "deer" ? 22 : 15,animal.type === "deer" ? 7 : 6,0,0,Math.PI*2); ctx.fill();
+    const season = getSeasonState();
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if (animal.hurtTimer > 0) ctx.globalAlpha = .62;
+
+    ctx.fillStyle = "rgba(10,14,10,.20)";
+    ctx.beginPath();
+    ctx.ellipse(1,7,animal.type === "deer" ? 23 : 15,animal.type === "deer" ? 7 : 5.5,0,0,Math.PI*2);
+    ctx.fill();
 
     if (animal.type === "deer") {
-      ctx.strokeStyle = "#6d5135"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-9,-2); ctx.lineTo(-10,9); ctx.moveTo(9,-2); ctx.lineTo(12,9); ctx.stroke();
-      ctx.fillStyle = "#8a6743"; ctx.beginPath(); ctx.ellipse(-1,-10,20,11,0,0,Math.PI*2); ctx.fill(); ctx.fillRect(11,-21,6,15);
-      ctx.beginPath(); ctx.arc(15,-24,7,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = "#151713"; ctx.beginPath(); ctx.arc(19,-25,1.2,0,Math.PI*2); ctx.fill();
+      const winter = season.id === "winter";
+      const bodyDark = winter ? "#6b5b4a" : "#6f5035";
+      const body = winter ? "#8a745e" : "#8a6540";
+      const bodyLight = winter ? "#aa9276" : "#ab8051";
+
+      ctx.strokeStyle = bodyDark;
+      ctx.lineWidth = 4.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-10,-1); ctx.lineTo(-11,10);
+      ctx.moveTo(7,-2); ctx.lineTo(10,10);
+      ctx.stroke();
+
+      ctx.fillStyle = bodyDark;
+      ctx.beginPath();
+      ctx.ellipse(-1,-9,21,11,-.03,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.ellipse(-2,-11,19,9.5,-.04,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = bodyLight;
+      ctx.globalAlpha = .45;
+      ctx.beginPath();
+      ctx.ellipse(-6,-15,11,4,-.10,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = animal.hurtTimer > 0 ? .62 : 1;
+
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(10,-15); ctx.lineTo(15,-29); ctx.lineTo(20,-27); ctx.lineTo(15,-11); ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(18,-30,7,6,-.12,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = bodyLight;
+      ctx.beginPath();
+      ctx.ellipse(20,-32,4.5,2.5,-.2,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#3d3024";
+      ctx.beginPath(); ctx.arc(22,-31,1.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#2b241d";
+      ctx.beginPath(); ctx.ellipse(25,-28,2,1.5,0,0,Math.PI*2); ctx.fill();
+
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(15,-34);ctx.lineTo(12,-41);ctx.lineTo(18,-36);ctx.closePath();ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(21,-35);ctx.lineTo(25,-41);ctx.lineTo(24,-34);ctx.closePath();ctx.fill();
+
+      ctx.strokeStyle = "#5a4632";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(15,-36);ctx.lineTo(12,-46);ctx.moveTo(12,-43);ctx.lineTo(8,-47);
+      ctx.moveTo(20,-36);ctx.lineTo(22,-46);ctx.moveTo(22,-43);ctx.lineTo(26,-47);
+      ctx.stroke();
+
+      ctx.fillStyle = "#d8c4a0";
+      ctx.beginPath();
+      ctx.ellipse(-21,-10,4,3,0,0,Math.PI*2);
+      ctx.fill();
     } else {
-      ctx.fillStyle = "#b6aa91"; ctx.beginPath(); ctx.ellipse(-2,-4,12,8,-.15,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(9,-9,7,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle = "#b6aa91"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(7,-15); ctx.lineTo(6,-26); ctx.moveTo(12,-15); ctx.lineTo(15,-25); ctx.stroke();
-      ctx.fillStyle = "#151713"; ctx.beginPath(); ctx.arc(12,-10,1.2,0,Math.PI*2); ctx.fill();
+      const winter = season.id === "winter";
+      const furDark = winter ? "#8d887d" : "#9c8d76";
+      const fur = winter ? "#cbc6b9" : "#b8aa92";
+      const furLight = winter ? "#ece9df" : "#d6cab4";
+
+      ctx.fillStyle = furDark;
+      ctx.beginPath();
+      ctx.ellipse(-4,-3,13,8,-.12,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = fur;
+      ctx.beginPath();
+      ctx.ellipse(-5,-5,12,7,-.12,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = furLight;
+      ctx.globalAlpha = .62;
+      ctx.beginPath();
+      ctx.ellipse(-8,-7,7,3,-.2,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = animal.hurtTimer > 0 ? .62 : 1;
+
+      ctx.fillStyle = fur;
+      ctx.beginPath();
+      ctx.arc(8,-10,7,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = furDark;
+      ctx.lineWidth = 4.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(6,-15);ctx.quadraticCurveTo(4,-24,7,-29);
+      ctx.moveTo(11,-15);ctx.quadraticCurveTo(14,-24,15,-28);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#d6b7ad";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(7,-17);ctx.lineTo(7,-27);
+      ctx.moveTo(11,-17);ctx.lineTo(14,-26);
+      ctx.stroke();
+
+      ctx.fillStyle = "#201d19";
+      ctx.beginPath();ctx.arc(11,-11,1.15,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle = "#eee7db";
+      ctx.beginPath();ctx.arc(12,-11.5,.35,0,Math.PI*2);ctx.fill();
+
+      ctx.fillStyle = "#eee9dc";
+      ctx.beginPath();ctx.arc(-16,-4,4,0,Math.PI*2);ctx.fill();
     }
+
     ctx.restore();
   }
 
-  building(building, preview = false) {
+    building(building, preview = false) {
     drawBuilding(this.ctx, this.screen(building.x, building.y), building, preview);
   }
 
