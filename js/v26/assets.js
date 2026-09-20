@@ -30,6 +30,14 @@ function makeTexture(kind,renderer){
         r=66+n*50; g=108+n*78; b=45+n*42;
       }else if(kind==="stone"){
         r=88+n*60; g=94+n*62; b=90+n*57;
+      }else if(kind==="wood"){
+        const streak=Math.sin(x*.27+Math.sin(y*.055)*1.7)*.5+.5;
+        r=78+n*46+streak*22; g=46+n*30+streak*12; b=24+n*20+streak*7;
+      }else if(kind==="thatch"){
+        const stripe=Math.sin((x+y*.18)*.45)*.5+.5;
+        r=92+n*46+stripe*18; g=69+n*38+stripe*14; b=36+n*23+stripe*8;
+      }else if(kind==="needle"){
+        r=24+n*28; g=64+n*58; b=34+n*34;
       }else{
         r=61+n*40; g=88+n*48; b=48+n*30;
       }
@@ -58,10 +66,28 @@ function makeTexture(kind,renderer){
       ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+12+hash(i,8,4)*22,y+6+hash(i,7,5)*18);ctx.stroke();
     }
   }
+  if(kind==="wood"){
+    ctx.strokeStyle="rgba(38,20,10,.24)";
+    for(let y=10;y<size;y+=18){
+      ctx.beginPath();
+      ctx.moveTo(0,y+Math.sin(y*.2)*3);
+      ctx.bezierCurveTo(size*.3,y-3,size*.7,y+4,size,y-1);
+      ctx.stroke();
+    }
+  }
+  if(kind==="thatch"){
+    ctx.strokeStyle="rgba(55,37,18,.22)";
+    for(let x=-20;x<size+20;x+=11){
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+30,size);ctx.stroke();
+    }
+  }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-  tex.repeat.set(kind==="bark"?2:1.8,kind==="bark"?5:1.8);
+  tex.repeat.set(
+    kind==="bark"?2:kind==="wood"?3:kind==="thatch"?4:1.8,
+    kind==="bark"?5:kind==="wood"?2.2:kind==="thatch"?5:1.8
+  );
   tex.colorSpace=THREE.SRGBColorSpace;
   tex.anisotropy=Math.min(8,renderer?.capabilities?.getMaxAnisotropy?.()||4);
 
@@ -76,7 +102,10 @@ function enhanceMaterials(root,renderer){
     leaf:makeTexture("leaf",renderer),
     leafLight:makeTexture("leafLight",renderer),
     stone:makeTexture("stone",renderer),
-    moss:makeTexture("moss",renderer)
+    moss:makeTexture("moss",renderer),
+    wood:makeTexture("wood",renderer),
+    thatch:makeTexture("thatch",renderer),
+    needle:makeTexture("needle",renderer)
   };
 
   root.traverse(o=>{
@@ -89,15 +118,18 @@ function enhanceMaterials(root,renderer){
     let pack=null;
 
     if(name.includes("bark"))pack=mats.bark;
+    else if(name.includes("needle"))pack=mats.needle;
     else if(name.includes("leaf")||name.includes("foliage"))pack=name.includes("light")?mats.leafLight:mats.leaf;
     else if(name.includes("moss"))pack=mats.moss;
     else if(name.includes("stone"))pack=mats.stone;
+    else if(name.includes("thatch"))pack=mats.thatch;
+    else if(name.includes("wood")||name.includes("plank"))pack=mats.wood;
 
     if(pack){
       material.map=pack.map;
       material.bumpMap=pack.bump;
-      material.bumpScale=name.includes("stone")?.12:name.includes("bark")?.10:.035;
-      material.roughness=name.includes("leaf")?.84:name.includes("stone")?.94:.96;
+      material.bumpScale=name.includes("stone")?.12:name.includes("bark")?.10:name.includes("wood")?.08:name.includes("thatch")?.10:.035;
+      material.roughness=name.includes("leaf")||name.includes("needle")?.86:name.includes("stone")?.94:name.includes("thatch")?.98:.94;
       material.metalness=0;
       if(name.includes("leaf")){
         material.side=THREE.DoubleSide;
