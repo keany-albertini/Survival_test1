@@ -1,5 +1,5 @@
 import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=14";
-import { Renderer } from "./render.js?v=14";
+import { Renderer } from "./render.js?v=15";
 import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=14";
 import { hunt, updateAnimals } from "./fauna.js?v=14";
 import { getSmartTarget } from "./world.js?v=14";
@@ -114,8 +114,11 @@ function update(dt) {
   updateProjectiles(dt, showToast);
 
   const smoothing = 1 - Math.pow(.0009, dt);
-  state.camera.x += (state.player.x - state.camera.x) * smoothing;
-  state.camera.y += (state.player.y - state.camera.y) * smoothing;
+  const cameraLead = 26;
+  const targetCameraX = state.player.x + (state.player.facingX || 0) * cameraLead;
+  const targetCameraY = state.player.y + (state.player.facingY || 0) * cameraLead;
+  state.camera.x += (targetCameraX - state.camera.x) * smoothing;
+  state.camera.y += (targetCameraY - state.camera.y) * smoothing;
 
   if (isBuildMode()) updateBuildPreview();
 
