@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=26";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=262";
 
 const ASSETS={
   oak:"assets/v26/trees/oak_01.gltf",
