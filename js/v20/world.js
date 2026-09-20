@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=20";
+} from "./models.js?v=21";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
