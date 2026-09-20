@@ -162,12 +162,40 @@ export function createWorld(scene){
   const world={
     scene,interactables:[],colliders:[],animated:[],buildings:[],enemies:[],ambientAnimals:[],
     season:0,seasonables:[],treeGroups:[],bushGroups:[],terrain:null,water:null,grass:null,snow:null,
-    horse:null,farm:null,chest:null,campfire:null,ruins:null
+    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null
   };
 
   world.terrain=createTerrain();scene.add(world.terrain);
+  world.snowGround=new THREE.Mesh(
+    world.terrain.geometry.clone(),
+    new THREE.MeshStandardMaterial({color:0xe1e7e2,roughness:.98,transparent:true,opacity:.64,polygonOffset:true,polygonOffsetFactor:-1})
+  );
+  world.snowGround.position.y=.035;
+  world.snowGround.receiveShadow=true;
+  world.snowGround.visible=false;
+  scene.add(world.snowGround);
+
   world.water=createRiver();scene.add(world.water);
   const bridge=createBridge();scene.add(bridge);
+
+  // Cascade et chaos rocheux dans le secteur nord-est, comme sur la référence.
+  const waterfallZ=-46, waterfallX=riverX(waterfallZ);
+  const fallGroup=new THREE.Group();
+  const cliffMat=new THREE.MeshStandardMaterial({color:0x737b77,roughness:.96});
+  for(let i=0;i<14;i++){
+    const a=i/14*Math.PI*2;
+    const r=new THREE.Mesh(new THREE.DodecahedronGeometry(.8+seeded(i+210)*.75,0),cliffMat);
+    r.scale.set(1,.9+seeded(i+240)*.7,1);
+    r.position.set(Math.cos(a)*3.5,1.0+seeded(i+260)*1.9,Math.sin(a)*2.2);
+    r.rotation.set(seeded(i+280),seeded(i+300)*3,seeded(i+320));
+    r.castShadow=true;r.receiveShadow=true;fallGroup.add(r);
+  }
+  const fallMat=new THREE.MeshPhysicalMaterial({color:0x7fc6d0,transparent:true,opacity:.76,roughness:.15,transmission:.12,side:THREE.DoubleSide});
+  const fall=new THREE.Mesh(new THREE.PlaneGeometry(4.8,4.2,10,12),fallMat);
+  fall.position.set(0,2.0,0);fall.rotation.y=Math.PI/2;fallGroup.add(fall);
+  fallGroup.position.set(waterfallX,terrainHeight(waterfallX,waterfallZ)-.4,waterfallZ);
+  scene.add(fallGroup);
+  world.animated.push({userData:{kind:"waterfall",windPhase:0},rotation:fallGroup.rotation});
 
   const camp=createCamp();camp.group.position.set(-8,terrainHeight(-8,8),8);scene.add(camp.group);world.campfire=camp.fire;
   world.interactables.push({type:"campfire",object:camp.fire,position:()=>new THREE.Vector3(-8,terrainHeight(-8,8),8),radius:2.1,label:"Utiliser le feu de camp"});
@@ -239,16 +267,35 @@ export function setWorldSeason(world,index){
   world.terrain.material.needsUpdate=true;
   if(world.grass?.material)world.grass.material.color.set(index===2?0x8a7037:index===3?0x879287:0x5f8247);
   world.snow.visible=index===3;
+  if(world.snowGround)world.snowGround.visible=index===3;
+
+  const autumn=new THREE.Color(0xb85d30), winter=new THREE.Color(0x78857b), summer=new THREE.Color(0x35683a);
+  for(const item of [...world.treeGroups,...world.bushGroups]){
+    const crown=item.userData.crown;
+    if(!crown)continue;
+    crown.traverse(o=>{
+      if(!o.isMesh||!o.material?.color)return;
+      if(!o.userData.baseSeasonColor)o.userData.baseSeasonColor=o.material.color.clone();
+      const base=o.userData.baseSeasonColor;
+      o.material.color.copy(base);
+      if(index===1)o.material.color.lerp(summer,.20);
+      else if(index===2)o.material.color.lerp(autumn,o.geometry?.type==="ConeGeometry"?.12:.70);
+      else if(index===3)o.material.color.lerp(winter,o.geometry?.type==="ConeGeometry"?.22:.60);
+    });
+  }
 }
 
 export function updateWorld(world,dt,time,playerPos){
   if(world.grass?.material?.userData.shader)world.grass.material.userData.shader.uniforms.uTime.value=time;
 
   for(const o of world.animated){
-    const phase=o.userData.windPhase||0;
-    const amount=o.userData.kind==="bush"?.018:.010;
-    o.rotation.z=Math.sin(time*.85+phase)*amount;
-    o.rotation.x=Math.cos(time*.72+phase)*amount*.38;
+    const phase=o.userData?.windPhase||0;
+    if(o.userData?.kind==="waterfall")continue;
+    const amount=o.userData?.kind==="bush"?.018:.010;
+    if(o.rotation){
+      o.rotation.z=Math.sin(time*.85+phase)*amount;
+      o.rotation.x=Math.cos(time*.72+phase)*amount*.38;
+    }
   }
 
   if(world.campfire){
