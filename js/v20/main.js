@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=24";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=24";
+import { createPlayer, makeGhost } from "./models.js?v=25";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=25";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -9,15 +9,15 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.30;
+renderer.toneMappingExposure=1.24;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8b994);
 scene.fog=new THREE.Fog(0x9eb38d,30,88);
 
-const hemi=new THREE.HemisphereLight(0xdbe8cc,0x514534,1.28);
+const hemi=new THREE.HemisphereLight(0xe0ead4,0x4a4033,1.20);
 scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffe3ac,2.15);
+const sun=new THREE.DirectionalLight(0xffdfae,2.28);
 sun.castShadow=true;
 sun.shadow.mapSize.set(1536,1536);
 sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
@@ -635,7 +635,7 @@ function saveGame(){
     localStorage.setItem("survival-v20-save",JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,version:24
+      buildings:state.buildings,version:25
     }));
   }catch(_){}
 }
