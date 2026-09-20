@@ -79,7 +79,7 @@ function createGroundPatch(renderer){
   return mesh;
 }
 
-export async function initPremiumZone(scene,world,renderer,terrainHeight){
+export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgress){
   const zone={group:new THREE.Group(),trees:[],rocks:[],ground:null};
   zone.group.name="V26_Premium_Test_Zone";
   scene.add(zone.group);
@@ -87,10 +87,17 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight){
   const center={x:-5,z:5};
   removePlaceholderArea(world,center.x,center.z,13);
 
+  let oakP=0,rockP=0;
+  const report=(label)=>{
+    const value=(oakP+rockP)/2;
+    onProgress?.(value,label);
+  };
+
   const [oakBase,rockBase]=await Promise.all([
-    loadPremiumModel(ASSETS.oak,renderer),
-    loadPremiumModel(ASSETS.rock,renderer)
+    loadPremiumModel(ASSETS.oak,renderer,p=>{oakP=p;report("Chargement du chêne GLTF");}),
+    loadPremiumModel(ASSETS.rock,renderer,p=>{rockP=p;report("Chargement du rocher GLTF");})
   ]);
+  onProgress?.(1,"Assets premium chargés");
 
   zone.ground=createGroundPatch(renderer);
   zone.ground.position.set(center.x,terrainHeight(center.x,center.z)+.028,center.z);
