@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=21";
+} from "./models.js?v=22";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -36,6 +36,115 @@ function addShadowFlags(obj,cast=true,receive=true){
   obj.traverse(o=>{if(o.isMesh){o.castShadow=cast;o.receiveShadow=receive;}});
 }
 
+function createGroundTextures(){
+  const size=512;
+  const colorCanvas=document.createElement("canvas");
+  const bumpCanvas=document.createElement("canvas");
+  colorCanvas.width=colorCanvas.height=size;
+  bumpCanvas.width=bumpCanvas.height=size;
+  const c=colorCanvas.getContext("2d");
+  const b=bumpCanvas.getContext("2d");
+
+  let seed=192837;
+  const rand=()=>{
+    seed=(seed*1664525+1013904223)>>>0;
+    return seed/4294967296;
+  };
+
+  const img=c.createImageData(size,size);
+  const bumpImg=b.createImageData(size,size);
+
+  for(let i=0;i<img.data.length;i+=4){
+    const n=(rand()+rand()+rand()+rand())/4;
+    const v=175+Math.floor(n*70);
+    img.data[i]=v-7;
+    img.data[i+1]=v;
+    img.data[i+2]=v-12;
+    img.data[i+3]=255;
+
+    const bv=118+Math.floor(n*116);
+    bumpImg.data[i]=bv;
+    bumpImg.data[i+1]=bv;
+    bumpImg.data[i+2]=bv;
+    bumpImg.data[i+3]=255;
+  }
+  c.putImageData(img,0,0);
+  b.putImageData(bumpImg,0,0);
+
+  for(let i=0;i<78;i++){
+    const x=rand()*size,y=rand()*size,rx=8+rand()*38,ry=5+rand()*24;
+    c.fillStyle="rgba("+(90+Math.floor(rand()*35))+","+(82+Math.floor(rand()*32))+","+(64+Math.floor(rand()*24))+","+(0.035+rand()*.07)+")";
+    c.beginPath();c.ellipse(x,y,rx,ry,rand()*Math.PI,0,Math.PI*2);c.fill();
+  }
+
+  for(let i=0;i<120;i++){
+    const x=rand()*size,y=rand()*size;
+    c.fillStyle="rgba(52,64,42,"+(0.05+rand()*.08)+")";
+    c.beginPath();c.arc(x,y,1+rand()*2.6,0,Math.PI*2);c.fill();
+  }
+
+  const map=new THREE.CanvasTexture(colorCanvas);
+  map.wrapS=map.wrapT=THREE.RepeatWrapping;
+  map.repeat.set(9,9);
+  map.colorSpace=THREE.SRGBColorSpace;
+
+  const bump=new THREE.CanvasTexture(bumpCanvas);
+  bump.wrapS=bump.wrapT=THREE.RepeatWrapping;
+  bump.repeat.set(9,9);
+  bump.colorSpace=THREE.NoColorSpace;
+
+  return {map,bump};
+}
+
+function createGroundScatter(){
+  const group=new THREE.Group();
+
+  const pebbleGeo=new THREE.DodecahedronGeometry(.10,0);
+  const pebbleMat=new THREE.MeshStandardMaterial({color:0x777b72,roughness:.96});
+  const pebbles=new THREE.InstancedMesh(pebbleGeo,pebbleMat,260);
+  pebbles.castShadow=false;pebbles.receiveShadow=true;
+
+  const leafGeo=new THREE.PlaneGeometry(.16,.09);
+  leafGeo.rotateX(-Math.PI/2);
+  const leafMat=new THREE.MeshStandardMaterial({color:0x6e6036,roughness:1,side:THREE.DoubleSide});
+  const leaves=new THREE.InstancedMesh(leafGeo,leafMat,300);
+  leaves.castShadow=false;leaves.receiveShadow=true;
+
+  const dummy=new THREE.Object3D();
+  let pn=0,ln=0;
+
+  for(let i=0;i<900&&(pn<260||ln<300);i++){
+    const x=randRange(2100+i*2.7,-HALF+2,HALF-2);
+    const z=randRange(2600+i*5.3,-HALF+2,HALF-2);
+    if(Math.abs(x-riverX(z))<6.4)continue;
+    if(Math.hypot(x+8,z-8)<5.2)continue;
+
+    const y=terrainHeight(x,z)+.025;
+    const r=seeded(i*11.7);
+
+    if(r<.46&&pn<260){
+      dummy.position.set(x,y,z);
+      dummy.rotation.set(seeded(i*6.2)*.5,seeded(i*9.1)*Math.PI*2,seeded(i*7.6)*.4);
+      const s=.45+seeded(i*4.4)*1.1;
+      dummy.scale.set(s,.45+s*.18,s*.82);
+      dummy.updateMatrix();
+      pebbles.setMatrixAt(pn++,dummy.matrix);
+    }else if(ln<300){
+      dummy.position.set(x,y+.012,z);
+      dummy.rotation.set(0,seeded(i*8.8)*Math.PI*2,0);
+      const s=.65+seeded(i*3.1)*.85;
+      dummy.scale.set(s,s,s);
+      dummy.updateMatrix();
+      leaves.setMatrixAt(ln++,dummy.matrix);
+    }
+  }
+
+  pebbles.count=pn;leaves.count=ln;
+  pebbles.instanceMatrix.needsUpdate=true;leaves.instanceMatrix.needsUpdate=true;
+  group.add(pebbles,leaves);
+  return group;
+}
+
 function createGrassMaterial(){
   const m=new THREE.MeshStandardMaterial({color:0x5f8247,roughness:.95,side:THREE.DoubleSide});
   m.onBeforeCompile=shader=>{
@@ -65,8 +174,22 @@ function createTerrain(){
   }
   geo.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
   geo.computeVertexNormals();
-  const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.98,metalness:0});
-  const terrain=new THREE.Mesh(geo,m);terrain.receiveShadow=true;return terrain;
+
+  const textures=createGroundTextures();
+  const m=new THREE.MeshStandardMaterial({
+    vertexColors:true,
+    map:textures.map,
+    bumpMap:textures.bump,
+    bumpScale:.16,
+    roughnessMap:textures.bump,
+    roughness:.94,
+    metalness:0
+  });
+
+  const terrain=new THREE.Mesh(geo,m);
+  terrain.receiveShadow=true;
+  terrain.userData.surfaceTextures=textures;
+  return terrain;
 }
 
 function createRiver(){
@@ -138,7 +261,7 @@ function createGrassField(){
   const geo=new THREE.BoxGeometry(.045,.48,.026);
   geo.translate(0,.24,0);
   const material=createGrassMaterial();
-  const count=920;const inst=new THREE.InstancedMesh(geo,material,count);inst.castShadow=false;inst.receiveShadow=true;
+  const count=1280;const inst=new THREE.InstancedMesh(geo,material,count);inst.castShadow=false;inst.receiveShadow=true;
   const dummy=new THREE.Object3D();let n=0;
   for(let i=0;i<count*2&&n<count;i++){
     const x=randRange(i*2.1,-HALF+2,HALF-2),z=randRange(i*4.7+8,-HALF+2,HALF-2);
@@ -162,10 +285,11 @@ export function createWorld(scene){
   const world={
     scene,interactables:[],colliders:[],animated:[],buildings:[],enemies:[],ambientAnimals:[],
     season:0,seasonables:[],treeGroups:[],bushGroups:[],terrain:null,water:null,grass:null,snow:null,
-    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null
+    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null,groundScatter:null
   };
 
   world.terrain=createTerrain();scene.add(world.terrain);
+  world.groundScatter=createGroundScatter();scene.add(world.groundScatter);
   world.snowGround=new THREE.Mesh(
     world.terrain.geometry.clone(),
     new THREE.MeshStandardMaterial({color:0xe1e7e2,roughness:.98,transparent:true,opacity:.64,polygonOffset:true,polygonOffsetFactor:-1})
@@ -287,6 +411,24 @@ export function setWorldSeason(world,index){
 
 export function updateWorld(world,dt,time,playerPos){
   if(world.grass?.material?.userData.shader)world.grass.material.userData.shader.uniforms.uTime.value=time;
+
+  for(const it of world.interactables){
+    const obj=it.object;
+    if(!obj||!obj.userData?.baseImpactScale)continue;
+
+    if((obj.userData.hitPulse||0)>0){
+      obj.userData.hitPulse=Math.max(0,obj.userData.hitPulse-dt*5.5);
+      const pulse=Math.sin((1-obj.userData.hitPulse)*Math.PI*3.2)*obj.userData.hitPulse;
+      const b=obj.userData.baseImpactScale;
+      obj.scale.set(
+        b.x*(1+pulse*.035),
+        b.y*(1-pulse*.022),
+        b.z*(1+pulse*.035)
+      );
+    }else{
+      obj.scale.copy(obj.userData.baseImpactScale);
+    }
+  }
 
   for(const o of world.animated){
     const phase=o.userData?.windPhase||0;
