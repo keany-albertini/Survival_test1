@@ -765,79 +765,244 @@ export function updateFarmVisual(plot,stage) {
   }
 }
 
-export function createDeer() {
+export function createDeer(male=false,variant=0) {
   const g=new THREE.Group();
   g.userData.kind="deer";
-  const coat=mat(0x916b46), dark=mat(0x57432f), cream=mat(0xd6bc92);
 
-  const body=mesh(new THREE.CapsuleGeometry(.30,.66,4,8),coat);
-  body.rotation.z=Math.PI/2;body.position.y=.75;g.add(body);
+  const coatColors=[0x855f3d,0x916b46,0x76543a];
+  const coat=mat(coatColors[variant%coatColors.length],.90,0);
+  const dark=mat(0x443328,.96,0);
+  const cream=mat(0xd7c19a,.92,0);
+  const noseMat=mat(0x241f1b,.78,.02);
+  const antlerMat=organicMaterial("bark",0x6b5136,.94,0);
+
+  const bodyRoot=new THREE.Group();
+  bodyRoot.position.y=.88;
+  g.add(bodyRoot);
+
+  const chest=sphere(.34,coatColors[variant%coatColors.length],[1.05,1.12,.88],2);
+  chest.position.set(.26,0,0);
+  bodyRoot.add(chest);
+
+  const belly=sphere(.40,coatColors[variant%coatColors.length],[1.55,.92,.95],2);
+  belly.position.set(-.16,-.02,0);
+  bodyRoot.add(belly);
+
+  const rump=sphere(.35,coatColors[variant%coatColors.length],[1.05,1.0,.92],2);
+  rump.position.set(-.55,.03,0);
+  bodyRoot.add(rump);
+
+  const bellyPatch=sphere(.22,0xcdb58e,[1.45,.35,.78],1);
+  bellyPatch.position.set(-.05,-.27,.05);
+  bodyRoot.add(bellyPatch);
 
   const neckPivot=new THREE.Group();
-  neckPivot.position.set(.40,.95,0);g.add(neckPivot);
-  const neck=cyl(.12,.18,.55,7,0x916b46);
-  neck.position.set(.14,.16,0);neck.rotation.z=-.45;neckPivot.add(neck);
+  neckPivot.position.set(.46,.22,0);
+  bodyRoot.add(neckPivot);
 
-  const head=sphere(.18,0x916b46,[1.2,.8,.75],1);
-  head.position.set(.40,.36,0);neckPivot.add(head);
+  const neck=mesh(new THREE.CylinderGeometry(.12,.20,.72,10),coat);
+  neck.position.set(.18,.24,0);
+  neck.rotation.z=-.46;
+  neckPivot.add(neck);
 
-  const muzzle=sphere(.09,0xb79268,[1.25,.68,.70],1);
-  muzzle.position.set(.57,.32,0);neckPivot.add(muzzle);
+  const headRoot=new THREE.Group();
+  headRoot.position.set(.49,.55,0);
+  neckPivot.add(headRoot);
 
-  const eye=sphere(.025,0x15120f,[1,1,1],1);
-  eye.position.set(.47,.40,.145);neckPivot.add(eye);
+  const head=sphere(.20,coatColors[variant%coatColors.length],[1.22,.88,.78],2);
+  head.position.set(.04,0,0);
+  headRoot.add(head);
 
-  const legs=[];
-  for(const z of [-.15,.15])for(const x of [-.30,.30]){
-    const pivot=new THREE.Group();pivot.position.set(x,.58,z);g.add(pivot);
-    const leg=cyl(.035,.045,.55,5,0x57432f);leg.position.y=-.27;pivot.add(leg);
-    legs.push(pivot);
+  const muzzle=sphere(.105,0xa9845f,[1.45,.66,.72],2);
+  muzzle.position.set(.22,-.035,0);
+  headRoot.add(muzzle);
+
+  const nose=sphere(.052,0x211d19,[1.15,.80,.86],1);
+  nose.material=noseMat;
+  nose.position.set(.34,-.045,0);
+  headRoot.add(nose);
+
+  const ears=[];
+  for(const z of [-.13,.13]){
+    const ear=mesh(new THREE.CapsuleGeometry(.045,.17,4,8),coat);
+    ear.position.set(-.06,.22,z);
+    ear.rotation.x=z>0?.20:-.20;
+    ear.rotation.z=z>0?.28:-.28;
+    headRoot.add(ear);
+    ears.push(ear);
   }
 
-  const tail=sphere(.09,0xd6bc92,[1.1,.9,1],1);
-  tail.position.set(-.62,.80,0);g.add(tail);
+  for(const z of [-.145,.145]){
+    const eye=sphere(.025,0x13110f,[1,1,1],1);
+    eye.position.set(.14,.055,z);
+    headRoot.add(eye);
 
+    const gleam=sphere(.008,0xffffff,[1,1,1],1);
+    gleam.position.set(.155,.068,z+(z>0?.004:-.004));
+    headRoot.add(gleam);
+  }
+
+  // Bois plus réalistes pour certains individus.
+  const antlers=new THREE.Group();
+  antlers.visible=male;
+  for(const side of [-1,1]){
+    const base=new THREE.Vector3(-.02,.20,side*.07);
+    const a1=new THREE.Vector3(-.05,.43,side*.16);
+    const a2=new THREE.Vector3(.04,.62,side*.23);
+    antlers.add(branchBetween(base,a1,.022,.014,antlerMat,7));
+    antlers.add(branchBetween(a1,a2,.015,.009,antlerMat,7));
+    antlers.add(branchBetween(
+      new THREE.Vector3(-.03,.39,side*.14),
+      new THREE.Vector3(-.16,.55,side*.23),
+      .012,.006,antlerMat,6
+    ));
+    antlers.add(branchBetween(
+      new THREE.Vector3(.00,.51,side*.20),
+      new THREE.Vector3(.16,.63,side*.29),
+      .011,.005,antlerMat,6
+    ));
+  }
+  headRoot.add(antlers);
+
+  const legRigs=[];
+  const legDefs=[
+    [.29,-.17,-.20],[.29,-.17,.20],
+    [-.46,-.14,-.20],[-.46,-.14,.20]
+  ];
+  for(let i=0;i<legDefs.length;i++){
+    const d=legDefs[i];
+    const hip=new THREE.Group();
+    hip.position.set(d[0],d[1],d[2]);
+    bodyRoot.add(hip);
+
+    const upper=mesh(new THREE.CylinderGeometry(.055,.075,.43,8),coat);
+    upper.position.y=-.21;
+    hip.add(upper);
+
+    const knee=new THREE.Group();
+    knee.position.y=-.42;
+    hip.add(knee);
+
+    const lower=mesh(new THREE.CylinderGeometry(.038,.052,.42,8),dark);
+    lower.position.y=-.20;
+    knee.add(lower);
+
+    const hoof=mesh(new THREE.BoxGeometry(.09,.08,.13),dark);
+    hoof.position.set(.02,-.43,.02);
+    hoof.rotation.z=-.10;
+    knee.add(hoof);
+
+    legRigs.push({hip,knee,hoof,index:i});
+  }
+
+  const tailRoot=new THREE.Group();
+  tailRoot.position.set(-.86,.08,0);
+  bodyRoot.add(tailRoot);
+  const tail=sphere(.10,0xd7c19a,[1.25,.78,.85],1);
+  tail.position.set(-.03,.03,0);
+  tailRoot.add(tail);
+
+  g.userData.bodyRoot=bodyRoot;
+  g.userData.body=belly;
   g.userData.neck=neckPivot;
-  g.userData.legs=legs;
-  g.userData.tail=tail;
-  g.userData.body=body;
+  g.userData.head=headRoot;
+  g.userData.ears=ears;
+  g.userData.antlers=antlers;
+  g.userData.legRigs=legRigs;
+  g.userData.legs=legRigs.map(r=>r.hip);
+  g.userData.tail=tailRoot;
   return g;
 }
 
-export function createRabbit() {
+export function createRabbit(variant=0) {
   const g=new THREE.Group();
   g.userData.kind="rabbit";
-  const fur=mat(0x9b8d77),dark=mat(0x665d50),light=mat(0xd8ccb7);
 
-  const body=sphere(.25,0x9b8d77,[1.25,.86,.92],1);
-  body.position.set(-.08,.27,0);g.add(body);
+  const furColors=[0x8f806d,0x9b8d77,0x7d7467];
+  const fur=mat(furColors[variant%furColors.length],.94,0);
+  const dark=mat(0x5b554d,.96,0);
+  const light=mat(0xd9cfbd,.94,0);
+
+  const bodyRoot=new THREE.Group();
+  bodyRoot.position.y=.29;
+  g.add(bodyRoot);
+
+  const body=sphere(.27,furColors[variant%furColors.length],[1.34,.92,1.0],2);
+  body.position.set(-.10,0,0);
+  bodyRoot.add(body);
+
+  const chest=sphere(.20,furColors[variant%furColors.length],[.92,1.10,.90],2);
+  chest.position.set(.16,.04,0);
+  bodyRoot.add(chest);
 
   const headPivot=new THREE.Group();
-  headPivot.position.set(.24,.42,0);g.add(headPivot);
+  headPivot.position.set(.29,.18,0);
+  bodyRoot.add(headPivot);
 
-  const head=sphere(.16,0x9b8d77,[1,.95,.9],1);
+  const head=sphere(.17,furColors[variant%furColors.length],[1.02,.97,.92],2);
   headPivot.add(head);
 
-  for(const z of [-.07,.07]){
-    const ear=mesh(new THREE.CapsuleGeometry(.035,.18,3,6),fur);
-    ear.position.set(-.01,.22,z);ear.rotation.z=-.10;headPivot.add(ear);
+  const muzzle=sphere(.075,0xc6b39a,[1.28,.72,.80],1);
+  muzzle.position.set(.13,-.04,0);
+  headPivot.add(muzzle);
+
+  const nose=sphere(.026,0x2a2420,[1,1,1],1);
+  nose.position.set(.205,-.045,0);
+  headPivot.add(nose);
+
+  const ears=[];
+  for(const z of [-.072,.072]){
+    const ear=mesh(new THREE.CapsuleGeometry(.040,.22,4,8),fur);
+    ear.position.set(-.015,.27,z);
+    ear.rotation.z=z>0?.08:-.06;
+    ear.rotation.x=z>0?.12:-.12;
+    headPivot.add(ear);
+    ears.push(ear);
   }
 
-  const eye=sphere(.018,0x171411,[1,1,1],1);
-  eye.position.set(.11,.035,.13);headPivot.add(eye);
-
-  const tail=sphere(.08,0xe5dccb,[1,1,1],1);
-  tail.position.set(-.38,.31,0);g.add(tail);
+  for(const z of [-.12,.12]){
+    const eye=sphere(.021,0x161310,[1,1,1],1);
+    eye.position.set(.08,.035,z);
+    headPivot.add(eye);
+  }
 
   const hind=[];
-  for(const z of [-.13,.13]){
-    const leg=mesh(new THREE.CapsuleGeometry(.045,.14,3,6),dark);
-    leg.position.set(-.18,.13,z);leg.rotation.z=Math.PI/2.8;g.add(leg);hind.push(leg);
+  for(const z of [-.14,.14]){
+    const hip=new THREE.Group();
+    hip.position.set(-.20,-.10,z);
+    bodyRoot.add(hip);
+
+    const thigh=sphere(.11,furColors[variant%furColors.length],[1.2,.72,.90],1);
+    thigh.position.set(-.04,-.02,0);
+    hip.add(thigh);
+
+    const foot=mesh(new THREE.CapsuleGeometry(.035,.18,3,6),dark);
+    foot.position.set(.04,-.14,.01);
+    foot.rotation.z=Math.PI/2.7;
+    hip.add(foot);
+
+    hind.push(hip);
   }
 
+  const fore=[];
+  for(const z of [-.10,.10]){
+    const leg=mesh(new THREE.CapsuleGeometry(.028,.13,3,6),dark);
+    leg.position.set(.19,-.19,z);
+    leg.rotation.z=.06;
+    bodyRoot.add(leg);
+    fore.push(leg);
+  }
+
+  const tail=sphere(.085,0xe5dccb,[1,1,1],1);
+  tail.position.set(-.44,.03,0);
+  bodyRoot.add(tail);
+
+  g.userData.bodyRoot=bodyRoot;
   g.userData.head=headPivot;
+  g.userData.ears=ears;
   g.userData.tail=tail;
   g.userData.hind=hind;
+  g.userData.fore=fore;
   g.userData.body=body;
   return g;
 }
