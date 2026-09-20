@@ -388,7 +388,8 @@ export function createWorld(scene){
   const world={
     scene,interactables:[],colliders:[],animated:[],buildings:[],enemies:[],ambientAnimals:[],
     season:0,seasonables:[],treeGroups:[],bushGroups:[],terrain:null,water:null,grass:null,snow:null,
-    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null,groundScatter:null,understory:null
+    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null,groundScatter:null,understory:null,
+    campGroup:null,hut:null
   };
 
   world.terrain=createTerrain();scene.add(world.terrain);
@@ -425,10 +426,10 @@ export function createWorld(scene){
   scene.add(fallGroup);
   world.animated.push({userData:{kind:"waterfall",windPhase:0},rotation:fallGroup.rotation});
 
-  const camp=createCamp();camp.group.position.set(-8,terrainHeight(-8,8),8);scene.add(camp.group);world.campfire=camp.fire;
+  const camp=createCamp();camp.group.position.set(-8,terrainHeight(-8,8),8);scene.add(camp.group);world.campfire=camp.fire;world.campGroup=camp.group;camp.group.name="LegacyCamp";
   world.interactables.push({type:"campfire",object:camp.fire,position:()=>new THREE.Vector3(-8,terrainHeight(-8,8),8),radius:2.1,label:"Utiliser le feu de camp"});
 
-  const hut=createSmallHut();hut.position.set(-14,terrainHeight(-14,14),14);hut.rotation.y=.24;scene.add(hut);
+  const hut=createSmallHut();hut.position.set(-14,terrainHeight(-14,14),14);hut.rotation.y=.24;scene.add(hut);world.hut=hut;hut.name="LegacyHut";
 
   world.ruins=createRuins();scene.add(world.ruins);
 
