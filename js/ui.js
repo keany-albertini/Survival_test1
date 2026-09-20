@@ -1,11 +1,12 @@
 import {
   state, ITEM_DATA, TOOL_DATA, QUICKBAR_ORDER, ARMOR_DATA, RECIPES, RESOURCE_INFO, RESOURCE_DATA
-} from "./data.js?v=14";
-import { canAfford } from "./harvest.js?v=14";
-import { getSmartTarget } from "./world.js?v=14";
-import { getNearestBuilding } from "./building.js?v=14";
-import { getOpenChest } from "./storage.js?v=14";
-import { SKILL_DATA, getSkillProgress } from "./skills.js?v=14";
+} from "./data.js?v=17";
+import { canAfford } from "./harvest.js?v=17";
+import { getSmartTarget } from "./world.js?v=17";
+import { getNearestBuilding } from "./building.js?v=17";
+import { getOpenChest } from "./storage.js?v=17";
+import { getOpenCampfire } from "./cooking.js?v=17";
+import { SKILL_DATA, getSkillProgress } from "./skills.js?v=17";
 
 export const ui = {
   healthCircle: document.getElementById("healthCircle"),
@@ -26,6 +27,13 @@ export const ui = {
   chestPanel: document.getElementById("chestPanel"),
   chestPlayerGrid: document.getElementById("chestPlayerGrid"),
   chestStorageGrid: document.getElementById("chestStorageGrid"),
+  campfirePanel: document.getElementById("campfirePanel"),
+  campfireRawCount: document.getElementById("campfireRawCount"),
+  campfireCookedCount: document.getElementById("campfireCookedCount"),
+  campfireStatus: document.getElementById("campfireStatus"),
+  campfireProgress: document.getElementById("campfireProgress"),
+  campfireCookButton: document.getElementById("campfireCookButton"),
+  campfireCollectButton: document.getElementById("campfireCollectButton"),
   inventoryGrid: document.getElementById("inventoryGrid"),
   craftList: document.getElementById("craftList"),
   equipmentSlots: document.getElementById("equipmentSlots"),
@@ -54,6 +62,9 @@ let placeItemHandler = null;
 let depositHandler = null;
 let withdrawHandler = null;
 let closeChestHandler = null;
+let closeCampfireHandler = null;
+let cookMeatHandler = null;
+let collectCookedHandler = null;
 let activeTab = "inventory";
 let quickbarSignature = "";
 let inventorySignature = "";
@@ -61,6 +72,7 @@ let craftSignature = "";
 let equipmentSignature = "";
 let skillsSignature = "";
 let chestSignature = "";
+let campfireSignature = "";
 
 export function configureUI(handlers) {
   useHandler = handlers.useItem;
@@ -71,6 +83,9 @@ export function configureUI(handlers) {
   depositHandler = handlers.depositItem;
   withdrawHandler = handlers.withdrawItem;
   closeChestHandler = handlers.closeChest;
+  closeCampfireHandler = handlers.closeCampfire;
+  cookMeatHandler = handlers.cookMeat;
+  collectCookedHandler = handlers.collectCooked;
 
   for (const button of ui.tabs) {
     button.addEventListener("click", () => setInventoryTab(button.dataset.tab));
@@ -85,11 +100,12 @@ export function showToast(message) {
 }
 
 export function isPanelOpen() {
-  return ui.inventoryPanel.classList.contains("open") || ui.chestPanel.classList.contains("open");
+  return ui.inventoryPanel.classList.contains("open") || ui.chestPanel.classList.contains("open") || ui.campfirePanel.classList.contains("open");
 }
 
 export function openInventory(tab = "inventory") {
   closeChestPanel();
+  closeCampfirePanel();
   setInventoryTab(tab);
   ui.inventoryPanel.classList.add("open");
   ui.inventoryPanel.setAttribute("aria-hidden", "false");
@@ -97,11 +113,13 @@ export function openInventory(tab = "inventory") {
 }
 
 export function openChestPanel() {
+  closeCampfirePanel();
   ui.inventoryPanel.classList.remove("open");
   ui.inventoryPanel.setAttribute("aria-hidden", "true");
   ui.chestPanel.classList.add("open");
   ui.chestPanel.setAttribute("aria-hidden", "false");
   chestSignature = "";
+  campfireSignature = "";
   updateUI();
 }
 
@@ -111,10 +129,28 @@ export function closeChestPanel() {
   closeChestHandler?.();
 }
 
+export function openCampfirePanel() {
+  ui.inventoryPanel.classList.remove("open");
+  ui.inventoryPanel.setAttribute("aria-hidden", "true");
+  ui.chestPanel.classList.remove("open");
+  ui.chestPanel.setAttribute("aria-hidden", "true");
+  ui.campfirePanel.classList.add("open");
+  ui.campfirePanel.setAttribute("aria-hidden", "false");
+  campfireSignature = "";
+  updateUI();
+}
+
+export function closeCampfirePanel() {
+  ui.campfirePanel.classList.remove("open");
+  ui.campfirePanel.setAttribute("aria-hidden", "true");
+  closeCampfireHandler?.();
+}
+
 export function closePanels() {
   ui.inventoryPanel.classList.remove("open");
   ui.inventoryPanel.setAttribute("aria-hidden", "true");
   closeChestPanel();
+  closeCampfirePanel();
 }
 
 export function toggleInventory(tab = activeTab) {
@@ -404,13 +440,52 @@ function renderChest() {
   if (!chestCount) ui.chestStorageGrid.innerHTML = '<div class="storage-empty">Coffre vide</div>';
 }
 
+function renderCampfire() {
+  const campfire = getOpenCampfire();
+  if (!campfire) {
+    closeCampfirePanel();
+    return;
+  }
+
+  const cooking = campfire.cooking || { remaining: 0, total: 5, ready: 0 };
+  const signature = JSON.stringify({
+    raw: state.inventory.meat || 0,
+    cooked: state.inventory.cooked_meat || 0,
+    remaining: Math.round((cooking.remaining || 0) * 10) / 10,
+    ready: cooking.ready || 0,
+    id: campfire.id
+  });
+  if (signature === campfireSignature) return;
+  campfireSignature = signature;
+
+  const remaining = Math.max(0, Number(cooking.remaining) || 0);
+  const total = Math.max(1, Number(cooking.total) || 5);
+  const ready = Math.max(0, Math.floor(Number(cooking.ready) || 0));
+  const cookingNow = remaining > 0;
+  const progress = cookingNow ? Math.max(0, Math.min(100, (1 - remaining / total) * 100)) : (ready > 0 ? 100 : 0);
+
+  ui.campfireRawCount.textContent = String(state.inventory.meat || 0);
+  ui.campfireCookedCount.textContent = String(ready);
+  ui.campfireProgress.style.width = progress.toFixed(1) + "%";
+  ui.campfireStatus.textContent = cookingNow
+    ? "Cuisson en cours · " + remaining.toFixed(1) + " s"
+    : ready > 0
+      ? "Viande cuite prête à récupérer."
+      : "Le feu est prêt.";
+
+  ui.campfireCookButton.disabled = cookingNow || (state.inventory.meat || 0) <= 0;
+  ui.campfireCookButton.textContent = cookingNow ? "Cuisson..." : "Cuire 1 viande";
+  ui.campfireCollectButton.disabled = ready <= 0;
+  ui.campfireCollectButton.textContent = ready > 0 ? "Récupérer x" + ready : "Rien à récupérer";
+}
+
 function renderQuickbar() {
   const signature = JSON.stringify({
     equipped: state.equipped,
     tools: state.tools,
     arrows: state.inventory.arrows,
     berries: state.inventory.berries,
-    meat: state.inventory.meat,
+    cooked_meat: state.inventory.cooked_meat,
     water: state.inventory.water,
     bandage: state.inventory.bandage
   });
@@ -507,6 +582,17 @@ export function updatePrompt() {
     return;
   }
 
+  const nearbyCampfire = (!isPanelOpen() && !state.gameOver) ? getNearestBuilding(68, "campfire") : null;
+  if (nearbyCampfire) {
+    ui.touchAction.classList.add("ready");
+    ui.touchAction.classList.remove("danger");
+    ui.touchActionIcon.textContent = "🔥";
+    ui.touchActionLabel.textContent = "Cuisiner";
+    ui.prompt.textContent = "ACTION — Utiliser le feu de camp";
+    ui.prompt.classList.add("visible");
+    return;
+  }
+
   const nearbyChest = (!isPanelOpen() && !state.gameOver) ? getNearestBuilding(62, "chest") : null;
   if (nearbyChest) {
     ui.touchAction.classList.add("ready");
@@ -584,6 +670,7 @@ export function updateUI() {
   renderQuickbar();
 
   if (ui.chestPanel.classList.contains("open")) renderChest();
+  if (ui.campfirePanel.classList.contains("open")) renderCampfire();
 
   if (ui.inventoryPanel.classList.contains("open")) {
     if (activeTab === "inventory") renderInventory();
