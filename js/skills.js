@@ -1,4 +1,4 @@
-import { state } from "./data.js?v=17";
+import { state } from "./data.js?v=19";
 
 export const SKILL_DATA = {
   woodcutting: {
