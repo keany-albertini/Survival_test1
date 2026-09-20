@@ -1,5 +1,5 @@
 import { state, hashRand, clamp } from "./data.js?v=17";
-import { getChunksForView, getAnimalState } from "./world.js?v=17";
+import { getChunksForView, getAnimalState } from "./world.js?v=18";
 
 export class Renderer {
   constructor(canvas) {
@@ -105,50 +105,233 @@ export class Renderer {
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 3, 4); ctx.quadraticCurveTo(i * 4, -10, i * 7, -18 - Math.abs(i) * 2); ctx.stroke(); }
       ctx.fillStyle = "#789d55"; ctx.beginPath(); ctx.ellipse(-7, -9, 7, 3, -.7, 0, Math.PI * 2); ctx.ellipse(8, -12, 7, 3, .6, 0, Math.PI * 2); ctx.fill();
     } else if (item.type === "stone") {
-      ctx.fillStyle = "#777b70";
-      ctx.beginPath(); ctx.moveTo(-9,4); ctx.lineTo(-6,-6); ctx.lineTo(3,-9); ctx.lineTo(10,-3); ctx.lineTo(8,6); ctx.lineTo(-3,8); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.13)";
-      ctx.beginPath(); ctx.moveTo(-5,-5); ctx.lineTo(3,-8); ctx.lineTo(6,-4); ctx.lineTo(-2,-1); ctx.closePath(); ctx.fill();
+      const variant = item.variant || 0;
+      ctx.fillStyle = "rgba(17,23,18,.15)";
+      ctx.beginPath();
+      ctx.ellipse(1,6,12 + variant,5.5,0,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#7f8780";
+      ctx.beginPath();
+      ctx.moveTo(-10,3);
+      ctx.lineTo(-7,-5);
+      ctx.lineTo(-1,-9);
+      ctx.lineTo(8,-6);
+      ctx.lineTo(11,1);
+      ctx.lineTo(5,7);
+      ctx.lineTo(-4,8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#aeb5ad";
+      ctx.beginPath();
+      ctx.moveTo(-6,-5);
+      ctx.lineTo(-1,-8);
+      ctx.lineTo(7,-5);
+      ctx.lineTo(2,-1);
+      ctx.lineTo(-4,-1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#676e68";
+      ctx.beginPath();
+      ctx.moveTo(-10,3);
+      ctx.lineTo(-4,-1);
+      ctx.lineTo(2,-1);
+      ctx.lineTo(5,7);
+      ctx.lineTo(-4,8);
+      ctx.closePath();
+      ctx.fill();
     } else if (["large_rock","copper_ore","tin_ore","ore","gold_ore"].includes(item.type)) {
-      const base = item.type === "large_rock" ? "#858982" : "#6a726e";
-      ctx.fillStyle = base;
-      ctx.beginPath(); ctx.moveTo(-22,9); ctx.lineTo(-17,-12); ctx.lineTo(2,-19); ctx.lineTo(21,-7); ctx.lineTo(18,12); ctx.lineTo(-7,16); ctx.closePath(); ctx.fill();
-
-      ctx.fillStyle = "rgba(255,255,255,.12)";
-      ctx.beginPath(); ctx.moveTo(-14,-10); ctx.lineTo(2,-17); ctx.lineTo(9,-10); ctx.lineTo(-4,-5); ctx.closePath(); ctx.fill();
-
+      const variant = item.variant || 0;
+      const lean = (variant - 1.5) * 1.4;
       const veinColors = {
-        copper_ore: "#b56f45",
-        tin_ore: "#c9cfcb",
-        ore: "#9a7250",
-        gold_ore: "#d9b449"
+        copper_ore: "#c87846",
+        tin_ore: "#d0d7d3",
+        ore: "#927660",
+        gold_ore: "#dfbd4d"
       };
+
+      ctx.fillStyle = "rgba(18,23,19,.20)";
+      ctx.beginPath();
+      ctx.ellipse(2,11,27,9,0,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(lean, 0);
+      ctx.scale(1 + variant * .018, 1 - variant * .008);
+
+      ctx.fillStyle = item.type === "large_rock" ? "#737a73" : "#646d68";
+      ctx.beginPath();
+      ctx.moveTo(-23,8);
+      ctx.lineTo(-21,-6);
+      ctx.lineTo(-12,-17);
+      ctx.lineTo(3,-22);
+      ctx.lineTo(18,-15);
+      ctx.lineTo(24,-3);
+      ctx.lineTo(20,11);
+      ctx.lineTo(7,17);
+      ctx.lineTo(-10,15);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = item.type === "large_rock" ? "#929a92" : "#818a84";
+      ctx.beginPath();
+      ctx.moveTo(-12,-17);
+      ctx.lineTo(3,-22);
+      ctx.lineTo(18,-15);
+      ctx.lineTo(10,-5);
+      ctx.lineTo(-3,-3);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = item.type === "large_rock" ? "#5e655f" : "#525b56";
+      ctx.beginPath();
+      ctx.moveTo(-23,8);
+      ctx.lineTo(-21,-6);
+      ctx.lineTo(-12,-17);
+      ctx.lineTo(-3,-3);
+      ctx.lineTo(-7,14);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = item.type === "large_rock" ? "#7d857d" : "#707a73";
+      ctx.beginPath();
+      ctx.moveTo(-3,-3);
+      ctx.lineTo(10,-5);
+      ctx.lineTo(20,11);
+      ctx.lineTo(7,17);
+      ctx.lineTo(-7,14);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(43,49,44,.56)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-12,-17); ctx.lineTo(-3,-3); ctx.lineTo(10,-5); ctx.lineTo(18,-15);
+      ctx.moveTo(-3,-3); ctx.lineTo(-7,14);
+      ctx.moveTo(10,-5); ctx.lineTo(20,11);
+      ctx.stroke();
+
       if (veinColors[item.type]) {
         ctx.strokeStyle = veinColors[item.type];
         ctx.lineWidth = 3;
+        ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(-12,-5); ctx.lineTo(-3,0); ctx.lineTo(4,-8);
-        ctx.moveTo(2,6); ctx.lineTo(10,1); ctx.lineTo(15,6);
+        ctx.moveTo(-11,-8); ctx.lineTo(-3,-2); ctx.lineTo(4,-9);
+        ctx.moveTo(2,5); ctx.lineTo(9,1); ctx.lineTo(15,5);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(255,255,255,.18)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-10,-9); ctx.lineTo(-3,-3); ctx.lineTo(4,-10);
         ctx.stroke();
       }
 
       const hits = state.resourceHits[item.id] || 0;
       if (hits > 0) {
-        ctx.strokeStyle = "rgba(30,30,26,.65)";
+        ctx.strokeStyle = "rgba(32,34,31,.72)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(-2,-2); ctx.lineTo(-7,4); ctx.lineTo(-3,9);
-        if (hits > 2) { ctx.moveTo(4,-4); ctx.lineTo(8,3); ctx.lineTo(3,8); }
+        ctx.moveTo(-1,-2); ctx.lineTo(-7,4); ctx.lineTo(-3,10);
+        if (hits > 2) {
+          ctx.moveTo(5,-5); ctx.lineTo(9,2); ctx.lineTo(4,8);
+        }
         ctx.stroke();
       }
+
+      ctx.restore();
     } else if (item.type === "berries") {
       ctx.fillStyle = "#315f34"; ctx.beginPath(); ctx.arc(-6,-7,10,0,Math.PI*2); ctx.arc(7,-8,11,0,Math.PI*2); ctx.arc(1,-16,9,0,Math.PI*2); ctx.fill();
       ctx.fillStyle = "#46519b"; [[-8,-8],[3,-14],[10,-6],[-1,-3]].forEach(b => { ctx.beginPath(); ctx.arc(b[0],b[1],2.4,0,Math.PI*2); ctx.fill(); });
     } else if (item.type === "tree") {
-      ctx.fillStyle = "rgba(20,28,18,.18)"; ctx.beginPath(); ctx.ellipse(5,6,27,10,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = "#5b3f29"; ctx.fillRect(-5,-47,11,52);
-      ctx.fillStyle = "#3f6d43"; ctx.beginPath(); ctx.arc(-12,-48,24,0,Math.PI*2); ctx.arc(12,-53,26,0,Math.PI*2); ctx.arc(0,-72,24,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = "rgba(188,218,134,.24)"; ctx.beginPath(); ctx.arc(-7,-65,13,0,Math.PI*2); ctx.fill();
+      const variant = item.variant || 0;
+      const crownShift = (variant - 1.5) * 2;
+
+      ctx.fillStyle = "rgba(17,24,18,.20)";
+      ctx.beginPath();
+      ctx.ellipse(4,9,29,10,0,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#4c3222";
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-4,5); ctx.lineTo(-13,12);
+      ctx.moveTo(3,5); ctx.lineTo(13,11);
+      ctx.moveTo(0,5); ctx.lineTo(2,14);
+      ctx.stroke();
+
+      ctx.fillStyle = "#604029";
+      ctx.beginPath();
+      ctx.moveTo(-7,7);
+      ctx.lineTo(-6,-46);
+      ctx.lineTo(5,-49);
+      ctx.lineTo(8,7);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#7c5637";
+      ctx.beginPath();
+      ctx.moveTo(-3,5);
+      ctx.lineTo(-2,-45);
+      ctx.lineTo(3,-46);
+      ctx.lineTo(4,5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#493020";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-3,-30); ctx.lineTo(-14,-42);
+      ctx.moveTo(3,-35); ctx.lineTo(15,-46);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(48,29,18,.48)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(-3,-36); ctx.lineTo(-1,-13);
+      ctx.moveTo(3,-30); ctx.lineTo(2,-8);
+      ctx.stroke();
+
+      ctx.fillStyle = "#294d30";
+      ctx.beginPath();
+      ctx.arc(-18 + crownShift,-50,22,0,Math.PI*2);
+      ctx.arc(15 + crownShift*.5,-54,24,0,Math.PI*2);
+      ctx.arc(-2,-72,25,0,Math.PI*2);
+      ctx.arc(2 + crownShift,-88,18,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#3f6d43";
+      ctx.beginPath();
+      ctx.arc(-22 + crownShift,-48,16,0,Math.PI*2);
+      ctx.arc(20 + crownShift*.4,-50,17,0,Math.PI*2);
+      ctx.arc(-10,-66,19,0,Math.PI*2);
+      ctx.arc(11,-68,20,0,Math.PI*2);
+      ctx.arc(1 + crownShift*.35,-84,16,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#537f4f";
+      ctx.beginPath();
+      ctx.arc(-11 + crownShift*.4,-61,12,0,Math.PI*2);
+      ctx.arc(11,-62,12,0,Math.PI*2);
+      ctx.arc(-2,-78,11,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(199,224,139,.24)";
+      ctx.beginPath();
+      ctx.arc(-13 + crownShift*.3,-69,8,0,Math.PI*2);
+      ctx.arc(7,-77,7,0,Math.PI*2);
+      ctx.arc(18,-55,6,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(232,239,188,.20)";
+      for (const leaf of [[-22,-58],[2,-91],[24,-62],[-3,-55]]) {
+        ctx.beginPath();
+        ctx.ellipse(leaf[0],leaf[1],3,1.6,-.35,0,Math.PI*2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
