@@ -504,8 +504,8 @@ document.getElementById("buildClose").addEventListener("click",()=>toggleBuild(f
 
 const floatingStick=document.getElementById("floatingStick");
 const floatingKnob=document.getElementById("floatingKnob");
-const JOY_MAX=54;
-const JOY_DEADZONE=6;
+const JOY_MAX=38;
+const JOY_DEADZONE=5;
 
 function beginFloatingJoy(e){
   if(e.pointerType==="mouse"||joy.id!==null)return;
