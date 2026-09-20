@@ -285,6 +285,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
 
   // On ne masque l'ancien camp qu'une fois les nouveaux assets prêts.
   if(world.campGroup)world.campGroup.visible=false;
+  if(world.campfire)world.campfire.visible=false;
   if(world.hut)world.hut.visible=false;
 
   const ground=createGroundPatch(renderer,12.7,0xcdb77f);
