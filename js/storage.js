@@ -1,5 +1,5 @@
-import { state, ITEM_DATA } from "./data.js?v=17";
-import { saveGame } from "./save.js?v=17";
+import { state, ITEM_DATA } from "./data.js?v=19";
+import { saveGame } from "./save.js?v=19";
 
 export function getOpenChest() {
   if (!state.openChestId) return null;
