@@ -1,23 +1,23 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=17";
-import { Renderer } from "./render.js?v=18";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=17";
-import { hunt, updateAnimals } from "./fauna.js?v=17";
-import { getSmartTarget, isPlayerBlockedByNature } from "./world.js?v=18";
-import { updateSurvival } from "./survival.js?v=17";
-import { saveGame, loadGame } from "./save.js?v=17";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=19";
+import { Renderer } from "./render.js?v=19";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=19";
+import { hunt, updateAnimals } from "./fauna.js?v=19";
+import { getSmartTarget, isPlayerBlockedByNature } from "./world.js?v=19";
+import { updateSurvival } from "./survival.js?v=19";
+import { saveGame, loadGame } from "./save.js?v=19";
 import {
   startPlacement, cancelPlacement, placeCurrent,
   updateBuildPreview, isBuildMode, getNearestBuilding, isPlayerBlockedByWall
-} from "./building.js?v=17";
-import { fireBow, setAim, updateProjectiles } from "./combat.js?v=17";
-import { openCampfire, closeCampfire, startCookingMeat, collectCookedMeat, updateCooking } from "./cooking.js?v=17";
+} from "./building.js?v=19";
+import { fireBow, setAim, updateProjectiles } from "./combat.js?v=19";
+import { openCampfire, closeCampfire, startCookingMeat, collectCookedMeat, updateCooking } from "./cooking.js?v=19";
 import {
   openChest, closeChest, depositItem, withdrawItem
-} from "./storage.js?v=17";
+} from "./storage.js?v=19";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
   isPanelOpen, toggleInventory, openInventory, openChestPanel, openCampfirePanel, closePanels
-} from "./ui.js?v=17";
+} from "./ui.js?v=19";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
