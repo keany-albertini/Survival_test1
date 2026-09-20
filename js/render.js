@@ -1,5 +1,5 @@
-import { state, hashRand, clamp } from "./data.js?v=14";
-import { getChunksForView, getAnimalState } from "./world.js?v=14";
+import { state, hashRand, clamp } from "./data.js?v=17";
+import { getChunksForView, getAnimalState } from "./world.js?v=17";
 
 export class Renderer {
   constructor(canvas) {
@@ -235,15 +235,66 @@ export class Renderer {
       if (preview) {
         ctx.beginPath(); ctx.arc(0,0,24,0,Math.PI*2); ctx.fill(); ctx.stroke();
       }
-      ctx.fillStyle = "#77756b";
+
+      const t = performance.now() * .006 + building.x * .012 + building.y * .009;
+      const sway = Math.sin(t) * 3.2;
+      const pulse = 1 + Math.sin(t * 1.7) * .08;
+      const flameH = 21 * pulse + Math.sin(t * 2.3) * 2;
+
+      ctx.fillStyle = "#85827a";
       for (let i=0;i<8;i++) {
         const a=i/8*Math.PI*2;
         ctx.beginPath(); ctx.arc(Math.cos(a)*13,Math.sin(a)*8,5,0,Math.PI*2); ctx.fill();
       }
-      ctx.strokeStyle="#5d3924"; ctx.lineWidth=5;
-      ctx.beginPath(); ctx.moveTo(-10,5);ctx.lineTo(10,-5);ctx.moveTo(-10,-5);ctx.lineTo(10,5);ctx.stroke();
-      ctx.fillStyle="#e48d32"; ctx.beginPath(); ctx.moveTo(0,-17);ctx.quadraticCurveTo(12,-2,0,6);ctx.quadraticCurveTo(-11,-3,0,-17);ctx.fill();
-      ctx.fillStyle="#f1c75c"; ctx.beginPath(); ctx.moveTo(0,-10);ctx.quadraticCurveTo(6,-1,0,3);ctx.quadraticCurveTo(-5,-1,0,-10);ctx.fill();
+
+      ctx.strokeStyle="#5d3924"; ctx.lineWidth=5; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(-11,5);ctx.lineTo(11,-5);ctx.moveTo(-11,-5);ctx.lineTo(11,5);ctx.stroke();
+
+      ctx.save();
+      ctx.shadowColor = "rgba(255,132,48,.65)";
+      ctx.shadowBlur = 11;
+
+      ctx.fillStyle="#e66f2e";
+      ctx.beginPath();
+      ctx.moveTo(-9,5);
+      ctx.quadraticCurveTo(-13+sway,-6, -2+sway*.45,-flameH);
+      ctx.quadraticCurveTo(5+sway*.25,-13, 10,2);
+      ctx.quadraticCurveTo(5,7,-9,5);
+      ctx.fill();
+
+      ctx.fillStyle="#f2a43d";
+      ctx.beginPath();
+      ctx.moveTo(-5,4);
+      ctx.quadraticCurveTo(-7+sway*.35,-4, 1+sway*.22,-flameH*.72);
+      ctx.quadraticCurveTo(7,-7,6,3);
+      ctx.quadraticCurveTo(2,7,-5,4);
+      ctx.fill();
+
+      ctx.fillStyle="#ffd768";
+      ctx.beginPath();
+      ctx.moveTo(-2,3);
+      ctx.quadraticCurveTo(-2+sway*.12,-2, 2,-flameH*.42);
+      ctx.quadraticCurveTo(5,-2,3,4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      for (let i=0;i<4;i++) {
+        const phase = t * (1.5 + i*.18) + i * 1.7;
+        const emberY = -8 - ((phase * 8) % 18);
+        const emberX = Math.sin(phase * 2.1) * (5 + i);
+        ctx.fillStyle = "rgba(255,191,76," + (.38 + (i%2)*.18) + ")";
+        ctx.beginPath(); ctx.arc(emberX,emberY,1.2,0,Math.PI*2); ctx.fill();
+      }
+
+      if (!preview && building.cooking?.remaining > 0) {
+        ctx.strokeStyle="#4d3524"; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(-21,-18); ctx.lineTo(21,-18); ctx.stroke();
+        ctx.fillStyle="#8e3f2e";
+        ctx.beginPath(); ctx.ellipse(0,-18,8,4.5,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle="rgba(255,196,125,.32)"; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(-4,-20); ctx.lineTo(5,-16); ctx.stroke();
+      }
     } else if (type === "workbench") {
       if (preview) { ctx.fillRect(-28,-18,56,36); ctx.strokeRect(-28,-18,56,36); }
       ctx.fillStyle="#65452d"; ctx.fillRect(-26,-13,52,14);
