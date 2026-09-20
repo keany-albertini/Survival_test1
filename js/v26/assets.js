@@ -110,12 +110,28 @@ function enhanceMaterials(root,renderer){
   });
 }
 
-export async function loadPremiumModel(url,renderer){
-  if(cache.has(url))return cache.get(url).clone(true);
+export async function loadPremiumModel(url,renderer,onProgress){
+  if(cache.has(url)){
+    onProgress?.(1);
+    return cache.get(url).clone(true);
+  }
 
-  const gltf=await loader.loadAsync(url);
+  const gltf=await new Promise((resolve,reject)=>{
+    loader.load(
+      url,
+      resolve,
+      evt=>{
+        if(!onProgress)return;
+        if(evt.lengthComputable&&evt.total>0)onProgress(Math.min(1,evt.loaded/evt.total));
+        else onProgress(.45);
+      },
+      reject
+    );
+  });
+
   enhanceMaterials(gltf.scene,renderer);
   cache.set(url,gltf.scene);
+  onProgress?.(1);
   return gltf.scene.clone(true);
 }
 
