@@ -1,7 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 import { createPlayer, makeGhost } from "./models.js?v=25";
 import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=25";
-import { initPremiumZone, updatePremiumZone } from "../v26/premiumZone.js?v=26";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -33,9 +32,41 @@ camera.position.set(14,17,14);
 
 const world=createWorld(scene);
 let premiumZone=null;
-initPremiumZone(scene,world,renderer,terrainHeight)
-  .then(zone=>{premiumZone=zone;})
-  .catch(err=>console.warn("V26 premium zone load failed",err));
+let premiumZoneUpdater=null;
+
+function loadingProgress(percent,label){
+  window.dispatchEvent(new CustomEvent("survival-loading",{
+    detail:{percent:Math.max(0,Math.min(100,percent)),label}
+  }));
+}
+
+async function bootPremiumZone(){
+  loadingProgress(68,"Monde jouable prêt");
+  try{
+    const premiumModule=await import("../v26/premiumZone.js?v=262");
+    loadingProgress(76,"Chargement des modèles GLTF/PBR");
+
+    const premiumPromise=premiumModule.initPremiumZone(
+      scene,world,renderer,terrainHeight,
+      (value,label)=>loadingProgress(76+value*.20,label)
+    );
+
+    const timeout=new Promise((_,reject)=>
+      setTimeout(()=>reject(new Error("premium-timeout")),6500)
+    );
+
+    premiumZone=await Promise.race([premiumPromise,timeout]);
+    premiumZoneUpdater=premiumModule.updatePremiumZone;
+    loadingProgress(100,"Monde prêt");
+  }catch(err){
+    console.warn("V26 premium zone disabled; base game continues.",err);
+    premiumZone=null;
+    premiumZoneUpdater=null;
+    loadingProgress(100,"Monde prêt · mode compatible");
+  }finally{
+    setTimeout(()=>document.getElementById("loading")?.classList.add("hidden"),180);
+  }
+}
 
 const player=createPlayer();
 scene.add(player);
@@ -832,7 +863,7 @@ function forceCleanSpawnUI(){
 
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
-  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updatePremiumZone(premiumZone,elapsed);updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
+  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed);updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
   requestAnimationFrame(frame);
@@ -927,6 +958,7 @@ player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
 motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
 syncEquippedTool();renderQuickbar();renderBag();updateBuildPanel();updateUI();
-setTimeout(()=>document.getElementById("loading").classList.add("hidden"),450);
+loadingProgress(62,"Initialisation du joueur et de la carte");
 showToast("Bienvenue à Val-des-Roches.");
 requestAnimationFrame(frame);
+bootPremiumZone();
