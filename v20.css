@@ -53,6 +53,42 @@ button{font:inherit;color:inherit}
 .desktop-help{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:5;display:flex;gap:8px;font-size:9px;color:rgba(238,234,220,.62);pointer-events:none}
 kbd{padding:2px 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;background:rgba(0,0,0,.25)}
 .touch-controls{display:none}
+.floating-stick{
+  display:none;
+  position:absolute;
+  z-index:11;
+  width:104px;
+  height:104px;
+  margin:-52px 0 0 -52px;
+  border-radius:50%;
+  opacity:0;
+  transform:scale(.82);
+  transition:opacity .08s ease,transform .08s ease;
+  pointer-events:none;
+  border:1px solid rgba(239,229,198,.17);
+  background:radial-gradient(circle at center,rgba(12,16,13,.12) 0 38%,rgba(7,10,8,.34) 70%,rgba(7,10,8,.10) 100%);
+  box-shadow:inset 0 0 0 12px rgba(255,255,255,.018),0 10px 26px rgba(0,0,0,.16)
+}
+.floating-stick.active{opacity:.78;transform:scale(1)}
+.floating-ring{
+  position:absolute;
+  inset:18px;
+  border-radius:50%;
+  border:1px solid rgba(238,222,180,.15)
+}
+.floating-knob{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:42px;
+  height:42px;
+  margin:-21px;
+  border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,rgba(183,184,139,.92),rgba(67,75,56,.92) 72%);
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:0 7px 15px rgba(0,0,0,.25),inset 0 2px rgba(255,255,255,.12);
+  will-change:transform
+}
 .build-panel{position:absolute;left:50%;top:68px;transform:translate(-50%,-130%);z-index:12;min-width:260px;padding:11px 12px;border-radius:12px;background:rgba(10,14,11,.94);border:1px solid rgba(224,198,137,.28);box-shadow:0 14px 34px rgba(0,0,0,.36);transition:.2s;display:flex;justify-content:space-between;gap:14px;align-items:center}
 .build-panel.open{transform:translate(-50%,0)}
 .build-panel>div{display:grid;gap:2px}
@@ -71,18 +107,40 @@ kbd{padding:2px 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;bac
   .loot-feed{margin-top:74px}
   .top-right{right:8px;top:8px}
   .minimap-wrap,#minimap{width:116px;height:116px}
-  .stats{bottom:72px;left:8px}
+  .stats{bottom:70px;left:8px}
   .stat{grid-template-columns:22px 105px 26px;gap:5px}
   .quickbar{bottom:max(8px,env(safe-area-inset-bottom));max-width:calc(100vw - 150px);overflow-x:auto}
   .qslot{flex:0 0 43px;width:43px;height:43px;font-size:19px}
   .prompt{display:none}
-  .touch-controls{display:flex;position:absolute;left:0;right:0;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 59px);z-index:10;justify-content:space-between;align-items:end;padding:0 14px;pointer-events:none}
-  .joy-base{position:relative;width:112px;height:112px;border-radius:50%;border:2px solid rgba(232,222,191,.20);background:radial-gradient(circle at 40% 35%,rgba(255,255,255,.10),rgba(5,8,6,.55));box-shadow:inset 0 0 0 12px rgba(255,255,255,.025);pointer-events:auto;touch-action:none}
-  .joy-knob{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#7f8462,#383f31 74%);border:2px solid rgba(255,255,255,.18);box-shadow:0 7px 17px rgba(0,0,0,.32)}
+  .floating-stick{display:block}
+  .touch-controls{
+    display:flex;
+    position:absolute;
+    right:max(10px,env(safe-area-inset-right));
+    bottom:calc(max(8px,env(safe-area-inset-bottom)) + 64px);
+    z-index:12;
+    align-items:end;
+    pointer-events:none
+  }
   .touch-actions{display:flex;align-items:end;gap:8px;pointer-events:auto}
-  .main-action{width:76px;height:76px;border-radius:50%;border:2px solid rgba(230,214,168,.30);background:radial-gradient(circle at 35% 30%,#725f3f,#302a20 73%);display:grid;place-items:center;align-content:center;gap:1px;box-shadow:0 10px 25px rgba(0,0,0,.30)}
-  .main-action span{font-size:24px}.main-action small{font-size:8px;font-weight:900;text-transform:uppercase}
-  .small-action{width:48px;height:48px;border-radius:14px;border:1px solid rgba(230,214,168,.23);background:rgba(18,23,18,.86);font-size:21px}
+  .main-action{
+    width:68px;height:68px;border-radius:50%;
+    border:1px solid rgba(230,214,168,.30);
+    background:radial-gradient(circle at 35% 30%,rgba(114,95,63,.92),rgba(48,42,32,.92) 73%);
+    display:grid;place-items:center;align-content:center;gap:1px;
+    box-shadow:0 9px 22px rgba(0,0,0,.27);
+    backdrop-filter:blur(5px);
+    touch-action:manipulation
+  }
+  .main-action span{font-size:22px}.main-action small{font-size:7px;font-weight:900;text-transform:uppercase}
+  .small-action{
+    width:44px;height:44px;border-radius:13px;
+    border:1px solid rgba(230,214,168,.23);
+    background:rgba(18,23,18,.78);
+    box-shadow:0 7px 17px rgba(0,0,0,.22);
+    font-size:19px;
+    touch-action:manipulation
+  }
 }
 @media(max-width:560px){
   .top-left{left:8px;top:8px}
