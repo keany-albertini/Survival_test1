@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=23";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=23";
+import { createPlayer, makeGhost } from "./models.js?v=24";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=24";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -503,10 +503,14 @@ function doAction(){
   updateUI();
 }
 
+function setBuildPanelVisible(open){
+  ui.buildPanel.classList.toggle("open",open);
+  ui.buildPanel.setAttribute("aria-hidden",open?"false":"true");
+}
 function toggleBuild(force){
   const next=force===undefined?!state.buildMode:Boolean(force);
   state.buildMode=next;
-  ui.buildPanel.classList.toggle("open",next);
+  setBuildPanelVisible(next);
   if(next){
     toggleBag(false);
     state.selected="build";
@@ -559,7 +563,7 @@ function placeBuild(){
   if(!buildValid){
     showToast(hasCost(b.cost)?"Impossible de construire ici.":"Ressources insuffisantes — le mode construction reste actif.");
     state.buildMode=true;
-    ui.buildPanel.classList.add("open");
+    setBuildPanelVisible(true);
     return;
   }
 
@@ -586,7 +590,7 @@ function placeBuild(){
 
   state.buildMode=true;
   state.selected="build";
-  ui.buildPanel.classList.add("open");
+  setBuildPanelVisible(true);
   showToast(b.label+" construit · placement continu actif.");
   updateBuildPreview(true);
   saveGame();
@@ -631,7 +635,7 @@ function saveGame(){
     localStorage.setItem("survival-v20-save",JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,version:23
+      buildings:state.buildings,version:24
     }));
   }catch(_){}
 }
@@ -809,6 +813,17 @@ function updateCamera(dt){
   sun.shadow.camera.updateProjectionMatrix();
 }
 
+function forceCleanSpawnUI(){
+  // V24 : une sauvegarde peut retenir "build" comme sélection,
+  // mais le joueur ne doit jamais apparaître avec le panneau Construction ouvert.
+  state.buildMode=false;
+  buildChainPoint=null;
+  removeBuildPreview();
+  setBuildPanelVisible(false);
+
+  if(state.selected==="build")state.selected="axe";
+}
+
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
   updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
@@ -900,6 +915,7 @@ for(const name of ["pointerup","pointercancel","lostpointercapture"]){
 }
 
 loadGame();
+forceCleanSpawnUI();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
 player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
