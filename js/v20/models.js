@@ -619,12 +619,78 @@ export function updateFarmVisual(plot,stage) {
 
 export function createDeer() {
   const g=new THREE.Group();
-  const coat=mat(0x8b6541), dark=mat(0x57432f), cream=mat(0xd0b58d);
-  const body=mesh(new THREE.CapsuleGeometry(.30,.66,4,8),coat);body.rotation.z=Math.PI/2;body.position.y=.75;g.add(body);
-  const neck=cyl(.12,.18,.55,7,0x8b6541);neck.position.set(.45,1.02,0);neck.rotation.z=-.45;g.add(neck);
-  const head=sphere(.18,0x8b6541,[1.2,.8,.75],1);head.position.set(.68,1.25,0);g.add(head);
-  for(const z of [-.15,.15])for(const x of [-.30,.30]){const leg=cyl(.035,.045,.55,5,0x57432f);leg.position.set(x,.34,z);g.add(leg);}
-  const tail=sphere(.09,0xd0b58d,[1.1,.9,1],1);tail.position.set(-.62,.80,0);g.add(tail);
+  g.userData.kind="deer";
+  const coat=mat(0x916b46), dark=mat(0x57432f), cream=mat(0xd6bc92);
+
+  const body=mesh(new THREE.CapsuleGeometry(.30,.66,4,8),coat);
+  body.rotation.z=Math.PI/2;body.position.y=.75;g.add(body);
+
+  const neckPivot=new THREE.Group();
+  neckPivot.position.set(.40,.95,0);g.add(neckPivot);
+  const neck=cyl(.12,.18,.55,7,0x916b46);
+  neck.position.set(.14,.16,0);neck.rotation.z=-.45;neckPivot.add(neck);
+
+  const head=sphere(.18,0x916b46,[1.2,.8,.75],1);
+  head.position.set(.40,.36,0);neckPivot.add(head);
+
+  const muzzle=sphere(.09,0xb79268,[1.25,.68,.70],1);
+  muzzle.position.set(.57,.32,0);neckPivot.add(muzzle);
+
+  const eye=sphere(.025,0x15120f,[1,1,1],1);
+  eye.position.set(.47,.40,.145);neckPivot.add(eye);
+
+  const legs=[];
+  for(const z of [-.15,.15])for(const x of [-.30,.30]){
+    const pivot=new THREE.Group();pivot.position.set(x,.58,z);g.add(pivot);
+    const leg=cyl(.035,.045,.55,5,0x57432f);leg.position.y=-.27;pivot.add(leg);
+    legs.push(pivot);
+  }
+
+  const tail=sphere(.09,0xd6bc92,[1.1,.9,1],1);
+  tail.position.set(-.62,.80,0);g.add(tail);
+
+  g.userData.neck=neckPivot;
+  g.userData.legs=legs;
+  g.userData.tail=tail;
+  g.userData.body=body;
+  return g;
+}
+
+export function createRabbit() {
+  const g=new THREE.Group();
+  g.userData.kind="rabbit";
+  const fur=mat(0x9b8d77),dark=mat(0x665d50),light=mat(0xd8ccb7);
+
+  const body=sphere(.25,0x9b8d77,[1.25,.86,.92],1);
+  body.position.set(-.08,.27,0);g.add(body);
+
+  const headPivot=new THREE.Group();
+  headPivot.position.set(.24,.42,0);g.add(headPivot);
+
+  const head=sphere(.16,0x9b8d77,[1,.95,.9],1);
+  headPivot.add(head);
+
+  for(const z of [-.07,.07]){
+    const ear=mesh(new THREE.CapsuleGeometry(.035,.18,3,6),fur);
+    ear.position.set(-.01,.22,z);ear.rotation.z=-.10;headPivot.add(ear);
+  }
+
+  const eye=sphere(.018,0x171411,[1,1,1],1);
+  eye.position.set(.11,.035,.13);headPivot.add(eye);
+
+  const tail=sphere(.08,0xe5dccb,[1,1,1],1);
+  tail.position.set(-.38,.31,0);g.add(tail);
+
+  const hind=[];
+  for(const z of [-.13,.13]){
+    const leg=mesh(new THREE.CapsuleGeometry(.045,.14,3,6),dark);
+    leg.position.set(-.18,.13,z);leg.rotation.z=Math.PI/2.8;g.add(leg);hind.push(leg);
+  }
+
+  g.userData.head=headPivot;
+  g.userData.tail=tail;
+  g.userData.hind=hind;
+  g.userData.body=body;
   return g;
 }
 
