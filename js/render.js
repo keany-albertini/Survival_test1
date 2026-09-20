@@ -33,9 +33,9 @@ export class Renderer {
 
   biomeColor(x, y) {
     const v = Math.sin(x / 760) + Math.cos(y / 860) + Math.sin((x + y) / 1240) * .65;
-    if (v > 1.25) return "#8ea36a";
-    if (v < -1.10) return "#55744c";
-    return "#6f8f56";
+    if (v > 1.25) return "#a7b97a";
+    if (v < -1.10) return "#6e8b62";
+    return "#86a667";
   }
 
   ground() {
@@ -55,7 +55,7 @@ export class Renderer {
         ctx.fillRect(Math.floor(p.x), Math.floor(p.y), tile + 1, tile + 1);
         const speck = hashRand(Math.floor(x / tile), Math.floor(y / tile), 17);
         if (speck > .63) {
-          ctx.fillStyle = "rgba(239,244,214,.11)";
+          ctx.fillStyle = "rgba(245,248,221,.16)";
           ctx.beginPath();
           ctx.arc(p.x + 22 + speck * 58, p.y + 28 + speck * 41, 2, 0, Math.PI * 2);
           ctx.fill();
@@ -84,9 +84,9 @@ export class Renderer {
     const ctx = this.ctx;
     const p = this.screen(item.x, item.y);
     ctx.save(); ctx.translate(p.x, p.y);
-    ctx.fillStyle = "rgba(42,102,122,.75)";
+    ctx.fillStyle = "rgba(55,128,150,.82)";
     ctx.beginPath(); ctx.ellipse(0, 0, 52, 27, -.08, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "rgba(190,226,219,.34)"; ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(211,241,234,.48)"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(-5, -3, 34, 14, -.08, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
@@ -101,16 +101,16 @@ export class Renderer {
       ctx.beginPath(); ctx.moveTo(-14, 3); ctx.lineTo(13, -5); ctx.moveTo(-9, -5); ctx.lineTo(11, 6); ctx.stroke();
       ctx.strokeStyle = "#83603a"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-10, 1); ctx.lineTo(11, -5); ctx.stroke();
     } else if (item.type === "fiber") {
-      ctx.strokeStyle = "#294e2b"; ctx.lineWidth = 3;
+      ctx.strokeStyle = "#365f36"; ctx.lineWidth = 3;
       for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * 3, 4); ctx.quadraticCurveTo(i * 4, -10, i * 7, -18 - Math.abs(i) * 2); ctx.stroke(); }
-      ctx.fillStyle = "#678d43"; ctx.beginPath(); ctx.ellipse(-7, -9, 7, 3, -.7, 0, Math.PI * 2); ctx.ellipse(8, -12, 7, 3, .6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#789d55"; ctx.beginPath(); ctx.ellipse(-7, -9, 7, 3, -.7, 0, Math.PI * 2); ctx.ellipse(8, -12, 7, 3, .6, 0, Math.PI * 2); ctx.fill();
     } else if (item.type === "stone") {
       ctx.fillStyle = "#777b70";
       ctx.beginPath(); ctx.moveTo(-9,4); ctx.lineTo(-6,-6); ctx.lineTo(3,-9); ctx.lineTo(10,-3); ctx.lineTo(8,6); ctx.lineTo(-3,8); ctx.closePath(); ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,.13)";
       ctx.beginPath(); ctx.moveTo(-5,-5); ctx.lineTo(3,-8); ctx.lineTo(6,-4); ctx.lineTo(-2,-1); ctx.closePath(); ctx.fill();
     } else if (["large_rock","copper_ore","tin_ore","ore","gold_ore"].includes(item.type)) {
-      const base = item.type === "large_rock" ? "#6f736d" : "#555d59";
+      const base = item.type === "large_rock" ? "#858982" : "#6a726e";
       ctx.fillStyle = base;
       ctx.beginPath(); ctx.moveTo(-22,9); ctx.lineTo(-17,-12); ctx.lineTo(2,-19); ctx.lineTo(21,-7); ctx.lineTo(18,12); ctx.lineTo(-7,16); ctx.closePath(); ctx.fill();
 
@@ -147,8 +147,8 @@ export class Renderer {
     } else if (item.type === "tree") {
       ctx.fillStyle = "rgba(20,28,18,.18)"; ctx.beginPath(); ctx.ellipse(5,6,27,10,0,0,Math.PI*2); ctx.fill();
       ctx.fillStyle = "#5b3f29"; ctx.fillRect(-5,-47,11,52);
-      ctx.fillStyle = "#2f5a34"; ctx.beginPath(); ctx.arc(-12,-48,24,0,Math.PI*2); ctx.arc(12,-53,26,0,Math.PI*2); ctx.arc(0,-72,24,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle = "rgba(167,199,115,.15)"; ctx.beginPath(); ctx.arc(-7,-65,13,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#3f6d43"; ctx.beginPath(); ctx.arc(-12,-48,24,0,Math.PI*2); ctx.arc(12,-53,26,0,Math.PI*2); ctx.arc(0,-72,24,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = "rgba(188,218,134,.24)"; ctx.beginPath(); ctx.arc(-7,-65,13,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
   }
@@ -674,11 +674,39 @@ export class Renderer {
   }
 
   night() {
+    const ctx = this.ctx;
     const daylight = Math.sin(state.dayProgress * Math.PI * 2 - Math.PI / 2) * .5 + .5;
-    const darkness = clamp(.60 - daylight * .60, 0, .56);
+    const darkness = clamp(.34 - daylight * .34, 0, .32);
+
     if (darkness > .01) {
-      this.ctx.fillStyle = "rgba(10,18,34," + darkness.toFixed(3) + ")";
-      this.ctx.fillRect(0, 0, this.viewW, this.viewH);
+      const player = this.screen(state.player.x, state.player.y);
+      const radius = Math.max(220, Math.min(this.viewW, this.viewH) * .42);
+      const shade = ctx.createRadialGradient(player.x, player.y, 30, player.x, player.y, radius);
+      shade.addColorStop(0, "rgba(16,24,42," + (darkness * .18).toFixed(3) + ")");
+      shade.addColorStop(.46, "rgba(16,24,42," + (darkness * .52).toFixed(3) + ")");
+      shade.addColorStop(1, "rgba(16,24,42," + darkness.toFixed(3) + ")");
+      ctx.fillStyle = shade;
+      ctx.fillRect(0, 0, this.viewW, this.viewH);
+    }
+
+    if (darkness > .035) {
+      const now = performance.now() * .006;
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      for (const building of state.buildings) {
+        if (building.type !== "campfire" || !this.visible(building.x, building.y, 180)) continue;
+        const p = this.screen(building.x, building.y);
+        const flicker = 78 + Math.sin(now + building.x * .01 + building.y * .013) * 8;
+        const glow = ctx.createRadialGradient(p.x, p.y - 5, 4, p.x, p.y - 5, flicker);
+        glow.addColorStop(0, "rgba(255,210,105,.32)");
+        glow.addColorStop(.35, "rgba(255,153,61,.16)");
+        glow.addColorStop(1, "rgba(255,125,40,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - 5, flicker, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
   }
 
