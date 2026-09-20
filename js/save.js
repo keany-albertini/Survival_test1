@@ -1,4 +1,4 @@
-import { state, SAVE_KEY, clamp } from "./data.js?v=14";
+import { state, SAVE_KEY, clamp } from "./data.js?v=17";
 
 export function saveGame() {
   try {
