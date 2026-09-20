@@ -234,8 +234,8 @@ export function setWorldSeason(world,index){
   world.season=index;
   const c=SEASON_COLORS[index];
   world.scene.fog.color.set(c.fog);
-  world.terrain.material.vertexColors=false;
-  world.terrain.material.color.set(c.ground);
+  world.terrain.material.vertexColors=true;
+  world.terrain.material.color.set(index===0?0xffffff:index===1?0xf3ebc7:index===2?0xd5b77b:0xdce6e7);
   world.terrain.material.needsUpdate=true;
   if(world.grass?.material)world.grass.material.color.set(index===2?0x8a7037:index===3?0x879287:0x5f8247);
   world.snow.visible=index===3;
