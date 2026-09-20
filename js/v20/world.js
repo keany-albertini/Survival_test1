@@ -446,7 +446,7 @@ export function setWorldSeason(world,index){
     crown.traverse(o=>{
       if(!o.isMesh||!o.material?.color)return;
       // Les matériaux d'écorce/roche ont une map texturée : on ne les recolore pas comme des feuilles.
-      if(o.material.map)return;
+      if(o.material.map&&!o.material.userData?.isLeafCard)return;
       if(!o.userData.baseSeasonColor)o.userData.baseSeasonColor=o.material.color.clone();
       const base=o.userData.baseSeasonColor;
       o.material.color.copy(base);
