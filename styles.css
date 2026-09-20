@@ -528,3 +528,59 @@ kbd{display:inline-block;padding:2px 5px;border-radius:5px;border:1px solid rgba
 .campfire-actions button:disabled{opacity:.35}
 @media(max-width:420px){.campfire-actions{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.campfire-flame{animation:none}}
+
+
+/* V19 — direction artistique fantasy réaliste stylisée */
+.world-card{
+  min-width:112px;
+  padding:9px 12px;
+  background:
+    linear-gradient(180deg,rgba(34,39,28,.94),rgba(16,22,17,.90));
+  border-color:rgba(218,195,139,.22);
+  box-shadow:0 10px 28px rgba(0,0,0,.30),inset 0 1px rgba(255,238,190,.05)
+}
+.world-card strong{
+  font-family:Georgia,"Times New Roman",serif;
+  letter-spacing:.035em;
+  color:#f1ead5
+}
+.world-card #timeText{color:#e6c982}
+.world-card .season-text{
+  color:#cad8b5;
+  font-weight:800;
+  letter-spacing:.025em;
+  margin-top:1px
+}
+.world-card #coordsText{opacity:.72}
+
+.panel{
+  background:
+    linear-gradient(180deg,rgba(20,27,20,.985),rgba(11,17,13,.985));
+  border-color:rgba(214,191,137,.16);
+  box-shadow:0 24px 64px rgba(0,0,0,.48),inset 0 1px rgba(255,236,190,.035)
+}
+.panel h2{
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:600;
+  letter-spacing:.015em;
+  color:#eee7d4
+}
+.eyebrow{color:#b8c79d}
+.quickbar{
+  background:linear-gradient(180deg,rgba(33,39,28,.94),rgba(14,21,16,.92));
+  border-color:rgba(214,190,134,.18);
+  box-shadow:0 12px 30px rgba(0,0,0,.34),inset 0 1px rgba(255,235,185,.04)
+}
+.quick-slot{
+  border-color:rgba(232,212,167,.10);
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(0,0,0,.07))
+}
+.quick-slot.selected{
+  border-color:rgba(224,202,137,.78);
+  box-shadow:0 0 0 2px rgba(224,202,137,.12),inset 0 0 16px rgba(226,207,148,.08);
+  background:rgba(208,189,126,.11)
+}
+.interaction-prompt,.toast{
+  border-color:rgba(220,198,144,.20);
+  background:rgba(12,17,13,.94)
+}
