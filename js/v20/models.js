@@ -112,25 +112,65 @@ export function createPlayer() {
   roll.position.set(0,.61,-.38);
   torsoPivot.add(roll);
 
+  const rightArm=armPivots[1];
+  const toolRoot=new THREE.Group();
+  toolRoot.position.set(0,-.57,.02);
+  rightArm.add(toolRoot);
+
   const axe=new THREE.Group();
-  const handle=cyl(.025,.032,.74,6,0x6b4727);
-  handle.rotation.z=-.15;
-  axe.add(handle);
-  const blade=mesh(new THREE.ConeGeometry(.16,.26,4),steel);
-  blade.rotation.z=Math.PI/2;
-  blade.scale.z=.34;
-  blade.position.set(.11,.34,0);
-  axe.add(blade);
-  axe.position.set(.42,.16,.05);
-  axe.rotation.z=-.35;
-  torsoPivot.add(axe);
+  const axeHandle=cyl(.025,.032,.78,6,0x6b4727);
+  axeHandle.position.y=-.27;
+  axe.add(axeHandle);
+  const axeBlade=mesh(new THREE.ConeGeometry(.17,.28,4),steel);
+  axeBlade.rotation.z=Math.PI/2;
+  axeBlade.scale.z=.34;
+  axeBlade.position.set(.12,-.62,0);
+  axe.add(axeBlade);
+  axe.rotation.z=-.10;
+  toolRoot.add(axe);
+
+  const pickaxe=new THREE.Group();
+  const pickHandle=cyl(.025,.032,.82,6,0x684426);
+  pickHandle.position.y=-.29;
+  pickaxe.add(pickHandle);
+  const pickHead=mesh(new THREE.BoxGeometry(.58,.075,.075),steel);
+  pickHead.position.y=-.69;
+  pickHead.rotation.z=.03;
+  pickaxe.add(pickHead);
+  const pickTipL=mesh(new THREE.ConeGeometry(.055,.22,5),steel);
+  pickTipL.rotation.z=Math.PI/2;
+  pickTipL.position.set(-.38,-.69,0);
+  pickaxe.add(pickTipL);
+  const pickTipR=pickTipL.clone();
+  pickTipR.rotation.z=-Math.PI/2;
+  pickTipR.position.x=.38;
+  pickaxe.add(pickTipR);
+  pickaxe.visible=false;
+  toolRoot.add(pickaxe);
+
+  const sword=new THREE.Group();
+  const grip=cyl(.028,.035,.24,6,0x4d3424);
+  grip.position.y=-.10;
+  sword.add(grip);
+  const guard=mesh(new THREE.BoxGeometry(.30,.045,.055),mat(0xb09a71,.4,.30));
+  guard.position.y=-.24;
+  sword.add(guard);
+  const swordBlade=mesh(new THREE.BoxGeometry(.075,.72,.035),steel);
+  swordBlade.position.y=-.62;
+  sword.add(swordBlade);
+  const swordTip=mesh(new THREE.ConeGeometry(.055,.18,4),steel);
+  swordTip.position.y=-1.06;
+  sword.add(swordTip);
+  sword.visible=false;
+  toolRoot.add(sword);
 
   g.userData.shadow=shadow;
   g.userData.hips=hips;
   g.userData.torso=torsoPivot;
   g.userData.legs=legPivots;
   g.userData.arms=armPivots;
-  g.userData.tool=axe;
+  g.userData.toolRoot=toolRoot;
+  g.userData.tools={axe,pickaxe,sword};
   g.userData.walkPhase=0;
   g.userData.speed01=0;
 
