@@ -828,6 +828,8 @@ export function createDeer(male=false,variant=0) {
     ear.position.set(-.06,.22,z);
     ear.rotation.x=z>0?.20:-.20;
     ear.rotation.z=z>0?.28:-.28;
+    ear.userData.baseX=ear.rotation.x;
+    ear.userData.baseZ=ear.rotation.z;
     headRoot.add(ear);
     ears.push(ear);
   }
@@ -956,6 +958,8 @@ export function createRabbit(variant=0) {
     ear.position.set(-.015,.27,z);
     ear.rotation.z=z>0?.08:-.06;
     ear.rotation.x=z>0?.12:-.12;
+    ear.userData.baseX=ear.rotation.x;
+    ear.userData.baseZ=ear.rotation.z;
     headPivot.add(ear);
     ears.push(ear);
   }
