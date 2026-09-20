@@ -3,172 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#263b2a">
-  <title>Survie 2D — Prototype V19</title>
-  <link rel="stylesheet" href="styles.css?v=19">
+  <meta name="theme-color" content="#1a251b">
+  <title>Survival V20 — Medieval Fantasy 3D</title>
+  <link rel="stylesheet" href="v20.css?v=20">
 </head>
 <body>
-  <main id="gameShell">
-    <canvas id="gameCanvas" aria-label="Jeu de survie 2D"></canvas>
+  <div id="game">
+    <canvas id="game3d"></canvas>
 
-    <section id="hud">
-      <div class="top-row">
-        <div class="status-circles" aria-label="Statistiques du survivant">
-          <div class="status-circle status-health" id="healthCircle" title="Vie">
-            <span class="status-icon">❤</span><b id="healthText">100%</b>
-          </div>
-          <div class="status-circle status-hunger" id="hungerCircle" title="Faim">
-            <span class="status-icon">🍗</span><b id="hungerText">100%</b>
-          </div>
-          <div class="status-circle status-thirst" id="thirstCircle" title="Soif">
-            <span class="status-icon">💧</span><b id="thirstText">100%</b>
-          </div>
-          <div class="status-circle status-stamina" id="staminaCircle" title="Endurance">
-            <span class="status-icon">⚡</span><b id="staminaText">100%</b>
-          </div>
-        </div>
+    <div class="cinema-vignette"></div>
 
-        <div class="world-card">
-          <strong id="dayText">Jour 1</strong>
-          <span id="timeText">08:00</span>
-          <small id="seasonText" class="season-text">🌱 Printemps · 1/3</small>
-          <small id="coordsText">0, 0</small>
-        </div>
+    <section class="top-left">
+      <div class="world-title">
+        <span>VAL-DES-ROCHES</span>
+        <small>Survie médiéval-fantasy</small>
       </div>
+      <div class="loot-feed" id="lootFeed"></div>
+    </section>
 
-      <div id="interactionPrompt" class="interaction-prompt" aria-live="polite"></div>
-      <div id="toast" class="toast" aria-live="polite"></div>
+    <section class="stats" aria-label="Statistiques">
+      <div class="stat health"><span>❤</span><i><b id="hpBar"></b></i><em id="hpText">100</em></div>
+      <div class="stat hunger"><span>🍗</span><i><b id="hungerBar"></b></i><em id="hungerText">100</em></div>
+      <div class="stat thirst"><span>💧</span><i><b id="thirstBar"></b></i><em id="thirstText">100</em></div>
+      <div class="stat stamina"><span>⚡</span><i><b id="staminaBar"></b></i><em id="staminaText">100</em></div>
+    </section>
 
-      <div id="quickbar" class="quickbar" aria-label="Barre rapide"></div>
-
-      <div class="bottom-row">
-        <div class="menu-actions">
-          <button id="inventoryButton" type="button">🎒 Inventaire <kbd>I</kbd></button>
-        </div>
+    <section class="top-right">
+      <div class="season-card">
+        <strong id="dayLabel">Jour 1</strong>
+        <span id="clockLabel">08:00</span>
+        <small id="seasonLabel">🌱 Printemps</small>
+      </div>
+      <div class="minimap-wrap">
+        <canvas id="minimap" width="150" height="150"></canvas>
+        <span class="north">N</span>
       </div>
     </section>
 
-    <aside id="inventoryPanel" class="panel inventory-panel" aria-hidden="true">
-      <header>
-        <div><span class="eyebrow">SURVIVANT</span><h2>Inventaire</h2></div>
-        <button class="close-panel" data-close="inventoryPanel" type="button">×</button>
-      </header>
+    <div id="prompt" class="prompt">Explore, récolte, construis, survis</div>
+    <div id="toast" class="toast"></div>
 
-      <nav class="inventory-tabs" aria-label="Onglets inventaire">
-        <button type="button" class="inventory-tab active" data-tab="inventory">🎒 Inventaire</button>
-        <button type="button" class="inventory-tab" data-tab="craft">🔨 Craft</button>
-        <button type="button" class="inventory-tab" data-tab="equipment">🛡️ Équipement</button>
-        <button type="button" class="inventory-tab" data-tab="skills">📈 Compétences</button>
-      </nav>
+    <section class="quest-card">
+      <span>OBJECTIF</span>
+      <strong>Bâtis ton domaine</strong>
+      <small>Récolte pierre et bois, explore les ruines et prépare ta forteresse.</small>
+    </section>
 
-      <section id="inventoryTabInventory" class="inventory-tab-panel active">
-        <div id="inventoryGrid" class="inventory-grid"></div>
-        <p class="panel-note">Touchez un outil pour l'équiper. Touchez nourriture, eau ou bandage pour les utiliser.</p>
-      </section>
-
-      <section id="inventoryTabCraft" class="inventory-tab-panel">
-        <div id="craftList" class="craft-list"></div>
-      </section>
-
-      <section id="inventoryTabEquipment" class="inventory-tab-panel">
-        <div class="equipment-layout">
-          <div class="equipment-preview">
-            <div class="equipment-silhouette">🧍</div>
-            <small>Les armures équipées apparaissent aussi sur le personnage en jeu.</small>
-          </div>
-          <div id="equipmentSlots" class="equipment-slots"></div>
-        </div>
-      </section>
-
-      <section id="inventoryTabSkills" class="inventory-tab-panel">
-        <div id="skillsList" class="skills-list"></div>
-      </section>
-    </aside>
-
-    <aside id="chestPanel" class="panel chest-panel" aria-hidden="true">
-      <header>
-        <div><span class="eyebrow">STOCKAGE</span><h2>Coffre</h2></div>
-        <button id="closeChestButton" class="close-panel" type="button">×</button>
-      </header>
-      <div class="chest-columns">
-        <section>
-          <h3>🎒 Inventaire</h3>
-          <div id="chestPlayerGrid" class="storage-grid"></div>
-        </section>
-        <section>
-          <h3>📦 Coffre</h3>
-          <div id="chestStorageGrid" class="storage-grid"></div>
-        </section>
-      </div>
-      <p class="panel-note">Déposer ou reprendre des objets ne les détruit pas. Le contenu reste sauvegardé dans ce coffre.</p>
-    </aside>
-
-    <aside id="campfirePanel" class="panel campfire-panel" aria-hidden="true">
-      <header>
-        <div><span class="eyebrow">CUISSON</span><h2>Feu de camp</h2></div>
-        <button id="closeCampfireButton" class="close-panel" type="button">×</button>
-      </header>
-
-      <div class="campfire-cooking">
-        <div class="campfire-visual" aria-hidden="true">
-          <span class="campfire-flame">🔥</span>
-          <small>Feu allumé</small>
-        </div>
-
-        <div class="campfire-stats">
-          <div><span>🥩 Viande crue</span><b id="campfireRawCount">0</b></div>
-          <div><span>🍖 Prête</span><b id="campfireCookedCount">0</b></div>
-        </div>
-
-        <div class="campfire-progress-track" aria-label="Progression de la cuisson">
-          <i id="campfireProgress"></i>
-        </div>
-        <p id="campfireStatus" class="campfire-status">Le feu est prêt.</p>
-
-        <div class="campfire-actions">
-          <button id="campfireCookButton" type="button">Cuire 1 viande</button>
-          <button id="campfireCollectButton" type="button" class="secondary" disabled>Rien à récupérer</button>
-        </div>
-      </div>
-      <p class="panel-note">Chaque morceau prend environ 5 secondes. La cuisson continue même si vous fermez le panneau.</p>
-    </aside>
-
-    <div id="deathScreen" class="death-screen" hidden>
-      <div><span class="eyebrow">FIN DE LA SURVIE</span><h1>Vous êtes mort</h1><p id="deathMessage">Vous allez réapparaître au point de départ.</p><button id="restartButton" type="button">Réapparaître</button></div>
-    </div>
+    <section id="quickbar" class="quickbar"></section>
 
     <section class="desktop-help">
-      <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> marcher</span>
+      <span><kbd>ZQSD</kbd>/<kbd>WASD</kbd> déplacement</span>
       <span><kbd>Shift</kbd> courir</span>
       <span><kbd>E</kbd> action</span>
-      <span><kbd>I</kbd> inventaire</span>
-      <span><kbd>C</kbd> craft</span>
+      <span><kbd>B</kbd> construction</span>
+      <span><kbd>R</kbd> changer pièce</span>
     </section>
 
-    <section class="touch-controls" aria-label="Commandes tactiles">
-      <div class="joystick-wrap">
-        <div id="joystickBase" class="joystick-base" aria-label="Joystick de déplacement">
-          <div class="joystick-ring"></div>
-          <div id="joystickKnob" class="joystick-knob"></div>
-        </div>
-        <small>Déplacement</small>
-      </div>
-
-      <div class="touch-right">
-        <div class="touch-menu">
-          <button id="touchInventory" type="button" aria-label="Ouvrir l'inventaire">🎒</button>
-        </div>
-        <div class="build-action-stack">
-          <button id="buildCancelButton" class="build-cancel-button" type="button" hidden>✕ Annuler</button>
-          <button id="touchAction" class="action-button" type="button">
-            <span id="touchActionIcon">✋</span>
-            <small id="touchActionLabel">Action</small>
-          </button>
-        </div>
+    <section class="touch-controls">
+      <div id="joyBase" class="joy-base"><div id="joyKnob" class="joy-knob"></div></div>
+      <div class="touch-actions">
+        <button id="buildBtn" class="small-action">🏰</button>
+        <button id="actionBtn" class="main-action"><span>✋</span><small>Action</small></button>
       </div>
     </section>
-  </main>
 
-  <script type="module" src="js/main.js?v=19"></script>
+    <aside id="buildPanel" class="build-panel">
+      <div>
+        <span class="eyebrow">CONSTRUCTION</span>
+        <strong id="buildPieceLabel">Mur de pierre</strong>
+        <small id="buildCostLabel">12 pierre • 4 bois</small>
+      </div>
+      <button id="buildClose">×</button>
+    </aside>
+
+    <div id="loading" class="loading">
+      <div class="crest">⚔</div>
+      <h1>Val-des-Roches</h1>
+      <p>Création du monde 3D…</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/v20/main.js?v=20"></script>
 </body>
 </html>
