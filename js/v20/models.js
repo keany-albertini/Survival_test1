@@ -24,41 +24,116 @@ function sphere(r,color,scale=[1,1,1],detail=1) {
 export function createPlayer() {
   const g=new THREE.Group();
   g.name="player";
-  const bootMat=mat(0x3a2b20), trouserMat=mat(0x2f362e), tunicMat=mat(0x43543a), leatherMat=mat(0x6b4a2f), skinMat=mat(0xc99770), hairMat=mat(0x30251f), steel=mat(0x9da5a1,.45,.18);
 
-  const shadow=mesh(new THREE.CircleGeometry(.48,24),new THREE.MeshBasicMaterial({color:0x071008,transparent:true,opacity:.26}),false,false);
-  shadow.rotation.x=-Math.PI/2; shadow.position.y=.015; shadow.scale.y=.52; g.add(shadow);
+  const bootMat=mat(0x3a2b20), trouserMat=mat(0x2f362e), tunicMat=mat(0x43543a);
+  const leatherMat=mat(0x6b4a2f), skinMat=mat(0xc99770), steel=mat(0x9da5a1,.45,.18);
 
-  const legs=new THREE.Group();
+  const shadow=mesh(new THREE.CircleGeometry(.48,24),new THREE.MeshBasicMaterial({color:0x071008,transparent:true,opacity:.24}),false,false);
+  shadow.rotation.x=-Math.PI/2;
+  shadow.position.y=.015;
+  shadow.scale.y=.52;
+  g.add(shadow);
+
+  const hips=new THREE.Group();
+  hips.position.y=.77;
+  g.add(hips);
+
+  const legPivots=[];
   for(const sx of [-.16,.16]){
-    const leg=mesh(new THREE.CylinderGeometry(.09,.11,.58,7),trouserMat); leg.position.set(sx,.43,0); legs.add(leg);
-    const boot=box(.22,.16,.34,0x3b2a1e); boot.position.set(sx,.11,.07); legs.add(boot);
+    const pivot=new THREE.Group();
+    pivot.position.set(sx,0,0);
+    hips.add(pivot);
+
+    const leg=mesh(new THREE.CylinderGeometry(.09,.11,.58,7),trouserMat);
+    leg.position.y=-.30;
+    pivot.add(leg);
+
+    const boot=box(.22,.16,.34,0x3b2a1e);
+    boot.position.set(0,-.63,.07);
+    pivot.add(boot);
+
+    legPivots.push(pivot);
   }
-  g.add(legs);
 
-  const body=mesh(new THREE.CapsuleGeometry(.30,.55,5,9),tunicMat); body.position.y=1.02; g.add(body);
-  const vest=mesh(new THREE.CapsuleGeometry(.315,.32,4,8),leatherMat); vest.position.y=1.05; vest.scale.z=.92; g.add(vest);
+  const torsoPivot=new THREE.Group();
+  torsoPivot.position.y=.80;
+  g.add(torsoPivot);
 
-  const belt=mesh(new THREE.CylinderGeometry(.34,.34,.10,10),mat(0x3f3023)); belt.position.y=.79; g.add(belt);
-  const buckle=box(.11,.09,.04,0xb89450); buckle.position.set(0,.80,.32); g.add(buckle);
+  const body=mesh(new THREE.CapsuleGeometry(.30,.55,5,9),tunicMat);
+  body.position.y=.25;
+  torsoPivot.add(body);
 
+  const vest=mesh(new THREE.CapsuleGeometry(.315,.32,4,8),leatherMat);
+  vest.position.y=.27;
+  vest.scale.z=.92;
+  torsoPivot.add(vest);
+
+  const belt=mesh(new THREE.CylinderGeometry(.34,.34,.10,10),mat(0x3f3023));
+  belt.position.y=.0;
+  torsoPivot.add(belt);
+
+  const buckle=box(.11,.09,.04,0xb89450);
+  buckle.position.set(0,.01,.32);
+  torsoPivot.add(buckle);
+
+  const armPivots=[];
   for(const sx of [-1,1]){
-    const arm=mesh(new THREE.CylinderGeometry(.075,.09,.58,7),skinMat); arm.position.set(sx*.36,1.05,0); arm.rotation.z=sx*.17; g.add(arm);
-  }
-  const neck=cyl(.09,.1,.15,8,0xc18e68); neck.position.y=1.46; g.add(neck);
-  const head=sphere(.23,0xd2a078,[.88,1.06,.92],2); head.position.y=1.72; g.add(head);
-  const hair=sphere(.235,0x30241d,[.93,.55,.95],1); hair.position.set(0,1.86,-.01); g.add(hair);
+    const pivot=new THREE.Group();
+    pivot.position.set(sx*.34,.52,0);
+    torsoPivot.add(pivot);
 
-  const pack=box(.42,.50,.23,0x5a402b); pack.position.set(0,1.04,-.31); pack.rotation.x=.05; g.add(pack);
-  const roll=cyl(.09,.09,.46,8,0x817150); roll.rotation.z=Math.PI/2; roll.position.set(0,1.37,-.38); g.add(roll);
+    const arm=mesh(new THREE.CylinderGeometry(.075,.09,.58,7),skinMat);
+    arm.position.y=-.28;
+    arm.rotation.z=sx*.06;
+    pivot.add(arm);
+
+    armPivots.push(pivot);
+  }
+
+  const neck=cyl(.09,.1,.15,8,0xc18e68);
+  neck.position.y=.66;
+  torsoPivot.add(neck);
+
+  const head=sphere(.23,0xd2a078,[.88,1.06,.92],2);
+  head.position.y=.92;
+  torsoPivot.add(head);
+
+  const hair=sphere(.235,0x30241d,[.93,.55,.95],1);
+  hair.position.set(0,1.06,-.01);
+  torsoPivot.add(hair);
+
+  const pack=box(.42,.50,.23,0x5a402b);
+  pack.position.set(0,.28,-.31);
+  pack.rotation.x=.05;
+  torsoPivot.add(pack);
+
+  const roll=cyl(.09,.09,.46,8,0x817150);
+  roll.rotation.z=Math.PI/2;
+  roll.position.set(0,.61,-.38);
+  torsoPivot.add(roll);
 
   const axe=new THREE.Group();
-  const handle=cyl(.025,.032,.74,6,0x6b4727); handle.rotation.z=-.15; axe.add(handle);
-  const blade=mesh(new THREE.ConeGeometry(.16,.26,4),steel); blade.rotation.z=Math.PI/2; blade.scale.z=.34; blade.position.set(.11,.34,0); axe.add(blade);
-  axe.position.set(.42,.96,.05); axe.rotation.z=-.35; g.add(axe);
-  g.userData.tool=axe;
+  const handle=cyl(.025,.032,.74,6,0x6b4727);
+  handle.rotation.z=-.15;
+  axe.add(handle);
+  const blade=mesh(new THREE.ConeGeometry(.16,.26,4),steel);
+  blade.rotation.z=Math.PI/2;
+  blade.scale.z=.34;
+  blade.position.set(.11,.34,0);
+  axe.add(blade);
+  axe.position.set(.42,.16,.05);
+  axe.rotation.z=-.35;
+  torsoPivot.add(axe);
 
-  g.userData.walk=0;
+  g.userData.shadow=shadow;
+  g.userData.hips=hips;
+  g.userData.torso=torsoPivot;
+  g.userData.legs=legPivots;
+  g.userData.arms=armPivots;
+  g.userData.tool=axe;
+  g.userData.walkPhase=0;
+  g.userData.speed01=0;
+
   return g;
 }
 
