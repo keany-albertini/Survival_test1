@@ -1,8 +1,8 @@
 import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=17";
-import { Renderer } from "./render.js?v=17";
+import { Renderer } from "./render.js?v=18";
 import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=17";
 import { hunt, updateAnimals } from "./fauna.js?v=17";
-import { getSmartTarget } from "./world.js?v=17";
+import { getSmartTarget, isPlayerBlockedByNature } from "./world.js?v=18";
 import { updateSurvival } from "./survival.js?v=17";
 import { saveGame, loadGame } from "./save.js?v=17";
 import {
@@ -102,12 +102,22 @@ function update(dt) {
     const nextX = state.player.x + moveX;
     const nextY = state.player.y + moveY;
 
-    // Collision séparée par axe : le joueur est bloqué par les murs,
-    // mais peut continuer à glisser naturellement le long de leur surface.
-    if (!isPlayerBlockedByWall(nextX, state.player.y)) {
+    // Collision séparée par axe : murs + gros obstacles naturels.
+    // Le joueur peut glisser le long des surfaces sans traverser les objets.
+    const startX = state.player.x;
+    const startY = state.player.y;
+
+    if (
+      !isPlayerBlockedByWall(nextX, state.player.y) &&
+      !isPlayerBlockedByNature(nextX, state.player.y, 9, startX, startY)
+    ) {
       state.player.x = nextX;
     }
-    if (!isPlayerBlockedByWall(state.player.x, nextY)) {
+
+    if (
+      !isPlayerBlockedByWall(state.player.x, nextY) &&
+      !isPlayerBlockedByNature(state.player.x, nextY, 9, state.player.x, startY)
+    ) {
       state.player.y = nextY;
     }
 
