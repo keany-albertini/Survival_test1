@@ -1,5 +1,5 @@
 import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=14";
-import { Renderer } from "./render.js?v=15";
+import { Renderer } from "./render.js?v=16";
 import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=14";
 import { hunt, updateAnimals } from "./fauna.js?v=14";
 import { getSmartTarget } from "./world.js?v=14";
@@ -7,8 +7,8 @@ import { updateSurvival } from "./survival.js?v=14";
 import { saveGame, loadGame } from "./save.js?v=14";
 import {
   startPlacement, cancelPlacement, placeCurrent,
-  updateBuildPreview, isBuildMode, getNearestBuilding
-} from "./building.js?v=14";
+  updateBuildPreview, isBuildMode, getNearestBuilding, isPlayerBlockedByWall
+} from "./building.js?v=16";
 import { fireBow, setAim, updateProjectiles } from "./combat.js?v=14";
 import {
   openChest, closeChest, depositItem, withdrawItem
@@ -93,8 +93,19 @@ function update(dt) {
   const speed = (sprinting ? 232 : 156) * v.strength;
 
   if (!isPanelOpen()) {
-    state.player.x += v.x * speed * dt;
-    state.player.y += v.y * speed * dt;
+    const moveX = v.x * speed * dt;
+    const moveY = v.y * speed * dt;
+    const nextX = state.player.x + moveX;
+    const nextY = state.player.y + moveY;
+
+    // Collision séparée par axe : le joueur est bloqué par les murs,
+    // mais peut continuer à glisser naturellement le long de leur surface.
+    if (!isPlayerBlockedByWall(nextX, state.player.y)) {
+      state.player.x = nextX;
+    }
+    if (!isPlayerBlockedByWall(state.player.x, nextY)) {
+      state.player.y = nextY;
+    }
 
     if (moving) {
       if (state.equipped !== "bow" || !aimTouch.active) {
