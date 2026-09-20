@@ -411,6 +411,7 @@ function drawBerryBush(ctx, item) {
   const season = getSeasonState();
   const p = season.palette;
   const v = item.variant || 0;
+  const wind = Math.sin(performance.now() * .0014 + item.x * .017 + item.y * .011) * 1.3;
 
   ellipse(ctx,2,6,20,8,"rgba(17,22,17,.18)");
   ctx.strokeStyle = p.woodDark;
@@ -437,12 +438,15 @@ function drawBerryBush(ctx, item) {
 
   const cols = seasonalLeafPalette(v);
   const clusters=[[-13,-9,9,6],[-6,-17,10,7],[5,-18,10,7],[14,-10,9,6],[1,-8,12,8]];
+  ctx.save();
+  ctx.translate(wind, 0);
   for(const c of clusters) {
     leaf(ctx,c[0],c[1],c[2],c[3],cols[0],.1);
     leaf(ctx,c[0]-1,c[1]-2,c[2]*.75,c[3]*.72,cols[1],-.2);
   }
   leaf(ctx,-8,-19,6,3.5,cols[2],-.4);
   leaf(ctx,7,-20,6,3.5,cols[2],.3);
+  ctx.restore();
 
   const berries = season.id === "autumn" ? "#8f2e2f" : "#4353a1";
   for(const b of [[-10,-11],[-2,-16],[8,-14],[12,-7],[1,-7],[-5,-7]]) {
@@ -455,6 +459,7 @@ function drawConifer(ctx, item) {
   const season = getSeasonState();
   const p = season.palette;
   const v = item.variant || 0;
+  const wind = Math.sin(performance.now() * .0011 + item.x * .012 + item.y * .009) * 1.5;
 
   ellipse(ctx,3,8,28,9,"rgba(15,20,16,.22)");
   line(ctx,0,7,0,-71,p.woodDark,8);
@@ -469,7 +474,7 @@ function drawConifer(ctx, item) {
 
   for (let i=0;i<tiers.length;i++) {
     const t=tiers[i];
-    const offset=(v-1.5)*(i%2?1.5:-1.2);
+    const offset=(v-1.5)*(i%2?1.5:-1.2) + wind * (i + 1) * .28;
     ctx.fillStyle = p.evergreenDark;
     ctx.beginPath();
     ctx.moveTo(offset, t.y-t.h);
@@ -519,6 +524,7 @@ function drawDeciduousTree(ctx, item) {
   const p = season.palette;
   const v = item.variant || 0;
   const lean = (v - 1.5) * 2;
+  const wind = Math.sin(performance.now() * .00115 + item.x * .014 + item.y * .01) * 1.7;
 
   ellipse(ctx,4,10,31,10,"rgba(15,20,16,.22)");
 
@@ -568,7 +574,10 @@ function drawDeciduousTree(ctx, item) {
   if (v===0) centers=[[-21,-53,24,19,-.2],[2,-65,27,22,.05],[23,-55,23,18,.18],[-5,-84,21,17,-.08]];
   else if (v===2) centers=[[-14,-53,19,17,-.2],[9,-63,23,19,.08],[18,-78,18,15,.18],[-8,-79,17,15,-.1]];
   else centers=[[-20,-55,22,18,-.2],[3,-67,25,20,.05],[24,-58,20,17,.18],[0,-85,20,16,-.08]];
+  ctx.save();
+  ctx.translate(wind, 0);
   canopyCloud(ctx,centers,cols);
+  ctx.restore();
 
   if (season.id === "spring" && (v===2 || v===3)) {
     ctx.globalAlpha=.82;
@@ -697,6 +706,19 @@ function drawCampfire(ctx,building,p) {
     ellipse(ctx,Math.sin(phase*2)*5,-8-((phase*7)%20),1.1,1.1,"rgba(255,194,75,.65)");
   }
 
+  ctx.save();
+  ctx.globalAlpha = .16;
+  ctx.strokeStyle = "#d8d0bf";
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 2; i++) {
+    const smoke = t * .55 + i * 1.7;
+    ctx.beginPath();
+    ctx.moveTo(i * 3 - 2, -24);
+    ctx.bezierCurveTo(-7 + Math.sin(smoke) * 3, -33, 8 + Math.sin(smoke * 1.4) * 4, -42, Math.sin(smoke * .8) * 5, -52);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   if(building.cooking?.remaining>0) {
     line(ctx,-22,-18,22,-18,"#4c3424",2.5);
     ellipse(ctx,0,-18,8,4.5,"#8d3f2e");
@@ -798,6 +820,31 @@ export function drawBuilding(ctx,pnt,building,preview=false) {
       ctx.beginPath();ctx.ellipse(0,-9,17,5,0,Math.PI,Math.PI*2);ctx.fill();
       ctx.globalAlpha = preview ? .68 : 1;
     }
+  }
+
+  if (season.id === "winter" && !preview) {
+    ctx.globalAlpha = .70;
+    const snow = p.snow || "#dce3dd";
+    if (type === "wood_foundation") {
+      ellipse(ctx,-17,-22,15,2.5,snow,-.04);
+      ellipse(ctx,16,-21,14,2.4,snow,.04);
+    } else if (type === "wood_wall") {
+      if (building.orientation === "v") {
+        ellipse(ctx,0,-29,9,2.3,snow,0);
+      } else {
+        ellipse(ctx,0,-8,34,2.2,snow,0);
+      }
+    } else if (type === "workbench") {
+      ellipse(ctx,0,-15,25,2.7,snow,0);
+    } else if (type === "chest") {
+      ellipse(ctx,0,-10,17,2.4,snow,0);
+    } else if (type === "bed") {
+      ellipse(ctx,3,-13,21,2.3,snow,0);
+    } else if (type === "forge") {
+      ellipse(ctx,-10,-13,10,2.4,snow,-.15);
+      ellipse(ctx,17,-28,5,2,snow,0);
+    }
+    ctx.globalAlpha = 1;
   }
 
   if(preview) {
