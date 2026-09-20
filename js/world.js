@@ -1,4 +1,4 @@
-import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=17";
+import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=19";
 
 function chunkKey(cx, cy) { return cx + ":" + cy; }
 function objectId(cx, cy, kind, i) { return cx + ":" + cy + ":" + kind + ":" + i; }
@@ -89,14 +89,22 @@ export function generateChunk(cx, cy) {
     });
   }
 
-  const decorCount = 12 + Math.floor(hashRand(cx, cy, 222) * 10);
+  // V19 : sous-bois plus riche façon fantasy réaliste stylisé.
+  const decorCount = 26 + Math.floor(hashRand(cx, cy, 222) * 15);
   for (let i = 0; i < decorCount; i++) {
+    const decorRoll = hashRand(cx, cy, 500 + i);
+    let decorType = "grass";
+    if (decorRoll < .42) decorType = "grass";
+    else if (decorRoll < .61) decorType = "fern";
+    else if (decorRoll < .78) decorType = "bush";
+    else decorType = "flower";
+
     decor.push({
       id: objectId(cx, cy, "d", i),
-      type: hashRand(cx, cy, 500 + i) > .35 ? "grass" : "flower",
-      x: baseX + hashRand(cx, cy, 600 + i * 2) * CHUNK_SIZE,
-      y: baseY + hashRand(cx, cy, 601 + i * 2) * CHUNK_SIZE,
-      variant: Math.floor(hashRand(cx, cy, 700 + i) * 3)
+      type: decorType,
+      x: baseX + 18 + hashRand(cx, cy, 600 + i * 2) * (CHUNK_SIZE - 36),
+      y: baseY + 18 + hashRand(cx, cy, 601 + i * 2) * (CHUNK_SIZE - 36),
+      variant: Math.floor(hashRand(cx, cy, 700 + i) * 4)
     });
   }
 
