@@ -1,5 +1,6 @@
 import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=19";
 import { Renderer } from "./render.js?v=19";
+import { getSeasonState } from "./seasons.js?v=19";
 import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=19";
 import { hunt, updateAnimals } from "./fauna.js?v=19";
 import { getSmartTarget, isPlayerBlockedByNature } from "./world.js?v=19";
@@ -26,6 +27,7 @@ const joystick = { x: 0, y: 0, pointerId: null };
 const aimTouch = { active: false, pointerId: null };
 let lastTime = performance.now();
 let uiClock = 0;
+let lastSeasonIndex = getSeasonState().index;
 
 function refreshAction(action) {
   const changed = action();
@@ -135,6 +137,13 @@ function update(dt) {
   state.player.moving = moving && !isPanelOpen();
 
   updateSurvival(dt, state.player.moving, sprinting && !isPanelOpen());
+
+  const seasonNow = getSeasonState();
+  if (seasonNow.index !== lastSeasonIndex) {
+    lastSeasonIndex = seasonNow.index;
+    showToast(seasonNow.icon + " Nouvelle saison : " + seasonNow.label);
+  }
+
   updateAnimals(dt);
   updateProjectiles(dt, showToast);
   updateCooking(dt, showToast);
