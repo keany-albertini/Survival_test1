@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1a251b">
-  <title>Survival V20 — Medieval Fantasy 3D</title>
-  <link rel="stylesheet" href="v20.css?v=20">
+  <title>Survival V21 — Medieval Fantasy 3D</title>
+  <link rel="stylesheet" href="v20.css?v=21">
 </head>
 <body>
   <div id="game">
@@ -59,10 +59,14 @@
       <span><kbd>R</kbd> changer pièce</span>
     </section>
 
+    <div id="floatingStick" class="floating-stick" aria-hidden="true">
+      <div class="floating-ring"></div>
+      <div id="floatingKnob" class="floating-knob"></div>
+    </div>
+
     <section class="touch-controls">
-      <div id="joyBase" class="joy-base"><div id="joyKnob" class="joy-knob"></div></div>
       <div class="touch-actions">
-        <button id="buildBtn" class="small-action">🏰</button>
+        <button id="buildBtn" class="small-action" aria-label="Construction">🏰</button>
         <button id="actionBtn" class="main-action"><span>✋</span><small>Action</small></button>
       </div>
     </section>
@@ -83,6 +87,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/v20/main.js?v=20"></script>
+  <script type="module" src="js/v20/main.js?v=21"></script>
 </body>
 </html>
