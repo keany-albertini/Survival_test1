@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=21";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=21";
+import { createPlayer, makeGhost } from "./models.js?v=22";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=22";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -57,6 +57,16 @@ const motion={
   yaw:0,
   targetYaw:0,
   cameraFocus:new THREE.Vector3(-4,0,4)
+};
+const actionState={
+  active:false,
+  kind:null,
+  target:null,
+  time:0,
+  duration:0,
+  impactAt:0,
+  impacted:false,
+  lockMovement:false
 };
 let last=performance.now(),elapsed=0,toastTimer=null,nearest=null;
 
@@ -122,9 +132,16 @@ function renderQuickbar(){
     b.addEventListener("click",()=>selectItem(it.id));ui.quickbar.appendChild(b);
   }
 }
+function syncEquippedTool(){
+  const tools=player.userData.tools;
+  if(!tools)return;
+  for(const [id,obj] of Object.entries(tools))obj.visible=state.selected===id;
+}
 function selectItem(id){
   if(id==="build"){toggleBuild(true);return;}
-  state.selected=id;renderQuickbar();
+  state.selected=id;
+  syncEquippedTool();
+  renderQuickbar();
 }
 
 const inputForward=new THREE.Vector3();
@@ -193,8 +210,195 @@ function removeResource(it){
   const c=world.colliders.find(c=>c.object===it.object);if(c)c.active=false;
 }
 
+function faceTarget(it){
+  if(!it)return;
+  const p=it.position();
+  const dx=p.x-state.x,dz=p.z-state.z;
+  const len=Math.hypot(dx,dz);
+  if(len<.001)return;
+  state.facing.set(dx/len,0,dz/len);
+  motion.targetYaw=Math.atan2(state.facing.x,state.facing.z);
+  motion.yaw=dampAngle(motion.yaw,motion.targetYaw,24,.12);
+  player.rotation.y=motion.yaw;
+}
+
+function beginAction(kind,it){
+  if(actionState.active)return false;
+  const defs={
+    chop:{duration:.82,impactAt:.49,lockMovement:true},
+    mine:{duration:.92,impactAt:.56,lockMovement:true},
+    attack:{duration:.60,impactAt:.31,lockMovement:true},
+    gather:{duration:.66,impactAt:.39,lockMovement:true},
+    interact:{duration:.62,impactAt:.34,lockMovement:true}
+  };
+  const def=defs[kind]||defs.interact;
+  actionState.active=true;
+  actionState.kind=kind;
+  actionState.target=it;
+  actionState.time=0;
+  actionState.duration=def.duration;
+  actionState.impactAt=def.impactAt;
+  actionState.impacted=false;
+  actionState.lockMovement=def.lockMovement;
+  motion.velocity.multiplyScalar(.18);
+  faceTarget(it);
+  return true;
+}
+
+function triggerImpactPulse(it){
+  if(!it?.object)return;
+  if(!it.object.userData.baseImpactScale)it.object.userData.baseImpactScale=it.object.scale.clone();
+  it.object.userData.hitPulse=1;
+}
+
+function resolveActionImpact(it){
+  if(!it||it.removed||!it.object?.visible)return;
+
+  if(it.type==="tree"){
+    it.hits++;
+    triggerImpactPulse(it);
+    showToast("Coup de hache "+it.hits+"/"+it.maxHits);
+    if(it.hits>=it.maxHits){removeResource(it);give("wood",6,"🪵","Bois");}
+  } else if(it.type==="rock"){
+    it.hits++;
+    triggerImpactPulse(it);
+    showToast("Pioche "+it.hits+"/"+it.maxHits);
+    if(it.hits>=it.maxHits){removeResource(it);give("stone",5,"🪨","Pierre");}
+  } else if(it.type==="ore"){
+    it.hits++;
+    triggerImpactPulse(it);
+    showToast("Extraction "+it.hits+"/"+it.maxHits);
+    if(it.hits>=it.maxHits){
+      removeResource(it);give("stone",2,"🪨","Pierre");
+      if(it.oreKind==="gold")give("gold",3,"🟡","Or");
+      else give("ore",4,"💎","Minerai");
+    }
+  } else if(it.type==="berries"){
+    const now=performance.now();
+    if((it.cooldown||0)>now){showToast("Le buisson n'a pas encore repoussé.");return;}
+    it.cooldown=now+30000;
+    triggerImpactPulse(it);
+    give("berries",3,"🍒","Baies");
+    give("seeds",1,"🌱","Graines");
+  } else if(it.type==="chest"){
+    if(it.object.userData.opened){showToast("Le coffre est vide.");return;}
+    it.object.userData.opened=true;
+    if(it.object.userData.lid)it.object.userData.lid.rotation.y=-.9;
+    give("gold",5,"🟡","Or");give("stone",6,"🪨","Pierre");give("wood",4,"🪵","Bois");
+    give("meat",2,"🥩","Viande crue");give("seeds",3,"🌱","Graines");
+    showToast("Butin des ruines récupéré.");
+  } else if(it.type==="campfire"){
+    if(state.inventory.meat<=0){showToast("Tu n'as pas de viande crue.");return;}
+    state.inventory.meat--;state.inventory.cooked++;
+    addLoot("🍖","Viande cuite",1);
+    showToast("La viande grille sur le feu.");
+    renderQuickbar();
+  } else if(it.type==="farm"){
+    const f=it.object.userData;
+    if(!f.planted){
+      if(state.inventory.seeds<1){showToast("Il te faut des graines.");return;}
+      state.inventory.seeds--;f.planted=true;f.plantedAt=performance.now();f.stage=1;
+      showToast("Champ semé. Les cultures vont pousser.");renderQuickbar();
+    } else if(f.ready){
+      f.planted=false;f.ready=false;f.stage=0;f.crops.visible=false;
+      give("grain",6,"🌾","Récolte");give("seeds",2,"🌱","Graines");
+      showToast("Récolte terminée.");
+    } else showToast("Les cultures poussent encore.");
+  } else if(it.type==="skeleton"){
+    it.object.userData.hp-=36;
+    triggerImpactPulse(it);
+    showToast("Squelette : "+Math.max(0,it.object.userData.hp)+" PV");
+    if(it.object.userData.hp<=0){
+      it.object.visible=false;it.removed=true;
+      give("gold",2,"🟡","Or ancien");
+      showToast("Squelette vaincu.");
+    }
+  }
+  updateUI();
+}
+
+function actionCurve(t,start,end){
+  return clamp((t-start)/(end-start),0,1);
+}
+
+function updateActionAnimation(dt){
+  const rig=player.userData;
+  if(!rig?.arms||!rig?.torso)return;
+
+  if(!actionState.active){
+    if(rig.toolRoot){
+      dampRotation(rig.toolRoot,"x",0,13,dt);
+      dampRotation(rig.toolRoot,"z",0,13,dt);
+    }
+    return;
+  }
+
+  actionState.time+=dt;
+  const n=clamp(actionState.time/actionState.duration,0,1);
+  const impactN=actionState.impactAt/actionState.duration;
+  const before=n<=impactN;
+  const wind=actionCurve(n,0,impactN);
+  const recover=actionCurve(n,impactN,1);
+
+  let rightX=0,leftX=0,rightZ=0,leftZ=0,torsoX=0,torsoY=0,toolX=0,toolZ=0;
+
+  if(actionState.kind==="chop"){
+    if(before){
+      const e=wind*wind*(3-2*wind);
+      rightX=-1.55*e;leftX=-.86*e;rightZ=-.18*e;leftZ=.12*e;torsoX=-.16*e;torsoY=-.34*e;toolX=-.24*e;
+    }else{
+      const snap=1-Math.pow(recover,1.8);
+      rightX=.92*snap;leftX=.32*snap;rightZ=.12*snap;torsoX=.22*snap;torsoY=.28*snap;toolX=.18*snap;
+    }
+  } else if(actionState.kind==="mine"){
+    if(before){
+      const e=wind*wind*(3-2*wind);
+      rightX=-1.72*e;leftX=-1.30*e;rightZ=-.12*e;leftZ=.10*e;torsoX=-.12*e;toolX=-.35*e;
+    }else{
+      const snap=1-Math.pow(recover,1.7);
+      rightX=1.02*snap;leftX=.72*snap;torsoX=.28*snap;toolX=.24*snap;
+    }
+  } else if(actionState.kind==="attack"){
+    if(before){
+      const e=wind*wind*(3-2*wind);
+      rightX=-.68*e;rightZ=-1.02*e;leftX=.18*e;torsoY=-.52*e;toolZ=-.45*e;
+    }else{
+      const snap=1-Math.pow(recover,2.0);
+      rightX=.35*snap;rightZ=.92*snap;torsoY=.58*snap;toolZ=.38*snap;
+    }
+  } else {
+    const dip=Math.sin(Math.PI*n);
+    rightX=-.78*dip;leftX=-.52*dip;torsoX=.34*dip;
+  }
+
+  rig.arms[0].rotation.x=leftX;
+  rig.arms[0].rotation.z=leftZ;
+  rig.arms[1].rotation.x=rightX;
+  rig.arms[1].rotation.z=rightZ;
+  rig.torso.rotation.x=torsoX;
+  rig.torso.rotation.y=torsoY;
+  if(rig.toolRoot){
+    rig.toolRoot.rotation.x=toolX;
+    rig.toolRoot.rotation.z=toolZ;
+  }
+
+  if(!actionState.impacted&&actionState.time>=actionState.impactAt){
+    actionState.impacted=true;
+    resolveActionImpact(actionState.target);
+  }
+
+  if(n>=1){
+    actionState.active=false;
+    actionState.kind=null;
+    actionState.target=null;
+    actionState.time=0;
+    actionState.impacted=false;
+    actionState.lockMovement=false;
+  }
+}
+
 function doAction(){
-  if(state.hp<=0)return;
+  if(state.hp<=0||actionState.active)return;
   if(state.buildMode){placeBuild();return;}
 
   if(state.mounted){
@@ -208,33 +412,23 @@ function doAction(){
 
   if(it.type==="tree"){
     if(state.selected!=="axe"){showToast("Équipe la hache pour couper cet arbre.");return;}
-    it.hits++;it.object.scale.y*=.985;showToast("Coup de hache "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("wood",6,"🪵","Bois");}
+    beginAction("chop",it);return;
   } else if(it.type==="rock"){
     if(state.selected!=="pickaxe"){showToast("Équipe la pioche pour casser ce rocher.");return;}
-    it.hits++;it.object.rotation.y+=.08;showToast("Pioche "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("stone",5,"🪨","Pierre");}
+    beginAction("mine",it);return;
   } else if(it.type==="ore"){
     if(state.selected!=="pickaxe"){showToast("Équipe la pioche pour extraire le minerai.");return;}
-    it.hits++;showToast("Extraction "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){
-      removeResource(it);give("stone",2,"🪨","Pierre");
-      if(it.oreKind==="gold"){give("gold",3,"🟡","Or");}
-      else {give("ore",4,"💎","Minerai");}
-    }
+    beginAction("mine",it);return;
   } else if(it.type==="berries"){
     const now=performance.now();
     if((it.cooldown||0)>now){showToast("Le buisson n'a pas encore repoussé.");return;}
-    it.cooldown=now+30000;give("berries",3,"🍒","Baies");give("seeds",1,"🌱","Graines");
+    beginAction("gather",it);return;
   } else if(it.type==="chest"){
     if(it.object.userData.opened){showToast("Le coffre est vide.");return;}
-    it.object.userData.opened=true;
-    if(it.object.userData.lid)it.object.userData.lid.rotation.y=-.9;
-    give("gold",5,"🟡","Or");give("stone",6,"🪨","Pierre");give("wood",4,"🪵","Bois");give("meat",2,"🥩","Viande crue");give("seeds",3,"🌱","Graines");
-    showToast("Butin des ruines récupéré.");
+    beginAction("interact",it);return;
   } else if(it.type==="campfire"){
     if(state.inventory.meat<=0){showToast("Tu n'as pas de viande crue.");return;}
-    state.inventory.meat--;state.inventory.cooked++;addLoot("🍖","Viande cuite",1);showToast("La viande grille sur le feu.");renderQuickbar();
+    beginAction("interact",it);return;
   } else if(it.type==="horse"){
     if(!it.object.userData.tamed){
       if(state.inventory.berries<3){showToast("Il te faut 3 baies pour gagner sa confiance.");return;}
@@ -243,16 +437,11 @@ function doAction(){
     state.mounted=true;player.scale.setScalar(.86);showToast("Monture équipée — E pour descendre.");
   } else if(it.type==="farm"){
     const f=it.object.userData;
-    if(!f.planted){
-      if(state.inventory.seeds<1){showToast("Il te faut des graines.");return;}
-      state.inventory.seeds--;f.planted=true;f.plantedAt=performance.now();f.stage=1;showToast("Champ semé. Les cultures vont pousser.");renderQuickbar();
-    } else if(f.ready){
-      f.planted=false;f.ready=false;f.stage=0;f.crops.visible=false;give("grain",6,"🌾","Récolte");give("seeds",2,"🌱","Graines");showToast("Récolte terminée.");
-    } else showToast("Les cultures poussent encore.");
+    if(!f.planted&&state.inventory.seeds<1){showToast("Il te faut des graines.");return;}
+    beginAction("gather",it);return;
   } else if(it.type==="skeleton"){
     if(state.selected!=="sword"){showToast("Équipe ton épée pour combattre.");return;}
-    it.object.userData.hp-=36;it.object.rotation.y+=.35;showToast("Squelette : "+Math.max(0,it.object.userData.hp)+" PV");
-    if(it.object.userData.hp<=0){it.object.visible=false;it.removed=true;give("gold",2,"🟡","Or ancien");showToast("Squelette vaincu.");}
+    beginAction("attack",it);return;
   }
   updateUI();
 }
@@ -394,7 +583,7 @@ function updatePlayerLocomotion(dt,speed01,isMoving,isSprinting){
 }
 
 function updateMovement(dt,time){
-  const v=inputVector();
+  const v=actionState.active&&actionState.lockMovement?{x:0,z:0,strength:0}:inputVector();
   const hasInput=v.strength>0;
   const touchSprint=joy.id!==null&&joy.strength>.86;
   const sprint=((keys.ShiftLeft||keys.ShiftRight)||touchSprint)&&state.stamina>2&&!state.mounted;
@@ -450,8 +639,8 @@ function updateMovement(dt,time){
     player.rotation.y=world.horse.rotation.y;
     updatePlayerLocomotion(dt,0,false,false);
   }else{
-    updatePlayerLocomotion(dt,speed01,actualSpeed>.08,sprint);
-    const bob=Math.abs(Math.sin((player.userData.walkPhase||0)*2))*0.022*speed01;
+    if(!actionState.active)updatePlayerLocomotion(dt,speed01,actualSpeed>.08,sprint);
+    const bob=actionState.active?0:Math.abs(Math.sin((player.userData.walkPhase||0)*2))*0.022*speed01;
     player.position.set(state.x,ground+bob,state.z);
   }
 }
@@ -505,7 +694,7 @@ function updateCamera(dt){
 
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
-  updateMovement(dt,elapsed);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
+  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
   requestAnimationFrame(frame);
@@ -593,7 +782,7 @@ state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);sc
 player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
 motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
-renderQuickbar();updateBuildPanel();updateUI();
+syncEquippedTool();renderQuickbar();updateBuildPanel();updateUI();
 setTimeout(()=>document.getElementById("loading").classList.add("hidden"),450);
 showToast("Bienvenue à Val-des-Roches.");
 requestAnimationFrame(frame);
