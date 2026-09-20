@@ -1,9 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
-  createChest, createSkeleton, createHorse, createFarmPlot, createDeer,
+  createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=22";
+} from "./models.js?v=23";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -146,7 +146,13 @@ function createGroundScatter(){
 }
 
 function createGrassMaterial(){
-  const m=new THREE.MeshStandardMaterial({color:0x5f8247,roughness:.95,side:THREE.DoubleSide});
+  const m=new THREE.MeshStandardMaterial({
+    color:0x6e9553,
+    roughness:.94,
+    side:THREE.DoubleSide,
+    emissive:0x193019,
+    emissiveIntensity:.14
+  });
   m.onBeforeCompile=shader=>{
     shader.uniforms.uTime={value:0};
     m.userData.shader=shader;
@@ -162,7 +168,7 @@ function createTerrain(){
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];
-  const c1=new THREE.Color(0x5e7648),c2=new THREE.Color(0x829358),soil=new THREE.Color(0x81694b);
+  const c1=new THREE.Color(0x6f8956),c2=new THREE.Color(0x9cab6a),soil=new THREE.Color(0x987b57);
   for(let i=0;i<pos.count;i++){
     const x=pos.getX(i), z=pos.getZ(i), y=terrainHeight(x,z);
     pos.setY(i,y);
@@ -339,7 +345,33 @@ export function createWorld(scene){
   const farm=createFarmPlot();farm.position.set(13,terrainHeight(13,23),23);scene.add(farm);world.farm=farm;
   world.interactables.push({type:"farm",object:farm,position:()=>farm.position,radius:2.6,label:"Cultiver la parcelle"});
 
-  for(let i=0;i<4;i++){const deer=createDeer();const x=-18+i*6,z=-10-i*3;deer.position.set(x,terrainHeight(x,z),z);deer.rotation.y=i*.8;scene.add(deer);world.ambientAnimals.push(deer);}
+  for(let i=0;i<7;i++){
+    const deer=createDeer();
+    const x=-22+(i%4)*7.2;
+    const z=-12-Math.floor(i/4)*9-i*1.2;
+    deer.position.set(x,terrainHeight(x,z),z);
+    deer.rotation.y=i*.73;
+    deer.userData.baseX=x;
+    deer.userData.baseZ=z;
+    deer.userData.phase=i*1.37;
+    deer.userData.wander=2.4+(i%3)*.8;
+    scene.add(deer);
+    world.ambientAnimals.push(deer);
+  }
+
+  for(let i=0;i<9;i++){
+    const rabbit=createRabbit();
+    const x=-16+(i%5)*6.5;
+    const z=18+Math.floor(i/5)*7+(i%2)*2.4;
+    rabbit.position.set(x,terrainHeight(x,z),z);
+    rabbit.rotation.y=i*.9;
+    rabbit.userData.baseX=x;
+    rabbit.userData.baseZ=z;
+    rabbit.userData.phase=i*.91+2.2;
+    rabbit.userData.wander=1.5+(i%3)*.45;
+    scene.add(rabbit);
+    world.ambientAnimals.push(rabbit);
+  }
 
   let seed=20;
   for(let i=0;i<58;i++){
@@ -389,7 +421,7 @@ export function setWorldSeason(world,index){
   world.terrain.material.vertexColors=true;
   world.terrain.material.color.set(index===0?0xffffff:index===1?0xf3ebc7:index===2?0xd5b77b:0xdce6e7);
   world.terrain.material.needsUpdate=true;
-  if(world.grass?.material)world.grass.material.color.set(index===2?0x8a7037:index===3?0x879287:0x5f8247);
+  if(world.grass?.material)world.grass.material.color.set(index===2?0x987d45:index===3?0x93a093:0x719854);
   world.snow.visible=index===3;
   if(world.snowGround)world.snowGround.visible=index===3;
 
@@ -437,10 +469,17 @@ export function updateWorld(world,dt,time,playerPos){
   for(const o of world.animated){
     const phase=o.userData?.windPhase||0;
     if(o.userData?.kind==="waterfall")continue;
-    const amount=o.userData?.kind==="bush"?.018:.010;
-    if(o.rotation){
-      o.rotation.z=Math.sin(time*.85+phase)*amount;
-      o.rotation.x=Math.cos(time*.72+phase)*amount*.38;
+
+    const crown=o.userData?.crown;
+    const bush=o.userData?.kind==="bush";
+    const amp=bush?.032:.020;
+    const gust=.55+.45*Math.sin(time*.19+phase*.4);
+
+    if(crown){
+      crown.rotation.z=Math.sin(time*.88+phase)*amp*gust;
+      crown.rotation.x=Math.cos(time*.71+phase*1.17)*amp*.48*gust;
+      const breathe=1+Math.sin(time*1.15+phase)*.004;
+      crown.scale.set(breathe,1,breathe);
     }
   }
 
@@ -463,9 +502,45 @@ export function updateWorld(world,dt,time,playerPos){
   }
 
   for(let i=0;i<world.ambientAnimals.length;i++){
-    const d=world.ambientAnimals[i];const a=time*.08+i*1.7;const baseX=-18+i*6,baseZ=-10-i*3;
-    d.position.x=baseX+Math.sin(a)*2.2;d.position.z=baseZ+Math.cos(a*.83)*1.8;d.position.y=terrainHeight(d.position.x,d.position.z);
-    d.rotation.y=Math.atan2(Math.cos(a)*2.2,-Math.sin(a*.83)*1.8);
+    const a=world.ambientAnimals[i];
+    const kind=a.userData.kind;
+    const phase=a.userData.phase||i;
+    const baseX=a.userData.baseX||0;
+    const baseZ=a.userData.baseZ||0;
+    const wander=a.userData.wander||2;
+    const speed=kind==="rabbit"?.34:.10;
+    const t=time*speed+phase;
+
+    const x=baseX+Math.sin(t)*wander;
+    const z=baseZ+Math.cos(t*.82)*wander*.72;
+    const dx=Math.cos(t)*wander*speed;
+    const dz=-Math.sin(t*.82)*wander*.72*.82*speed;
+
+    a.position.x=x;
+    a.position.z=z;
+    const hop=kind==="rabbit"?Math.abs(Math.sin(time*5.4+phase))*.10:Math.abs(Math.sin(time*2.1+phase))*.018;
+    a.position.y=terrainHeight(x,z)+hop;
+    a.rotation.y=Math.atan2(dx,dz);
+
+    if(kind==="deer"){
+      const gait=Math.sin(time*3.8+phase);
+      const legs=a.userData.legs||[];
+      for(let j=0;j<legs.length;j++)legs[j].rotation.x=(j%2?1:-1)*gait*.16;
+      if(a.userData.neck){
+        a.userData.neck.rotation.z=-.08+Math.sin(time*.65+phase)*.05;
+        a.userData.neck.rotation.y=Math.sin(time*.48+phase)*.12;
+      }
+      if(a.userData.tail)a.userData.tail.rotation.z=Math.sin(time*4.1+phase)*.14;
+      if(a.userData.body)a.userData.body.rotation.x=Math.sin(time*3.8+phase)*.025;
+    }else if(kind==="rabbit"){
+      const kick=Math.sin(time*5.4+phase);
+      for(const leg of (a.userData.hind||[]))leg.rotation.z=1.10+kick*.24;
+      if(a.userData.head){
+        a.userData.head.rotation.y=Math.sin(time*.9+phase)*.20;
+        a.userData.head.rotation.z=Math.sin(time*1.7+phase)*.05;
+      }
+      if(a.userData.tail)a.userData.tail.scale.setScalar(1+Math.sin(time*4.2+phase)*.05);
+    }
   }
 
   if(world.farm?.userData.planted){
