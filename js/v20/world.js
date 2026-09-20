@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=24";
+} from "./models.js?v=25";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -142,6 +142,103 @@ function createGroundScatter(){
   pebbles.count=pn;leaves.count=ln;
   pebbles.instanceMatrix.needsUpdate=true;leaves.instanceMatrix.needsUpdate=true;
   group.add(pebbles,leaves);
+  return group;
+}
+
+function createFernTexture(){
+  const canvas=document.createElement("canvas");
+  canvas.width=128;canvas.height=128;
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,128,128);
+
+  ctx.strokeStyle="rgba(255,255,255,.92)";
+  ctx.fillStyle="rgba(255,255,255,.94)";
+  ctx.lineCap="round";
+
+  ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(64,120);ctx.quadraticCurveTo(60,70,64,12);ctx.stroke();
+
+  for(let i=0;i<10;i++){
+    const y=105-i*9;
+    const span=12+i*2.7;
+    ctx.lineWidth=2.2;
+    ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(64-span,y-9);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(64,y);ctx.lineTo(64+span,y-8);ctx.stroke();
+
+    for(const side of [-1,1]){
+      for(let j=0;j<3;j++){
+        const bx=64+side*(7+j*span/4);
+        const by=y-(3+j*2);
+        ctx.beginPath();
+        ctx.ellipse(bx,by,6,2.4,side*(.22+.06*j),0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createUnderstory(){
+  const group=new THREE.Group();
+  const tex=createFernTexture();
+  const fernMat=new THREE.MeshStandardMaterial({
+    color:0x4e7c43,
+    map:tex,
+    transparent:true,
+    alphaTest:.22,
+    roughness:.93,
+    side:THREE.DoubleSide
+  });
+
+  fernMat.onBeforeCompile=shader=>{
+    shader.uniforms.uTime={value:0};
+    fernMat.userData.shader=shader;
+    shader.vertexShader=shader.vertexShader
+      .replace("#include <common>","#include <common>\nuniform float uTime;")
+      .replace("#include <begin_vertex>","#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat sway=sin(uTime*1.15 + instanceMatrix[3].x*.24 + instanceMatrix[3].z*.31 + position.y*2.0);\ntransformed.x += sway*.035*max(position.y,0.0);\n#endif");
+  };
+
+  const geo=new THREE.PlaneGeometry(.62,1.05,1,3);
+  geo.translate(0,.52,0);
+
+  const count=360;
+  const a=new THREE.InstancedMesh(geo,fernMat,count);
+  const b=new THREE.InstancedMesh(geo,fernMat,count);
+  a.castShadow=false;a.receiveShadow=true;
+  b.castShadow=false;b.receiveShadow=true;
+
+  const dummy=new THREE.Object3D();
+  let n=0;
+  for(let i=0;i<count*3&&n<count;i++){
+    const x=randRange(3300+i*2.8,-HALF+3,HALF-3);
+    const z=randRange(3700+i*4.6,-HALF+3,HALF-3);
+    if(Math.abs(x-riverX(z))<5.8)continue;
+    if(Math.hypot(x+8,z-8)<6.5)continue;
+
+    const y=terrainHeight(x,z)+.02;
+    const s=.45+seeded(3900+i*3.3)*.85;
+    const yaw=seeded(4100+i*7.7)*Math.PI*2;
+
+    dummy.position.set(x,y,z);
+    dummy.rotation.set(0,yaw,0);
+    dummy.scale.set(s,s,s);
+    dummy.updateMatrix();
+    a.setMatrixAt(n,dummy.matrix);
+
+    dummy.rotation.y=yaw+Math.PI/2;
+    dummy.updateMatrix();
+    b.setMatrixAt(n,dummy.matrix);
+    n++;
+  }
+
+  a.count=b.count=n;
+  a.instanceMatrix.needsUpdate=true;
+  b.instanceMatrix.needsUpdate=true;
+  group.add(a,b);
+  group.userData.material=fernMat;
   return group;
 }
 
@@ -291,11 +388,12 @@ export function createWorld(scene){
   const world={
     scene,interactables:[],colliders:[],animated:[],buildings:[],enemies:[],ambientAnimals:[],
     season:0,seasonables:[],treeGroups:[],bushGroups:[],terrain:null,water:null,grass:null,snow:null,
-    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null,groundScatter:null
+    horse:null,farm:null,chest:null,campfire:null,ruins:null,snowGround:null,groundScatter:null,understory:null
   };
 
   world.terrain=createTerrain();scene.add(world.terrain);
   world.groundScatter=createGroundScatter();scene.add(world.groundScatter);
+  world.understory=createUnderstory();scene.add(world.understory);
   world.snowGround=new THREE.Mesh(
     world.terrain.geometry.clone(),
     new THREE.MeshStandardMaterial({color:0xe1e7e2,roughness:.98,transparent:true,opacity:.64,polygonOffset:true,polygonOffsetFactor:-1})
@@ -346,7 +444,7 @@ export function createWorld(scene){
   world.interactables.push({type:"farm",object:farm,position:()=>farm.position,radius:2.6,label:"Cultiver la parcelle"});
 
   for(let i=0;i<7;i++){
-    const deer=createDeer();
+    const deer=createDeer(i%3===0,i%3);
     const x=-22+(i%4)*7.2;
     const z=-12-Math.floor(i/4)*9-i*1.2;
     deer.position.set(x,terrainHeight(x,z),z);
@@ -356,8 +454,8 @@ export function createWorld(scene){
     deer.userData.phase=i*1.37;
     deer.userData.ai={
       state:"walk",timer:.5+seeded(700+i)*1.4,speed:0,
-      walkSpeed:.82+seeded(720+i)*.28,
-      runSpeed:2.55+seeded(740+i)*.55,
+      walkSpeed:1.05+seeded(720+i)*.35,
+      runSpeed:3.20+seeded(740+i)*.75,
       fleeDistance:5.4,
       routeIndex:0,
       route:[]
@@ -367,7 +465,7 @@ export function createWorld(scene){
   }
 
   for(let i=0;i<9;i++){
-    const rabbit=createRabbit();
+    const rabbit=createRabbit(i%3);
     const x=-16+(i%5)*6.5;
     const z=18+Math.floor(i/5)*7+(i%2)*2.4;
     rabbit.position.set(x,terrainHeight(x,z),z);
@@ -377,8 +475,8 @@ export function createWorld(scene){
     rabbit.userData.phase=i*.91+2.2;
     rabbit.userData.ai={
       state:"walk",timer:.35+seeded(780+i)*1.1,speed:0,
-      walkSpeed:.68+seeded(800+i)*.22,
-      runSpeed:2.15+seeded(820+i)*.45,
+      walkSpeed:.85+seeded(800+i)*.28,
+      runSpeed:2.75+seeded(820+i)*.55,
       fleeDistance:4.2,
       routeIndex:0,
       route:[]
@@ -467,7 +565,7 @@ function ensureAnimalRoute(animal,index){
 
   const homeX=animal.userData.baseX||animal.position.x;
   const homeZ=animal.userData.baseZ||animal.position.z;
-  const radius=animal.userData.kind==="rabbit"?3.4:6.2;
+  const radius=animal.userData.kind==="rabbit"?5.2:9.0;
 
   for(let p=0;p<5;p++){
     const angle=seeded(900+index*17+p*7)*Math.PI*2;
@@ -490,7 +588,7 @@ function nextAnimalWaypoint(animal){
   ai.timer=1.8+seeded((animal.userData.phase||1)*100+ai.routeIndex*13)*2.2;
 }
 
-function updateAnimalAI(animal,index,dt,time,playerPos){
+function updateAnimalAI(animal,index,dt,time,playerPos,animals){
   const ai=animal.userData.ai;
   if(!ai)return;
 
@@ -552,6 +650,29 @@ function updateAnimalAI(animal,index,dt,time,playerPos){
     const len=Math.hypot(dx,dz)||1;
     dirX=dx/len;dirZ=dz/len;
 
+    // Évitement local : aucun animal ne traverse ou ne colle ses voisins.
+    let sepX=0,sepZ=0,sepCount=0;
+    const personalSpace=kind==="rabbit"?.78:1.65;
+    for(let j=0;j<animals.length;j++){
+      const other=animals[j];
+      if(other===animal||other.userData.kind!==kind)continue;
+      const ox=animal.position.x-other.position.x;
+      const oz=animal.position.z-other.position.z;
+      const od=Math.hypot(ox,oz);
+      if(od>0.001&&od<personalSpace){
+        const force=(personalSpace-od)/personalSpace;
+        sepX+=ox/od*force;
+        sepZ+=oz/od*force;
+        sepCount++;
+      }
+    }
+    if(sepCount){
+      dirX+=sepX/sepCount*1.25;
+      dirZ+=sepZ/sepCount*1.25;
+      const dl=Math.hypot(dirX,dirZ)||1;
+      dirX/=dl;dirZ/=dl;
+    }
+
     const nextX=animal.position.x+dirX*ai.speed*dt;
     const nextZ=animal.position.z+dirZ*ai.speed*dt;
 
@@ -576,24 +697,50 @@ function updateAnimalAI(animal,index,dt,time,playerPos){
   const amp=ai.state==="run"?(kind==="rabbit"?.54:.48):(kind==="rabbit"?.30:.24);
 
   if(kind==="deer"){
-    const legs=animal.userData.legs||[];
-    for(let j=0;j<legs.length;j++){
-      const offset=(j===0||j===3)?0:Math.PI;
-      legs[j].rotation.x=moving?Math.sin(gait+offset)*amp:Math.sin(time*.65+j)*.025;
+    const rigs=animal.userData.legRigs||[];
+    for(let j=0;j<rigs.length;j++){
+      const rig=rigs[j];
+      const diagonal=(j===0||j===3)?0:Math.PI;
+      const swing=moving?Math.sin(gait+diagonal)*amp:Math.sin(time*.55+j)*.018;
+      rig.hip.rotation.x=swing;
+      rig.knee.rotation.x=moving?Math.max(0,-Math.sin(gait+diagonal))*amp*.72:.02;
     }
+
     if(animal.userData.neck){
-      animal.userData.neck.rotation.z=-.06+Math.sin(time*.72+animal.userData.phase)*.035;
-      animal.userData.neck.rotation.y=Math.sin(time*.48+animal.userData.phase)*.10;
-      if(ai.state==="idle")animal.userData.neck.rotation.x=.10+Math.sin(time*.42+index)*.08;
-      else animal.userData.neck.rotation.x=-.03-ratio*.08;
+      animal.userData.neck.rotation.z=-.055+Math.sin(time*.72+animal.userData.phase)*.030;
+      animal.userData.neck.rotation.y=Math.sin(time*.48+animal.userData.phase)*.08;
+      animal.userData.neck.rotation.x=ai.state==="idle"
+        ? .11+Math.sin(time*.42+index)*.07
+        : -.04-ratio*.10;
     }
-    if(animal.userData.tail)animal.userData.tail.rotation.z=Math.sin(time*(ai.state==="run"?7.5:3.0)+index)*(.08+ratio*.12);
-    if(animal.userData.body)animal.userData.body.rotation.x=moving?Math.sin(gait*2)*.022*(.5+ratio):0;
+
+    if(animal.userData.head&&ai.state==="idle"){
+      animal.userData.head.rotation.y=Math.sin(time*.36+index)*.12;
+    }
+
+    for(let e=0;e<(animal.userData.ears||[]).length;e++){
+      const ear=animal.userData.ears[e];
+      ear.rotation.z+=(Math.sin(time*1.6+index+e)*.018);
+    }
+
+    if(animal.userData.tail)animal.userData.tail.rotation.z=Math.sin(time*(ai.state==="run"?7.5:3.0)+index)*(.07+ratio*.14);
+    if(animal.userData.bodyRoot)animal.userData.bodyRoot.rotation.x=moving?Math.sin(gait*2)*.018*(.5+ratio):0;
   }else if(kind==="rabbit"){
-    for(const leg of (animal.userData.hind||[]))leg.rotation.z=1.10+(moving?Math.sin(gait)*amp:.04*Math.sin(time+index));
+    for(const leg of (animal.userData.hind||[]))leg.rotation.z=moving
+      ? .95+Math.sin(gait)*amp
+      : 1.00+.04*Math.sin(time+index);
+
+    for(let j=0;j<(animal.userData.fore||[]).length;j++){
+      animal.userData.fore[j].rotation.z=moving?Math.sin(gait+Math.PI)*.20:0;
+    }
+
     if(animal.userData.head){
-      animal.userData.head.rotation.y=Math.sin(time*.92+animal.userData.phase)*.17;
-      animal.userData.head.rotation.z=Math.sin(time*1.4+index)*.035;
+      animal.userData.head.rotation.y=Math.sin(time*.92+animal.userData.phase)*.15;
+      animal.userData.head.rotation.z=Math.sin(time*1.4+index)*.028;
+    }
+
+    for(let e=0;e<(animal.userData.ears||[]).length;e++){
+      animal.userData.ears[e].rotation.x+=(Math.sin(time*1.8+index+e)*.025);
     }
   }
 
@@ -606,6 +753,7 @@ function updateAnimalAI(animal,index,dt,time,playerPos){
 
 export function updateWorld(world,dt,time,playerPos){
   if(world.grass?.material?.userData.shader)world.grass.material.userData.shader.uniforms.uTime.value=time;
+  if(world.understory?.userData.material?.userData.shader)world.understory.userData.material.userData.shader.uniforms.uTime.value=time;
 
   for(const it of world.interactables){
     const obj=it.object;
@@ -674,7 +822,7 @@ export function updateWorld(world,dt,time,playerPos){
   }
 
   for(let i=0;i<world.ambientAnimals.length;i++){
-    updateAnimalAI(world.ambientAnimals[i],i,dt,time,playerPos);
+    updateAnimalAI(world.ambientAnimals[i],i,dt,time,playerPos,world.ambientAnimals);
   }
 
   if(world.farm?.userData.planted){
