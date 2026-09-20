@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=23";
+} from "./models.js?v=24";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -354,7 +354,14 @@ export function createWorld(scene){
     deer.userData.baseX=x;
     deer.userData.baseZ=z;
     deer.userData.phase=i*1.37;
-    deer.userData.wander=2.4+(i%3)*.8;
+    deer.userData.ai={
+      state:"walk",timer:.5+seeded(700+i)*1.4,speed:0,
+      walkSpeed:.82+seeded(720+i)*.28,
+      runSpeed:2.55+seeded(740+i)*.55,
+      fleeDistance:5.4,
+      routeIndex:0,
+      route:[]
+    };
     scene.add(deer);
     world.ambientAnimals.push(deer);
   }
@@ -368,7 +375,14 @@ export function createWorld(scene){
     rabbit.userData.baseX=x;
     rabbit.userData.baseZ=z;
     rabbit.userData.phase=i*.91+2.2;
-    rabbit.userData.wander=1.5+(i%3)*.45;
+    rabbit.userData.ai={
+      state:"walk",timer:.35+seeded(780+i)*1.1,speed:0,
+      walkSpeed:.68+seeded(800+i)*.22,
+      runSpeed:2.15+seeded(820+i)*.45,
+      fleeDistance:4.2,
+      routeIndex:0,
+      route:[]
+    };
     scene.add(rabbit);
     world.ambientAnimals.push(rabbit);
   }
@@ -445,6 +459,151 @@ export function setWorldSeason(world,index){
   }
 }
 
+function clampWorld(v){return Math.max(-53,Math.min(53,v));}
+
+function ensureAnimalRoute(animal,index){
+  const ai=animal.userData.ai;
+  if(!ai||ai.route.length)return;
+
+  const homeX=animal.userData.baseX||animal.position.x;
+  const homeZ=animal.userData.baseZ||animal.position.z;
+  const radius=animal.userData.kind==="rabbit"?3.4:6.2;
+
+  for(let p=0;p<5;p++){
+    const angle=seeded(900+index*17+p*7)*Math.PI*2;
+    const dist=radius*(.48+seeded(940+index*23+p*11)*.52);
+    let x=homeX+Math.cos(angle)*dist;
+    let z=homeZ+Math.sin(angle)*dist;
+
+    const rx=riverX(z);
+    if(Math.abs(x-rx)<6.5)x=rx+(x<rx?-7.5:7.5);
+
+    ai.route.push({x:clampWorld(x),z:clampWorld(z)});
+  }
+}
+
+function nextAnimalWaypoint(animal){
+  const ai=animal.userData.ai;
+  if(!ai?.route?.length)return;
+  ai.routeIndex=(ai.routeIndex+1)%ai.route.length;
+  ai.state="walk";
+  ai.timer=1.8+seeded((animal.userData.phase||1)*100+ai.routeIndex*13)*2.2;
+}
+
+function updateAnimalAI(animal,index,dt,time,playerPos){
+  const ai=animal.userData.ai;
+  if(!ai)return;
+
+  ensureAnimalRoute(animal,index);
+
+  const kind=animal.userData.kind;
+  const dxPlayer=animal.position.x-playerPos.x;
+  const dzPlayer=animal.position.z-playerPos.z;
+  const playerDist=Math.hypot(dxPlayer,dzPlayer);
+
+  let target=null;
+
+  if(playerDist<ai.fleeDistance){
+    ai.state="run";
+    ai.timer=.9;
+    const inv=1/Math.max(.001,playerDist);
+    target={
+      x:clampWorld(animal.position.x+dxPlayer*inv*7.5),
+      z:clampWorld(animal.position.z+dzPlayer*inv*7.5)
+    };
+  }else{
+    ai.timer-=dt;
+
+    if(ai.state==="run"&&playerDist>ai.fleeDistance+2.5){
+      ai.state="walk";
+      ai.timer=.7;
+    }
+
+    if(ai.state==="idle"){
+      if(ai.timer<=0)nextAnimalWaypoint(animal);
+    }else{
+      target=ai.route[ai.routeIndex];
+      if(!target){
+        nextAnimalWaypoint(animal);
+        target=ai.route[ai.routeIndex];
+      }
+      const td=Math.hypot(target.x-animal.position.x,target.z-animal.position.z);
+      if(td<.28||ai.timer<=0){
+        const pauseChance=seeded((index+1)*111+ai.routeIndex*37+Math.floor(time*.15));
+        if(pauseChance<.32){
+          ai.state="idle";
+          ai.timer=.75+pauseChance*4.2;
+          target=null;
+        }else{
+          nextAnimalWaypoint(animal);
+          target=ai.route[ai.routeIndex];
+        }
+      }
+    }
+  }
+
+  const desiredSpeed=ai.state==="run"?ai.runSpeed:ai.state==="walk"?ai.walkSpeed:0;
+  ai.speed+= (desiredSpeed-ai.speed)*(1-Math.exp(-dt*(ai.state==="run"?6.5:4.0)));
+
+  let dirX=0,dirZ=0;
+  if(target&&ai.speed>.015){
+    let dx=target.x-animal.position.x;
+    let dz=target.z-animal.position.z;
+    const len=Math.hypot(dx,dz)||1;
+    dirX=dx/len;dirZ=dz/len;
+
+    const nextX=animal.position.x+dirX*ai.speed*dt;
+    const nextZ=animal.position.z+dirZ*ai.speed*dt;
+
+    const riverGap=Math.abs(nextX-riverX(nextZ));
+    if(riverGap>5.6){
+      animal.position.x=nextX;
+      animal.position.z=nextZ;
+    }else{
+      ai.routeIndex=(ai.routeIndex+1)%Math.max(1,ai.route.length);
+      ai.timer=.2;
+    }
+
+    const yaw=Math.atan2(dirX,dirZ);
+    const delta=Math.atan2(Math.sin(yaw-animal.rotation.y),Math.cos(yaw-animal.rotation.y));
+    animal.rotation.y+=delta*(1-Math.exp(-dt*7.2));
+  }
+
+  const ratio=Math.min(1,ai.speed/Math.max(.01,ai.runSpeed));
+  const moving=ai.speed>.08;
+  const gaitFreq=ai.state==="run"?(kind==="rabbit"?12.5:9.5):(kind==="rabbit"?7.2:5.2);
+  const gait=time*gaitFreq+animal.userData.phase;
+  const amp=ai.state==="run"?(kind==="rabbit"?.54:.48):(kind==="rabbit"?.30:.24);
+
+  if(kind==="deer"){
+    const legs=animal.userData.legs||[];
+    for(let j=0;j<legs.length;j++){
+      const offset=(j===0||j===3)?0:Math.PI;
+      legs[j].rotation.x=moving?Math.sin(gait+offset)*amp:Math.sin(time*.65+j)*.025;
+    }
+    if(animal.userData.neck){
+      animal.userData.neck.rotation.z=-.06+Math.sin(time*.72+animal.userData.phase)*.035;
+      animal.userData.neck.rotation.y=Math.sin(time*.48+animal.userData.phase)*.10;
+      if(ai.state==="idle")animal.userData.neck.rotation.x=.10+Math.sin(time*.42+index)*.08;
+      else animal.userData.neck.rotation.x=-.03-ratio*.08;
+    }
+    if(animal.userData.tail)animal.userData.tail.rotation.z=Math.sin(time*(ai.state==="run"?7.5:3.0)+index)*(.08+ratio*.12);
+    if(animal.userData.body)animal.userData.body.rotation.x=moving?Math.sin(gait*2)*.022*(.5+ratio):0;
+  }else if(kind==="rabbit"){
+    for(const leg of (animal.userData.hind||[]))leg.rotation.z=1.10+(moving?Math.sin(gait)*amp:.04*Math.sin(time+index));
+    if(animal.userData.head){
+      animal.userData.head.rotation.y=Math.sin(time*.92+animal.userData.phase)*.17;
+      animal.userData.head.rotation.z=Math.sin(time*1.4+index)*.035;
+    }
+  }
+
+  const hop=kind==="rabbit"&&moving
+    ? Math.max(0,Math.sin(gait))* (.035+ratio*.13)
+    : kind==="deer"&&moving ? Math.abs(Math.sin(gait*2))*.012*(.5+ratio) : 0;
+
+  animal.position.y=terrainHeight(animal.position.x,animal.position.z)+hop;
+}
+
 export function updateWorld(world,dt,time,playerPos){
   if(world.grass?.material?.userData.shader)world.grass.material.userData.shader.uniforms.uTime.value=time;
 
@@ -472,14 +631,27 @@ export function updateWorld(world,dt,time,playerPos){
 
     const crown=o.userData?.crown;
     const bush=o.userData?.kind==="bush";
-    const amp=bush?.032:.020;
+    const amp=bush ? .034 : .021;
     const gust=.55+.45*Math.sin(time*.19+phase*.4);
 
     if(crown){
       crown.rotation.z=Math.sin(time*.88+phase)*amp*gust;
-      crown.rotation.x=Math.cos(time*.71+phase*1.17)*amp*.48*gust;
-      const breathe=1+Math.sin(time*1.15+phase)*.004;
-      crown.scale.set(breathe,1,breathe);
+      crown.rotation.x=Math.cos(time*.71+phase*1.17)*amp*.45*gust;
+    }
+
+    const layers=o.userData?.leafLayers||[];
+    for(let i=0;i<layers.length;i++){
+      const layer=layers[i];
+      layer.rotation.z=Math.sin(time*(1.25+i*.16)+phase+i*.9)*amp*(1.55+i*.18)*gust;
+      layer.rotation.x=Math.cos(time*(1.05+i*.13)+phase*.8+i)*amp*.82*gust;
+      const s=1+Math.sin(time*(1.7+i*.18)+phase+i)*.006;
+      layer.scale.set(s,1,s);
+    }
+
+    const branches=o.userData?.branches;
+    if(branches){
+      branches.rotation.z=Math.sin(time*.72+phase)*amp*.28*gust;
+      branches.rotation.x=Math.cos(time*.58+phase*.7)*amp*.16*gust;
     }
   }
 
@@ -502,45 +674,7 @@ export function updateWorld(world,dt,time,playerPos){
   }
 
   for(let i=0;i<world.ambientAnimals.length;i++){
-    const a=world.ambientAnimals[i];
-    const kind=a.userData.kind;
-    const phase=a.userData.phase||i;
-    const baseX=a.userData.baseX||0;
-    const baseZ=a.userData.baseZ||0;
-    const wander=a.userData.wander||2;
-    const speed=kind==="rabbit"?.34:.10;
-    const t=time*speed+phase;
-
-    const x=baseX+Math.sin(t)*wander;
-    const z=baseZ+Math.cos(t*.82)*wander*.72;
-    const dx=Math.cos(t)*wander*speed;
-    const dz=-Math.sin(t*.82)*wander*.72*.82*speed;
-
-    a.position.x=x;
-    a.position.z=z;
-    const hop=kind==="rabbit"?Math.abs(Math.sin(time*5.4+phase))*.10:Math.abs(Math.sin(time*2.1+phase))*.018;
-    a.position.y=terrainHeight(x,z)+hop;
-    a.rotation.y=Math.atan2(dx,dz);
-
-    if(kind==="deer"){
-      const gait=Math.sin(time*3.8+phase);
-      const legs=a.userData.legs||[];
-      for(let j=0;j<legs.length;j++)legs[j].rotation.x=(j%2?1:-1)*gait*.16;
-      if(a.userData.neck){
-        a.userData.neck.rotation.z=-.08+Math.sin(time*.65+phase)*.05;
-        a.userData.neck.rotation.y=Math.sin(time*.48+phase)*.12;
-      }
-      if(a.userData.tail)a.userData.tail.rotation.z=Math.sin(time*4.1+phase)*.14;
-      if(a.userData.body)a.userData.body.rotation.x=Math.sin(time*3.8+phase)*.025;
-    }else if(kind==="rabbit"){
-      const kick=Math.sin(time*5.4+phase);
-      for(const leg of (a.userData.hind||[]))leg.rotation.z=1.10+kick*.24;
-      if(a.userData.head){
-        a.userData.head.rotation.y=Math.sin(time*.9+phase)*.20;
-        a.userData.head.rotation.z=Math.sin(time*1.7+phase)*.05;
-      }
-      if(a.userData.tail)a.userData.tail.scale.setScalar(1+Math.sin(time*4.2+phase)*.05);
-    }
+    updateAnimalAI(world.ambientAnimals[i],i,dt,time,playerPos);
   }
 
   if(world.farm?.userData.planted){
