@@ -3,6 +3,49 @@ import { CHUNK_SIZE, state, hashRand, distance } from "./data.js?v=17";
 function chunkKey(cx, cy) { return cx + ":" + cy; }
 function objectId(cx, cy, kind, i) { return cx + ":" + cy + ":" + kind + ":" + i; }
 
+const SOLID_NATURE = {
+  tree: { rx: 14, ry: 12 },
+  large_rock: { rx: 21, ry: 15 },
+  copper_ore: { rx: 20, ry: 14 },
+  tin_ore: { rx: 20, ry: 14 },
+  ore: { rx: 21, ry: 15 },
+  gold_ore: { rx: 20, ry: 14 }
+};
+
+function natureCollisionScore(x, y, resource, radius = 9) {
+  const hit = SOLID_NATURE[resource.type];
+  if (!hit) return Infinity;
+  const nx = (x - resource.x) / (hit.rx + radius);
+  const ny = (y - resource.y) / (hit.ry + radius);
+  return nx * nx + ny * ny;
+}
+
+export function isPlayerBlockedByNature(
+  x,
+  y,
+  radius = 9,
+  fromX = state.player.x,
+  fromY = state.player.y
+) {
+  for (const chunk of getChunksNear(x, y, 1)) {
+    for (const resource of chunk.resources) {
+      if (!SOLID_NATURE[resource.type]) continue;
+      if (state.removedResources.has(resource.id)) continue;
+
+      const nextScore = natureCollisionScore(x, y, resource, radius);
+      if (nextScore >= 1) continue;
+
+      // Si une ancienne sauvegarde charge le joueur dans un obstacle,
+      // il peut toujours se déplacer vers l'extérieur au lieu d'être piégé.
+      const previousScore = natureCollisionScore(fromX, fromY, resource, radius);
+      if (previousScore < 1 && nextScore > previousScore) continue;
+
+      return true;
+    }
+  }
+  return false;
+}
+
 export function generateChunk(cx, cy) {
   const key = chunkKey(cx, cy);
   if (state.chunkCache.has(key)) return state.chunkCache.get(key);
