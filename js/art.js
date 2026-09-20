@@ -796,7 +796,7 @@ export function drawBuilding(ctx,pnt,building,preview=false) {
       ctx.fillStyle=p.woodLight;
       ctx.globalAlpha=.32;
       ctx.beginPath();ctx.ellipse(0,-9,17,5,0,Math.PI,Math.PI*2);ctx.fill();
-      ctx.globalAlpha=preview?.68:1;
+      ctx.globalAlpha = preview ? .68 : 1;
     }
   }
 
