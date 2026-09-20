@@ -289,3 +289,9 @@ kbd{padding:2px 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;bac
   font-size:9px;
   color:#9fa897
 }
+
+
+/* V26.3 — rendu plus sobre et survival */
+.cinema-vignette{
+  background:radial-gradient(circle at 50% 43%,transparent 64%,rgba(4,7,5,.045) 84%,rgba(2,4,3,.16) 100%)
+}
