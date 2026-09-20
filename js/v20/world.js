@@ -399,9 +399,13 @@ export function setWorldSeason(world,index){
     if(!crown)continue;
     crown.traverse(o=>{
       if(!o.isMesh||!o.material?.color)return;
+      // Les matériaux d'écorce/roche ont une map texturée : on ne les recolore pas comme des feuilles.
+      if(o.material.map)return;
       if(!o.userData.baseSeasonColor)o.userData.baseSeasonColor=o.material.color.clone();
       const base=o.userData.baseSeasonColor;
       o.material.color.copy(base);
+      const hex=base.getHex();
+      if(hex>0xd0d0d0)return;
       if(index===1)o.material.color.lerp(summer,.20);
       else if(index===2)o.material.color.lerp(autumn,o.geometry?.type==="ConeGeometry"?.12:.70);
       else if(index===3)o.material.color.lerp(winter,o.geometry?.type==="ConeGeometry"?.22:.60);
