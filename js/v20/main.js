@@ -1,6 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 import { createPlayer, makeGhost } from "./models.js?v=25";
 import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=25";
+import { initPremiumZone, updatePremiumZone } from "../v26/premiumZone.js?v=26";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -31,6 +32,11 @@ const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,
 camera.position.set(14,17,14);
 
 const world=createWorld(scene);
+let premiumZone=null;
+initPremiumZone(scene,world,renderer,terrainHeight)
+  .then(zone=>{premiumZone=zone;})
+  .catch(err=>console.warn("V26 premium zone load failed",err));
+
 const player=createPlayer();
 scene.add(player);
 
@@ -826,7 +832,7 @@ function forceCleanSpawnUI(){
 
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
-  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
+  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));updatePremiumZone(premiumZone,elapsed);updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
   requestAnimationFrame(frame);
