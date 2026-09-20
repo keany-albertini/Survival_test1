@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#263b2a">
-  <title>Survie 2D — Prototype V16</title>
-  <link rel="stylesheet" href="styles.css?v=15">
+  <title>Survie 2D — Prototype V17</title>
+  <link rel="stylesheet" href="styles.css?v=17">
 </head>
 <body>
   <main id="gameShell">
@@ -102,6 +102,36 @@
       <p class="panel-note">Déposer ou reprendre des objets ne les détruit pas. Le contenu reste sauvegardé dans ce coffre.</p>
     </aside>
 
+    <aside id="campfirePanel" class="panel campfire-panel" aria-hidden="true">
+      <header>
+        <div><span class="eyebrow">CUISSON</span><h2>Feu de camp</h2></div>
+        <button id="closeCampfireButton" class="close-panel" type="button">×</button>
+      </header>
+
+      <div class="campfire-cooking">
+        <div class="campfire-visual" aria-hidden="true">
+          <span class="campfire-flame">🔥</span>
+          <small>Feu allumé</small>
+        </div>
+
+        <div class="campfire-stats">
+          <div><span>🥩 Viande crue</span><b id="campfireRawCount">0</b></div>
+          <div><span>🍖 Prête</span><b id="campfireCookedCount">0</b></div>
+        </div>
+
+        <div class="campfire-progress-track" aria-label="Progression de la cuisson">
+          <i id="campfireProgress"></i>
+        </div>
+        <p id="campfireStatus" class="campfire-status">Le feu est prêt.</p>
+
+        <div class="campfire-actions">
+          <button id="campfireCookButton" type="button">Cuire 1 viande</button>
+          <button id="campfireCollectButton" type="button" class="secondary" disabled>Rien à récupérer</button>
+        </div>
+      </div>
+      <p class="panel-note">Chaque morceau prend environ 5 secondes. La cuisson continue même si vous fermez le panneau.</p>
+    </aside>
+
     <div id="deathScreen" class="death-screen" hidden>
       <div><span class="eyebrow">FIN DE LA SURVIE</span><h1>Vous êtes mort</h1><p id="deathMessage">Vous allez réapparaître au point de départ.</p><button id="restartButton" type="button">Réapparaître</button></div>
     </div>
@@ -138,6 +168,6 @@
     </section>
   </main>
 
-  <script type="module" src="js/main.js?v=16"></script>
+  <script type="module" src="js/main.js?v=17"></script>
 </body>
 </html>
