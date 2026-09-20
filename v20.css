@@ -89,8 +89,21 @@ kbd{padding:2px 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;bac
   box-shadow:0 7px 15px rgba(0,0,0,.25),inset 0 2px rgba(255,255,255,.12);
   will-change:transform
 }
-.build-panel{position:absolute;left:50%;top:68px;transform:translate(-50%,-130%);z-index:12;min-width:260px;padding:11px 12px;border-radius:12px;background:rgba(10,14,11,.94);border:1px solid rgba(224,198,137,.28);box-shadow:0 14px 34px rgba(0,0,0,.36);transition:.2s;display:flex;justify-content:space-between;gap:14px;align-items:center}
-.build-panel.open{transform:translate(-50%,0)}
+.build-panel{
+  position:absolute;left:50%;top:68px;
+  transform:translate(-50%,-20px) scale(.97);
+  z-index:12;min-width:260px;padding:11px 12px;border-radius:12px;
+  background:rgba(10,14,11,.94);
+  border:1px solid rgba(224,198,137,.28);
+  box-shadow:0 14px 34px rgba(0,0,0,.36);
+  transition:opacity .16s ease,transform .16s ease,visibility .16s;
+  display:flex;justify-content:space-between;gap:14px;align-items:center;
+  visibility:hidden;opacity:0;pointer-events:none
+}
+.build-panel.open{
+  visibility:visible;opacity:1;pointer-events:auto;
+  transform:translate(-50%,0) scale(1)
+}
 .build-panel>div{display:grid;gap:2px}
 .build-panel .eyebrow{font-size:8px;letter-spacing:.18em;color:#cbb98b}
 .build-panel strong{font-family:Georgia,serif;font-size:15px}
