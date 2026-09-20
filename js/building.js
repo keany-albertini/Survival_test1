@@ -1,5 +1,5 @@
-import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=17";
-import { saveGame } from "./save.js?v=17";
+import { state, BUILDING_DATA, ITEM_DATA, distance } from "./data.js?v=19";
+import { saveGame } from "./save.js?v=19";
 
 const FOUNDATION_W = 64;
 const FOUNDATION_H = 46;
