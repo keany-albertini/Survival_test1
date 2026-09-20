@@ -513,7 +513,10 @@ export class Renderer {
     const chunks = getChunksForView(state.camera, this.viewW, this.viewH, 1);
 
     for (const chunk of chunks) {
-      for (const d of chunk.decor) if (this.visible(d.x,d.y,20)) this.grass(d);
+      for (const d of chunk.decor) {
+        if (!this.visible(d.x,d.y,30)) continue;
+        if (d.type === "grass" || d.type === "flower") this.grass(d);
+      }
       for (const r of chunk.resources) if (r.type === "pond" && this.visible(r.x,r.y,80)) this.pond(r);
     }
 
@@ -535,6 +538,11 @@ export class Renderer {
     }
 
     for (const chunk of chunks) {
+      for (const d of chunk.decor) {
+        if ((d.type === "bush" || d.type === "fern") && this.visible(d.x,d.y,60)) {
+          drawables.push({ y:d.y, kind:"decor", value:d });
+        }
+      }
       for (const r of chunk.resources) {
         if (r.type === "pond" || state.removedResources.has(r.id) || !this.visible(r.x,r.y,110)) continue;
         drawables.push({ y:r.y, kind:"resource", value:r });
@@ -549,6 +557,7 @@ export class Renderer {
     drawables.sort((a,b) => a.y - b.y);
     for (const d of drawables) {
       if (d.kind === "resource") this.resource(d.value);
+      else if (d.kind === "decor") this.grass(d.value);
       else if (d.kind === "animal") this.animal(d.value);
       else if (d.kind === "building") this.building(d.value);
       else if (d.kind === "projectile") this.projectile(d.value);
