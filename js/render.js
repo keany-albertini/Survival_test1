@@ -212,24 +212,24 @@ export class Renderer {
     } else if (type === "wood_wall") {
       if (building.orientation === "v") {
         if (preview) {
-          ctx.fillRect(-7,-25,14,50); ctx.strokeRect(-7,-25,14,50);
+          ctx.fillRect(-9,-29,18,58); ctx.strokeRect(-9,-29,18,58);
         }
         ctx.fillStyle = preview ? "rgba(125,86,52,.78)" : "#6e4a2e";
-        ctx.fillRect(-5,-24,10,48);
+        ctx.fillRect(-6,-28,12,56);
         ctx.fillStyle = preview ? "rgba(180,130,85,.78)" : "#a16f43";
-        for (let y=-20; y<=16; y+=9) ctx.fillRect(-8,y,16,4);
+        for (let y=-24; y<=20; y+=9) ctx.fillRect(-10,y,20,4);
         ctx.fillStyle = "#3c2a1c";
-        ctx.fillRect(-7,-26,4,52); ctx.fillRect(3,-26,4,52);
+        ctx.fillRect(-9,-30,4,60); ctx.fillRect(5,-30,4,60);
       } else {
         if (preview) {
-          ctx.fillRect(-34,-7,68,14); ctx.strokeRect(-34,-7,68,14);
+          ctx.fillRect(-38,-9,76,18); ctx.strokeRect(-38,-9,76,18);
         }
         ctx.fillStyle = preview ? "rgba(125,86,52,.78)" : "#6e4a2e";
-        ctx.fillRect(-32,-5,64,10);
+        ctx.fillRect(-36,-6,72,12);
         ctx.fillStyle = preview ? "rgba(180,130,85,.78)" : "#a16f43";
-        for (let x=-28; x<=24; x+=11) ctx.fillRect(x,-8,4,16);
+        for (let x=-32; x<=28; x+=12) ctx.fillRect(x,-10,4,20);
         ctx.fillStyle = "#3c2a1c";
-        ctx.fillRect(-34,-7,5,14); ctx.fillRect(29,-7,5,14);
+        ctx.fillRect(-38,-9,5,18); ctx.fillRect(33,-9,5,18);
       }
     } else if (type === "campfire") {
       if (preview) {
