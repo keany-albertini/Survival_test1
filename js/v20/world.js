@@ -245,7 +245,7 @@ function createUnderstory(){
 function createGrassMaterial(){
   const m=new THREE.MeshStandardMaterial({
     color:0x6e9553,
-    roughness:.94,
+    roughness:.90,
     side:THREE.DoubleSide,
     emissive:0x193019,
     emissiveIntensity:.14
@@ -283,7 +283,7 @@ function createTerrain(){
     vertexColors:true,
     map:textures.map,
     bumpMap:textures.bump,
-    bumpScale:.16,
+    bumpScale:.22,
     roughnessMap:textures.bump,
     roughness:.94,
     metalness:0
@@ -584,8 +584,11 @@ function nextAnimalWaypoint(animal){
   const ai=animal.userData.ai;
   if(!ai?.route?.length)return;
   ai.routeIndex=(ai.routeIndex+1)%ai.route.length;
-  ai.state="walk";
-  ai.timer=1.8+seeded((animal.userData.phase||1)*100+ai.routeIndex*13)*2.2;
+  const mood=seeded((animal.userData.phase||1)*137+ai.routeIndex*29);
+  ai.state=mood>.80?"run":"walk";
+  ai.timer=ai.state==="run"
+    ? .85+mood*.65
+    : 2.2+seeded((animal.userData.phase||1)*100+ai.routeIndex*13)*2.8;
 }
 
 function updateAnimalAI(animal,index,dt,time,playerPos,animals){
