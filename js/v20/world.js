@@ -723,7 +723,7 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
 
     for(let e=0;e<(animal.userData.ears||[]).length;e++){
       const ear=animal.userData.ears[e];
-      ear.rotation.z+=(Math.sin(time*1.6+index+e)*.018);
+      ear.rotation.z=(ear.userData.baseZ||0)+Math.sin(time*1.6+index+e)*.018;
     }
 
     if(animal.userData.tail)animal.userData.tail.rotation.z=Math.sin(time*(ai.state==="run"?7.5:3.0)+index)*(.07+ratio*.14);
@@ -743,7 +743,8 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
     }
 
     for(let e=0;e<(animal.userData.ears||[]).length;e++){
-      animal.userData.ears[e].rotation.x+=(Math.sin(time*1.8+index+e)*.025);
+      const ear=animal.userData.ears[e];
+      ear.rotation.x=(ear.userData.baseX||0)+Math.sin(time*1.8+index+e)*.025;
     }
   }
 
