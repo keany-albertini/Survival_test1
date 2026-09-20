@@ -1,7 +1,7 @@
-import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp } from "./data.js?v=14";
-import { getNearestResource } from "./world.js?v=14";
-import { saveGame } from "./save.js?v=14";
-import { addSkillXP, SKILL_DATA } from "./skills.js?v=14";
+import { state, RECIPES, ARMOR_DATA, RESOURCE_DATA, clamp } from "./data.js?v=17";
+import { getNearestResource } from "./world.js?v=17";
+import { saveGame } from "./save.js?v=17";
+import { addSkillXP, SKILL_DATA } from "./skills.js?v=17";
 
 export function addItem(id, amount) {
   state.inventory[id] = (state.inventory[id] || 0) + amount;
@@ -101,10 +101,11 @@ export function useItem(id, notify) {
     state.player.hunger = clamp(state.player.hunger + 14, 0, 100);
     state.player.thirst = clamp(state.player.thirst + 4, 0, 100);
     notify("Vous mangez des baies.");
-  } else if (id === "meat") {
-    state.inventory.meat -= 1;
-    state.player.hunger = clamp(state.player.hunger + 12, 0, 100);
-    notify("Vous mangez de la viande.");
+  } else if (id === "cooked_meat") {
+    state.inventory.cooked_meat -= 1;
+    state.player.hunger = clamp(state.player.hunger + 32, 0, 100);
+    state.player.health = clamp(state.player.health + 4, 0, 100);
+    notify("Vous mangez de la viande cuite.");
   } else if (id === "water") {
     state.inventory.water -= 1;
     state.player.thirst = clamp(state.player.thirst + 35, 0, 100);
