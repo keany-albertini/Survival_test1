@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1a251b">
-  <title>Survival V26 — Medieval Fantasy 3D</title>
-  <link rel="stylesheet" href="v20.css?v=26">
+  <title>Survival V26.2 — Medieval Fantasy 3D</title>
+  <link rel="stylesheet" href="v20.css?v=262">
 </head>
 <body>
   <div id="game">
@@ -104,7 +104,12 @@
     <div id="loading" class="loading">
       <div class="crest">⚔</div>
       <h1>Val-des-Roches</h1>
-      <p>Chargement du monde GLTF/PBR…</p>
+      <p id="loadingLabel">Initialisation du moteur…</p>
+      <div class="loading-progress" aria-label="Progression du chargement">
+        <i><b id="loadingBar"></b></i>
+        <span id="loadingPercent">0%</span>
+      </div>
+      <small id="loadingHint">Préparation du monde</small>
     </div>
   </div>
 
@@ -116,6 +121,53 @@
       }
     }
   </script>
-  <script type="module" src="js/v26/main.js?v=26"></script>
+  <script>
+    (() => {
+      const started = performance.now();
+      let lastPercent = 0;
+
+      function updateLoading(percent, label) {
+        const bar = document.getElementById("loadingBar");
+        const pct = document.getElementById("loadingPercent");
+        const text = document.getElementById("loadingLabel");
+        const hint = document.getElementById("loadingHint");
+        const value = Math.max(lastPercent, Math.min(100, Number(percent) || 0));
+        lastPercent = value;
+
+        if (bar) bar.style.width = value + "%";
+        if (pct) pct.textContent = Math.round(value) + "%";
+        if (text && label) text.textContent = label;
+        if (hint) hint.textContent = value < 100 ? "Chargement sécurisé · V26.2" : "Prêt";
+      }
+
+      window.addEventListener("survival-loading", e => {
+        const d = e.detail || {};
+        updateLoading(d.percent, d.label);
+      });
+
+      window.addEventListener("error", e => {
+        console.warn("Startup error captured:", e.error || e.message);
+      });
+
+      window.addEventListener("unhandledrejection", e => {
+        console.warn("Startup promise rejection captured:", e.reason);
+      });
+
+      updateLoading(6, "Chargement du moteur 3D");
+
+      // Anti-écran-infini : le jeu de base ne reste jamais prisonnier du loader.
+      setTimeout(() => {
+        const overlay = document.getElementById("loading");
+        if (!overlay || overlay.classList.contains("hidden")) return;
+
+        updateLoading(100, "Mode compatible activé");
+        const hint = document.getElementById("loadingHint");
+        if (hint) hint.textContent = "Les assets premium continueront de charger si possible";
+
+        setTimeout(() => overlay.classList.add("hidden"), 650);
+      }, 9000);
+    })();
+  </script>
+  <script type="module" src="js/v26/main.js?v=262"></script>
 </body>
 </html>
