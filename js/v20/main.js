@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=22";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=22";
+import { createPlayer, makeGhost } from "./models.js?v=23";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=23";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -9,22 +9,22 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
+renderer.toneMappingExposure=1.30;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8b994);
 scene.fog=new THREE.Fog(0x9eb38d,30,88);
 
-const hemi=new THREE.HemisphereLight(0xcde2bd,0x3b3024,1.05);
+const hemi=new THREE.HemisphereLight(0xdbe8cc,0x514534,1.28);
 scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffe0a8,1.85);
+const sun=new THREE.DirectionalLight(0xffe3ac,2.15);
 sun.castShadow=true;
 sun.shadow.mapSize.set(1536,1536);
 sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
 sun.shadow.camera.near=.5;sun.shadow.camera.far=90;
 sun.shadow.bias=-.00035;
 scene.add(sun);
-const fill=new THREE.DirectionalLight(0x8ca5c7,.30);fill.position.set(-20,14,-18);scene.add(fill);
+const fill=new THREE.DirectionalLight(0xa8bfda,.46);fill.position.set(-20,14,-18);scene.add(fill);
 
 let viewSize=18;
 const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,.1,160);
@@ -37,18 +37,20 @@ scene.add(player);
 const state={
   x:-4,z:4,facing:new THREE.Vector3(0,0,1),
   hp:100,hunger:100,thirst:100,stamina:100,
-  inventory:{wood:18,stone:18,ore:0,gold:0,berries:5,meat:1,cooked:0,seeds:4,grain:0},
+  inventory:{wood:64,stone:96,ore:12,gold:2,berries:10,meat:3,cooked:2,seeds:10,grain:0},
+  bagCapacity:260,
   selected:"axe",mounted:false,day:1,dayProgress:.31,season:0,
   buildMode:false,buildIndex:0,buildings:[],lastSave:0
 };
 
 const buildTypes=[
-  {id:"stone_wall",label:"Mur de pierre",cost:{stone:12,wood:4},radius:1.65},
-  {id:"stone_tower",label:"Tour de guet",cost:{stone:28,wood:8},radius:1.45},
-  {id:"palisade",label:"Palissade",cost:{wood:18},radius:1.8}
+  {id:"stone_wall",label:"Mur de pierre",cost:{stone:8,wood:2},radius:1.65,chainStep:3.35},
+  {id:"stone_tower",label:"Tour de guet",cost:{stone:22,wood:6},radius:1.45,chainStep:0},
+  {id:"palisade",label:"Palissade",cost:{wood:10},radius:1.8,chainStep:3.45}
 ];
 let buildPreview=null;
 let buildValid=false;
+let buildChainPoint=null;
 
 const keys=Object.create(null);
 const joy={x:0,y:0,id:null,originX:0,originY:0,strength:0};
@@ -79,7 +81,11 @@ const ui={
   prompt:document.getElementById("prompt"),toast:document.getElementById("toast"),loot:document.getElementById("lootFeed"),
   quickbar:document.getElementById("quickbar"),minimap:document.getElementById("minimap"),
   buildPanel:document.getElementById("buildPanel"),buildPiece:document.getElementById("buildPieceLabel"),buildCost:document.getElementById("buildCostLabel"),
-  actionBtn:document.getElementById("actionBtn"),buildBtn:document.getElementById("buildBtn")
+  actionBtn:document.getElementById("actionBtn"),buildBtn:document.getElementById("buildBtn"),
+  bagBtn:document.getElementById("bagBtn"),bagTouchBtn:document.getElementById("bagTouchBtn"),
+  bagPanel:document.getElementById("bagPanel"),bagClose:document.getElementById("bagClose"),
+  bagGrid:document.getElementById("bagGrid"),bagWeightText:document.getElementById("bagWeightText"),
+  bagWeightBar:document.getElementById("bagWeightBar"),bagWeightMini:document.getElementById("bagWeightMini")
 };
 
 const seasonNames=["🌱 Printemps","☀️ Été","🍂 Automne","❄️ Hiver"];
@@ -112,11 +118,61 @@ function addLoot(icon,label,amount=1){
   ui.loot.prepend(line);while(ui.loot.children.length>5)ui.loot.lastChild.remove();
   setTimeout(()=>{line.style.opacity="0";setTimeout(()=>line.remove(),240)},5200);
 }
+const itemWeights={wood:.50,stone:.72,ore:.85,gold:.25,berries:.08,meat:.40,cooked:.40,seeds:.04,grain:.10};
+const bagItems=[
+  {id:"wood",icon:"🪵",label:"Bois"},
+  {id:"stone",icon:"🪨",label:"Pierre"},
+  {id:"ore",icon:"💎",label:"Minerai"},
+  {id:"gold",icon:"🟡",label:"Or"},
+  {id:"berries",icon:"🍒",label:"Baies"},
+  {id:"meat",icon:"🥩",label:"Viande crue"},
+  {id:"cooked",icon:"🍖",label:"Viande cuite"},
+  {id:"seeds",icon:"🌱",label:"Graines"},
+  {id:"grain",icon:"🌾",label:"Récolte"}
+];
+
+function bagWeight(){
+  return Object.entries(state.inventory).reduce((sum,[id,count])=>sum+(itemWeights[id]||0)*Math.max(0,count||0),0);
+}
+function bagRemaining(){return Math.max(0,state.bagCapacity-bagWeight());}
+function maxFit(id,amount){
+  const w=itemWeights[id]||0;
+  if(w<=0)return amount;
+  return Math.max(0,Math.min(amount,Math.floor((bagRemaining()+1e-6)/w)));
+}
+function renderBag(){
+  const weight=bagWeight();
+  const pct=clamp(weight/state.bagCapacity*100,0,100);
+  ui.bagWeightText.textContent=weight.toFixed(1)+" / "+state.bagCapacity;
+  ui.bagWeightMini.textContent=Math.round(weight)+" / "+state.bagCapacity;
+  ui.bagWeightBar.style.width=pct+"%";
+  ui.bagGrid.innerHTML="";
+  for(const it of bagItems){
+    const count=state.inventory[it.id]||0;
+    const card=document.createElement("div");
+    card.className="bag-item";
+    card.innerHTML="<span>"+it.icon+"</span><div><strong>"+it.label+"</strong><small>x"+count+" · "+((itemWeights[it.id]||0)*count).toFixed(1)+" charge</small></div>";
+    ui.bagGrid.appendChild(card);
+  }
+}
+function isBagOpen(){return ui.bagPanel.classList.contains("open");}
+function toggleBag(force){
+  const open=force===undefined?!isBagOpen():Boolean(force);
+  ui.bagPanel.classList.toggle("open",open);
+  ui.bagPanel.setAttribute("aria-hidden",open?"false":"true");
+  if(open){resetJoy();renderBag();}
+}
 function give(id,amount,icon,label){
-  state.inventory[id]=(state.inventory[id]||0)+amount;addLoot(icon,label,amount);renderQuickbar();
+  const accepted=maxFit(id,amount);
+  if(accepted<=0){showToast("🎒 Sac plein.");return 0;}
+  state.inventory[id]=(state.inventory[id]||0)+accepted;
+  addLoot(icon,label,accepted);
+  if(accepted<amount)showToast("Sac presque plein : "+accepted+"/"+amount+" récupéré.");
+  renderQuickbar();renderBag();
+  return accepted;
 }
 function hasCost(cost){return Object.entries(cost).every(([k,v])=>(state.inventory[k]||0)>=v);}
-function payCost(cost){for(const [k,v] of Object.entries(cost))state.inventory[k]-=v;renderQuickbar();}
+function payCost(cost){for(const [k,v] of Object.entries(cost))state.inventory[k]-=v;renderQuickbar();renderBag();}
 function costText(cost){const names={wood:"bois",stone:"pierre"};return Object.entries(cost).map(([k,v])=>v+" "+(names[k]||k)).join(" • ");}
 
 const quickItems=[
@@ -149,6 +205,7 @@ const inputRight=new THREE.Vector3();
 const worldUp=new THREE.Vector3(0,1,0);
 
 function inputVector(){
+  if(isBagOpen())return {x:0,z:0,strength:0};
   let sx=0,sy=0;
   if(keys.KeyA||keys.KeyQ||keys.ArrowLeft)sx-=1;
   if(keys.KeyD||keys.ArrowRight)sx+=1;
@@ -450,7 +507,14 @@ function toggleBuild(force){
   const next=force===undefined?!state.buildMode:Boolean(force);
   state.buildMode=next;
   ui.buildPanel.classList.toggle("open",next);
-  if(next){state.selected="build";updateBuildPreview(true);}else removeBuildPreview();
+  if(next){
+    toggleBag(false);
+    state.selected="build";
+    updateBuildPreview(true);
+  }else{
+    buildChainPoint=null;
+    removeBuildPreview();
+  }
   renderQuickbar();updateBuildPanel();
 }
 function updateBuildPanel(){
@@ -461,7 +525,9 @@ function removeBuildPreview(){
 }
 function cycleBuild(){
   if(!state.buildMode)toggleBuild(true);
-  state.buildIndex=(state.buildIndex+1)%buildTypes.length;updateBuildPreview(true);updateBuildPanel();
+  state.buildIndex=(state.buildIndex+1)%buildTypes.length;
+  buildChainPoint=null;
+  updateBuildPreview(true);updateBuildPanel();
 }
 function updateBuildPreview(force=false){
   if(!state.buildMode)return;
@@ -470,20 +536,60 @@ function updateBuildPreview(force=false){
     removeBuildPreview();buildPreview=makeGhost(createBuildObject(b.id),true);scene.add(buildPreview);
   }
   const fx=state.facing.x||0,fz=state.facing.z||1;
-  let x=Math.round((state.x+fx*3.6)*2)/2,z=Math.round((state.z+fz*3.6)*2)/2;
+  let x,z,rot;
+  if(buildChainPoint&&buildChainPoint.type===b.id){
+    x=buildChainPoint.x;z=buildChainPoint.z;rot=buildChainPoint.rot;
+  }else{
+    x=Math.round((state.x+fx*3.6)*2)/2;
+    z=Math.round((state.z+fz*3.6)*2)/2;
+    rot=Math.round(Math.atan2(fx,fz)/(Math.PI/2))*(Math.PI/2);
+  }
   buildPreview.position.set(x,terrainHeight(x,z),z);
-  buildPreview.rotation.y=Math.round(Math.atan2(fx,fz)/(Math.PI/2))*(Math.PI/2);
-  buildValid=hasCost(b.cost)&&Math.abs(x)<54&&Math.abs(z)<54&&Math.abs(x-getRiverX(z))>5.2;
+  buildPreview.rotation.y=rot;
+  const clear=world.buildings.every(existing=>{
+    const dx=x-existing.object.position.x,dz=z-existing.object.position.z;
+    const minDist=(b.radius+existing.radius)*.72;
+    return dx*dx+dz*dz>minDist*minDist;
+  });
+  buildValid=hasCost(b.cost)&&clear&&Math.abs(x)<54&&Math.abs(z)<54&&Math.abs(x-getRiverX(z))>5.2;
   buildPreview.traverse(o=>{if(o.isMesh&&o.material){o.material.color.set(buildValid?0x86c978:0xc86460);}});
 }
 function placeBuild(){
   const b=buildTypes[state.buildIndex];
-  if(!buildValid){showToast(hasCost(b.cost)?"Impossible de construire ici.":"Ressources insuffisantes.");return;}
+  if(!buildValid){
+    showToast(hasCost(b.cost)?"Impossible de construire ici.":"Ressources insuffisantes — le mode construction reste actif.");
+    state.buildMode=true;
+    ui.buildPanel.classList.add("open");
+    return;
+  }
+
   payCost(b.cost);
-  const obj=createBuildObject(b.id);obj.position.copy(buildPreview.position);obj.rotation.y=buildPreview.rotation.y;scene.add(obj);
+  const obj=createBuildObject(b.id);
+  obj.position.copy(buildPreview.position);
+  obj.rotation.y=buildPreview.rotation.y;
+  scene.add(obj);
+
   world.buildings.push({object:obj,type:b.id,radius:b.radius});
   state.buildings.push({type:b.id,x:obj.position.x,z:obj.position.z,rot:obj.rotation.y});
-  showToast(b.label+" construit.");updateBuildPreview(true);saveGame();
+
+  // V23 : placement continu. Le prochain mur/palisade est déjà proposé à côté.
+  if(b.chainStep>0){
+    const stepX=Math.cos(obj.rotation.y)*b.chainStep;
+    const stepZ=-Math.sin(obj.rotation.y)*b.chainStep;
+    buildChainPoint={
+      type:b.id,
+      x:Math.round((obj.position.x+stepX)*2)/2,
+      z:Math.round((obj.position.z+stepZ)*2)/2,
+      rot:obj.rotation.y
+    };
+  }else buildChainPoint=null;
+
+  state.buildMode=true;
+  state.selected="build";
+  ui.buildPanel.classList.add("open");
+  showToast(b.label+" construit · placement continu actif.");
+  updateBuildPreview(true);
+  saveGame();
 }
 
 function updatePrompt(){
@@ -500,6 +606,7 @@ function updatePrompt(){
 
 function updateUI(){
   setBar(ui.hpBar,ui.hpText,state.hp);setBar(ui.hungerBar,ui.hungerText,state.hunger);setBar(ui.thirstBar,ui.thirstText,state.thirst);setBar(ui.staminaBar,ui.staminaText,state.stamina);
+  if(ui.bagWeightMini)ui.bagWeightMini.textContent=Math.round(bagWeight())+" / "+state.bagCapacity;
   const mins=Math.floor(state.dayProgress*24*60),h=Math.floor(mins/60)%24,m=mins%60;
   ui.day.textContent="Jour "+state.day;ui.clock.textContent=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");ui.season.textContent=seasonNames[state.season];
 }
@@ -524,7 +631,7 @@ function saveGame(){
     localStorage.setItem("survival-v20-save",JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings
+      buildings:state.buildings,version:23
     }));
   }catch(_){}
 }
@@ -536,6 +643,16 @@ function loadGame(){
     for(const k of ["hp","hunger","thirst","dayProgress"])if(Number.isFinite(s[k]))state[k]=s[k];
     if(Number.isFinite(s.day))state.day=Math.max(1,Math.floor(s.day));
     if(s.inventory&&typeof s.inventory==="object")for(const k of Object.keys(state.inventory))if(Number.isFinite(s.inventory[k]))state.inventory[k]=Math.max(0,Math.floor(s.inventory[k]));
+
+    // Migration V23 : une seule fois, on crédite un vrai stock de chantier aux anciennes sauvegardes.
+    if(!Number.isFinite(s.version)||s.version<23){
+      state.inventory.wood=(state.inventory.wood||0)+60;
+      state.inventory.stone=(state.inventory.stone||0)+90;
+      state.inventory.ore=(state.inventory.ore||0)+10;
+      state.inventory.berries=(state.inventory.berries||0)+5;
+      state.inventory.seeds=(state.inventory.seeds||0)+6;
+    }
+
     if(typeof s.selected==="string")state.selected=s.selected;
     world.horse.userData.tamed=Boolean(s.horseTamed);
     if(s.chestOpened){world.chest.userData.opened=true;if(world.chest.userData.lid)world.chest.userData.lid.rotation.y=-.9;}
@@ -666,11 +783,11 @@ function updateEnemyDamage(){
 }
 
 function updateDayLight(){
-  const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.72+.38,.10,1);
-  hemi.intensity=.46+daylight*.72;sun.intensity=.32+daylight*1.55;
+  const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.66+.46,.18,1);
+  hemi.intensity=.72+daylight*.78;sun.intensity=.58+daylight*1.72;
   sun.color.set(daylight>.55?0xffdda0:0xc1b4b0);
   sun.position.set(state.x+Math.cos(a)*28,10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,0,state.z);scene.add(sun.target);
-  const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x172232);scene.background.copy(night).lerp(base,daylight*.92);
+  const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
   scene.fog.color.copy(scene.background).lerp(new THREE.Color(seasonSky[state.season]),.38);
 }
 
@@ -704,6 +821,8 @@ addEventListener("keydown",e=>{
   keys[e.code]=true;
   if(e.code==="KeyE"||e.code==="Space"){e.preventDefault();doAction();}
   else if(e.code==="KeyB"){e.preventDefault();toggleBuild();}
+  else if(e.code==="KeyI"){e.preventDefault();toggleBag();}
+  else if(e.code==="Escape"){toggleBag(false);}
   else if(e.code==="KeyR"){e.preventDefault();cycleBuild();}
   else if(/^Digit[1-9]$/.test(e.code)){const item=quickItems[Number(e.code.slice(-1))-1];if(item)selectItem(item.id);}
 });
@@ -714,6 +833,9 @@ addEventListener("wheel",e=>{viewSize=clamp(viewSize+Math.sign(e.deltaY)*1.2,13,
 
 ui.actionBtn.addEventListener("pointerdown",e=>{e.preventDefault();doAction();});
 ui.buildBtn.addEventListener("click",()=>toggleBuild());
+ui.bagBtn?.addEventListener("click",()=>toggleBag());
+ui.bagTouchBtn?.addEventListener("click",()=>toggleBag());
+ui.bagClose?.addEventListener("click",()=>toggleBag(false));
 document.getElementById("buildClose").addEventListener("click",()=>toggleBuild(false));
 
 const floatingStick=document.getElementById("floatingStick");
@@ -782,7 +904,7 @@ state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);sc
 player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
 motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
-syncEquippedTool();renderQuickbar();updateBuildPanel();updateUI();
+syncEquippedTool();renderQuickbar();renderBag();updateBuildPanel();updateUI();
 setTimeout(()=>document.getElementById("loading").classList.add("hidden"),450);
 showToast("Bienvenue à Val-des-Roches.");
 requestAnimationFrame(frame);
