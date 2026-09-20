@@ -1,5 +1,5 @@
-import { state } from "./data.js?v=17";
-import { saveGame } from "./save.js?v=17";
+import { state } from "./data.js?v=19";
+import { saveGame } from "./save.js?v=19";
 
 let openCampfireId = null;
 const COOK_TIME = 5;
