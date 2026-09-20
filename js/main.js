@@ -1,22 +1,23 @@
-import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=14";
-import { Renderer } from "./render.js?v=16";
-import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=14";
-import { hunt, updateAnimals } from "./fauna.js?v=14";
-import { getSmartTarget } from "./world.js?v=14";
-import { updateSurvival } from "./survival.js?v=14";
-import { saveGame, loadGame } from "./save.js?v=14";
+import { state, QUICKBAR_ORDER, TOOL_DATA } from "./data.js?v=17";
+import { Renderer } from "./render.js?v=17";
+import { interact, craft, useItem, equipTool, equipArmor } from "./harvest.js?v=17";
+import { hunt, updateAnimals } from "./fauna.js?v=17";
+import { getSmartTarget } from "./world.js?v=17";
+import { updateSurvival } from "./survival.js?v=17";
+import { saveGame, loadGame } from "./save.js?v=17";
 import {
   startPlacement, cancelPlacement, placeCurrent,
   updateBuildPreview, isBuildMode, getNearestBuilding, isPlayerBlockedByWall
-} from "./building.js?v=16";
-import { fireBow, setAim, updateProjectiles } from "./combat.js?v=14";
+} from "./building.js?v=17";
+import { fireBow, setAim, updateProjectiles } from "./combat.js?v=17";
+import { openCampfire, closeCampfire, startCookingMeat, collectCookedMeat, updateCooking } from "./cooking.js?v=17";
 import {
   openChest, closeChest, depositItem, withdrawItem
-} from "./storage.js?v=14";
+} from "./storage.js?v=17";
 import {
   ui, configureUI, showToast, updateUI, updatePrompt,
-  isPanelOpen, toggleInventory, openInventory, openChestPanel, closePanels
-} from "./ui.js?v=14";
+  isPanelOpen, toggleInventory, openInventory, openChestPanel, openCampfirePanel, closePanels
+} from "./ui.js?v=17";
 
 const canvas = document.getElementById("gameCanvas");
 const renderer = new Renderer(canvas);
@@ -44,7 +45,10 @@ configureUI({
   },
   depositItem: (id, amount) => refreshAction(() => depositItem(id, amount)),
   withdrawItem: (id, amount) => refreshAction(() => withdrawItem(id, amount)),
-  closeChest
+  closeChest,
+  closeCampfire,
+  cookMeat: () => refreshAction(() => startCookingMeat(showToast)),
+  collectCooked: () => refreshAction(() => collectCookedMeat(showToast))
 });
 
 function inputVector() {
@@ -123,6 +127,7 @@ function update(dt) {
   updateSurvival(dt, state.player.moving, sprinting && !isPanelOpen());
   updateAnimals(dt);
   updateProjectiles(dt, showToast);
+  updateCooking(dt, showToast);
 
   const smoothing = 1 - Math.pow(.0009, dt);
   const cameraLead = 26;
@@ -141,6 +146,14 @@ function update(dt) {
   }
 }
 
+function openNearbyCampfire() {
+  const campfire = getNearestBuilding(68, "campfire");
+  if (!campfire) return false;
+  if (!openCampfire(campfire.id)) return false;
+  openCampfirePanel();
+  return true;
+}
+
 function openNearbyChest() {
   const chest = getNearestBuilding(62, "chest");
   if (!chest) return false;
@@ -157,6 +170,7 @@ function smartAction() {
     return;
   }
 
+  if (openNearbyCampfire()) return;
   if (openNearbyChest()) return;
 
   if (state.equipped === "bow") {
@@ -217,6 +231,9 @@ addEventListener("blur", () => {
 document.getElementById("inventoryButton").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("touchInventory").addEventListener("click", () => toggleInventory("inventory"));
 document.getElementById("closeChestButton").addEventListener("click", closePanels);
+document.getElementById("closeCampfireButton").addEventListener("click", closePanels);
+document.getElementById("campfireCookButton").addEventListener("click", () => refreshAction(() => startCookingMeat(showToast)));
+document.getElementById("campfireCollectButton").addEventListener("click", () => refreshAction(() => collectCookedMeat(showToast)));
 document.getElementById("buildCancelButton").addEventListener("click", () => {
   refreshAction(() => cancelPlacement(showToast));
 });
