@@ -127,14 +127,39 @@ function selectItem(id){
   state.selected=id;renderQuickbar();
 }
 
+const inputForward=new THREE.Vector3();
+const inputRight=new THREE.Vector3();
+const worldUp=new THREE.Vector3(0,1,0);
+
 function inputVector(){
-  let x=0,z=0;
-  if(keys.KeyA||keys.KeyQ||keys.ArrowLeft)x-=1;
-  if(keys.KeyD||keys.ArrowRight)x+=1;
-  if(keys.KeyW||keys.KeyZ||keys.ArrowUp)z-=1;
-  if(keys.KeyS||keys.ArrowDown)z+=1;
-  if(Math.abs(x)+Math.abs(z)===0){x=joy.x;z=joy.y;}
-  const l=Math.hypot(x,z);return l>.08?{x:x/l,z:z/l,strength:Math.min(1,l)}:{x:0,z:0,strength:0};
+  let sx=0,sy=0;
+  if(keys.KeyA||keys.KeyQ||keys.ArrowLeft)sx-=1;
+  if(keys.KeyD||keys.ArrowRight)sx+=1;
+  if(keys.KeyW||keys.KeyZ||keys.ArrowUp)sy-=1;
+  if(keys.KeyS||keys.ArrowDown)sy+=1;
+
+  if(Math.abs(sx)+Math.abs(sy)===0){
+    sx=joy.x;
+    sy=joy.y;
+  }
+
+  const length=Math.hypot(sx,sy);
+  if(length<=.08)return {x:0,z:0,strength:0};
+
+  const nx=sx/length;
+  const ny=sy/length;
+
+  // Déplacement relatif à la caméra : pousser le doigt vers le haut
+  // déplace réellement le personnage vers le haut de l'écran.
+  camera.getWorldDirection(inputForward);
+  inputForward.y=0;
+  inputForward.normalize();
+  inputRight.crossVectors(inputForward,worldUp).normalize();
+
+  const wx=inputRight.x*nx + inputForward.x*(-ny);
+  const wz=inputRight.z*nx + inputForward.z*(-ny);
+
+  return {x:wx,z:wz,strength:Math.min(1,length)};
 }
 
 function canMove(x,z){
