@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=20";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=20";
+import { createPlayer, makeGhost } from "./models.js?v=21";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=21";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -51,7 +51,13 @@ let buildPreview=null;
 let buildValid=false;
 
 const keys=Object.create(null);
-const joy={x:0,y:0,id:null};
+const joy={x:0,y:0,id:null,originX:0,originY:0,strength:0};
+const motion={
+  velocity:new THREE.Vector2(0,0),
+  yaw:0,
+  targetYaw:0,
+  cameraFocus:new THREE.Vector3(-4,0,4)
+};
 let last=performance.now(),elapsed=0,toastTimer=null,nearest=null;
 
 const ui={
@@ -78,6 +84,14 @@ function resize(){
 addEventListener("resize",resize);resize();
 
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function damp(current,target,lambda,dt){return current+(target-current)*(1-Math.exp(-lambda*dt));}
+function dampAngle(current,target,lambda,dt){
+  const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
+  return current+delta*(1-Math.exp(-lambda*dt));
+}
+function dampRotation(obj,axis,target,lambda,dt){
+  obj.rotation[axis]=damp(obj.rotation[axis],target,lambda,dt);
+}
 function setBar(el,text,val){const v=clamp(val,0,100);el.style.width=v+"%";text.textContent=Math.round(v);}
 function showToast(msg){
   clearTimeout(toastTimer);ui.toast.textContent=msg;ui.toast.classList.add("show");
@@ -319,26 +333,102 @@ function loadGame(){
   }catch(_){}
 }
 
+function updatePlayerLocomotion(dt,speed01,isMoving,isSprinting){
+  const rig=player.userData;
+  const phaseSpeed=isSprinting?10.4:7.0;
+  rig.walkPhase=(rig.walkPhase||0)+dt*phaseSpeed*(.35+speed01*.9);
+
+  const phase=rig.walkPhase;
+  const swing=Math.sin(phase)*(isSprinting?.72:.52)*speed01;
+  const armSwing=-swing*.78;
+  const bob=Math.abs(Math.sin(phase*2))*0.035*speed01;
+  const side=Math.sin(phase)*.022*speed01;
+
+  if(rig.legs?.length===2){
+    dampRotation(rig.legs[0],"x",isMoving?swing:0,11,dt);
+    dampRotation(rig.legs[1],"x",isMoving?-swing:0,11,dt);
+  }
+  if(rig.arms?.length===2){
+    dampRotation(rig.arms[0],"x",isMoving?armSwing:0,10,dt);
+    dampRotation(rig.arms[1],"x",isMoving?-armSwing*.78:0,10,dt);
+  }
+  if(rig.hips){
+    dampRotation(rig.hips,"y",isMoving?side:0,12,dt);
+    dampRotation(rig.hips,"z",isMoving?-side*.45:0,12,dt);
+  }
+  if(rig.torso){
+    dampRotation(rig.torso,"x",isMoving?(isSprinting?-.10:-.045):0,8,dt);
+    dampRotation(rig.torso,"z",isMoving?-side*.55:0,10,dt);
+    rig.torso.position.y=damp(rig.torso.position.y,.80+bob,14,dt);
+  }
+  if(rig.shadow){
+    const squash=1-speed01*.08;
+    rig.shadow.scale.x=damp(rig.shadow.scale.x,1+speed01*.05,10,dt);
+    rig.shadow.scale.y=damp(rig.shadow.scale.y,.52*squash,10,dt);
+  }
+}
+
 function updateMovement(dt,time){
-  const v=inputVector(),moving=v.strength>0;
-  const sprint=(keys.ShiftLeft||keys.ShiftRight)&&state.stamina>2&&!state.mounted;
-  let speed=state.mounted?8.0:sprint?6.1:4.0;
+  const v=inputVector();
+  const hasInput=v.strength>0;
+  const touchSprint=joy.id!==null&&joy.strength>.86;
+  const sprint=((keys.ShiftLeft||keys.ShiftRight)||touchSprint)&&state.stamina>2&&!state.mounted;
+
+  let maxSpeed=state.mounted?8.3:sprint?6.25:4.15;
   const riverDist=Math.abs(state.x-getRiverX(state.z));
-  if(riverDist<4.4&&Math.abs(state.z)>2.0&&!state.mounted)speed*=.48;
-  if(moving){
-    const nx=state.x+v.x*speed*dt,nz=state.z+v.z*speed*dt;
-    if(canMove(nx,state.z))state.x=nx;if(canMove(state.x,nz))state.z=nz;
-    state.facing.set(v.x,0,v.z);
-    const angle=Math.atan2(v.x,v.z);
-    if(state.mounted)world.horse.rotation.y=angle;else player.rotation.y=angle;
-    state.stamina=clamp(state.stamina-(sprint?19:0)*dt,0,100);
-  }else state.stamina=clamp(state.stamina+15*dt,0,100);
+  if(riverDist<4.4&&Math.abs(state.z)>2.0&&!state.mounted)maxSpeed*=.48;
+
+  const targetVX=hasInput?v.x*maxSpeed*v.strength:0;
+  const targetVZ=hasInput?v.z*maxSpeed*v.strength:0;
+  const response=hasInput?(state.mounted?7.2:10.5):14.5;
+
+  motion.velocity.x=damp(motion.velocity.x,targetVX,response,dt);
+  motion.velocity.y=damp(motion.velocity.y,targetVZ,response,dt);
+
+  if(Math.abs(motion.velocity.x)<.015)motion.velocity.x=0;
+  if(Math.abs(motion.velocity.y)<.015)motion.velocity.y=0;
+
+  const nx=state.x+motion.velocity.x*dt;
+  const nz=state.z+motion.velocity.y*dt;
+
+  if(canMove(nx,state.z))state.x=nx;
+  else motion.velocity.x*=.16;
+
+  if(canMove(state.x,nz))state.z=nz;
+  else motion.velocity.y*=.16;
+
+  const actualSpeed=Math.hypot(motion.velocity.x,motion.velocity.y);
+  const speed01=clamp(actualSpeed/Math.max(.01,maxSpeed),0,1);
+
+  if(actualSpeed>.08){
+    const fx=motion.velocity.x/actualSpeed;
+    const fz=motion.velocity.y/actualSpeed;
+    state.facing.x=damp(state.facing.x,fx,14,dt);
+    state.facing.z=damp(state.facing.z,fz,14,dt);
+    const fl=Math.hypot(state.facing.x,state.facing.z)||1;
+    state.facing.x/=fl;state.facing.z/=fl;
+
+    motion.targetYaw=Math.atan2(fx,fz);
+    motion.yaw=dampAngle(motion.yaw,motion.targetYaw,state.mounted?7.5:11.5,dt);
+    if(state.mounted)world.horse.rotation.y=motion.yaw;
+    else player.rotation.y=motion.yaw;
+  }
+
+  if(sprint&&hasInput)state.stamina=clamp(state.stamina-dt*19*clamp(v.strength,.55,1),0,100);
+  else state.stamina=clamp(state.stamina+dt*15,0,100);
 
   const ground=terrainHeight(state.x,state.z);
   if(state.mounted){
-    world.horse.position.set(state.x,ground,state.z);player.position.set(state.x,ground+1.48+Math.sin(time*8)*.025,state.z);
+    const gait=Math.sin(time*(6.6+speed01*3.5))*0.035*speed01;
+    world.horse.position.set(state.x,ground+Math.abs(gait)*.45,state.z);
+    player.position.set(state.x,ground+1.48+Math.abs(gait),state.z);
     player.rotation.y=world.horse.rotation.y;
-  }else player.position.set(state.x,ground+Math.abs(Math.sin(time*7))* (moving?.035:0),state.z);
+    updatePlayerLocomotion(dt,0,false,false);
+  }else{
+    updatePlayerLocomotion(dt,speed01,actualSpeed>.08,sprint);
+    const bob=Math.abs(Math.sin((player.userData.walkPhase||0)*2))*0.022*speed01;
+    player.position.set(state.x,ground+bob,state.z);
+  }
 }
 
 function updateSurvival(dt){
@@ -371,9 +461,20 @@ function updateDayLight(){
 }
 
 function updateCamera(dt){
-  const target=new THREE.Vector3(state.x,terrainHeight(state.x,state.z)+.8,state.z);
-  const desired=new THREE.Vector3(state.x+12.5,target.y+14.8,state.z+12.5);
-  const s=1-Math.exp(-dt*4.2);camera.position.lerp(desired,s);camera.lookAt(target);
+  const lookAheadX=motion.velocity.x*.42;
+  const lookAheadZ=motion.velocity.y*.42;
+  const targetY=terrainHeight(state.x,state.z)+(state.mounted?1.15:.82);
+  const focusTarget=new THREE.Vector3(state.x+lookAheadX,targetY,state.z+lookAheadZ);
+
+  motion.cameraFocus.lerp(focusTarget,1-Math.exp(-dt*5.2));
+
+  const desired=new THREE.Vector3(
+    motion.cameraFocus.x+12.7,
+    motion.cameraFocus.y+(state.mounted?15.6:14.8),
+    motion.cameraFocus.z+12.7
+  );
+  camera.position.lerp(desired,1-Math.exp(-dt*3.8));
+  camera.lookAt(motion.cameraFocus);
   sun.shadow.camera.updateProjectionMatrix();
 }
 
@@ -401,19 +502,72 @@ ui.actionBtn.addEventListener("pointerdown",e=>{e.preventDefault();doAction();})
 ui.buildBtn.addEventListener("click",()=>toggleBuild());
 document.getElementById("buildClose").addEventListener("click",()=>toggleBuild(false));
 
-const joyBase=document.getElementById("joyBase"),joyKnob=document.getElementById("joyKnob");
-function setJoy(x,y){
-  const r=joyBase.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=x-cx,dy=y-cy;const max=r.width*.32,l=Math.hypot(dx,dy);
-  if(l>max){dx=dx/l*max;dy=dy/l*max;}joy.x=dx/max;joy.y=dy/max;joyKnob.style.transform="translate("+dx+"px,"+dy+"px)";
+const floatingStick=document.getElementById("floatingStick");
+const floatingKnob=document.getElementById("floatingKnob");
+const JOY_MAX=54;
+const JOY_DEADZONE=6;
+
+function beginFloatingJoy(e){
+  if(e.pointerType==="mouse"||joy.id!==null)return;
+  e.preventDefault();
+
+  joy.id=e.pointerId;
+  joy.originX=e.clientX;
+  joy.originY=e.clientY;
+  joy.x=0;joy.y=0;joy.strength=0;
+
+  floatingStick.style.left=e.clientX+"px";
+  floatingStick.style.top=e.clientY+"px";
+  floatingStick.classList.add("active");
+  floatingStick.setAttribute("aria-hidden","false");
+  floatingKnob.style.transform="translate(0,0)";
+
+  try{canvas.setPointerCapture(e.pointerId);}catch(_){}
 }
-function resetJoy(){joy.x=0;joy.y=0;joy.id=null;joyKnob.style.transform="translate(0,0)";}
-joyBase.addEventListener("pointerdown",e=>{e.preventDefault();joy.id=e.pointerId;try{joyBase.setPointerCapture(e.pointerId)}catch(_){}setJoy(e.clientX,e.clientY);});
-joyBase.addEventListener("pointermove",e=>{if(e.pointerId!==joy.id)return;setJoy(e.clientX,e.clientY);});
-for(const name of ["pointerup","pointercancel","lostpointercapture"])joyBase.addEventListener(name,e=>{if(joy.id===null||e.pointerId===joy.id||name==="lostpointercapture")resetJoy();});
+
+function updateFloatingJoy(e){
+  if(e.pointerId!==joy.id)return;
+  e.preventDefault();
+
+  let dx=e.clientX-joy.originX;
+  let dy=e.clientY-joy.originY;
+  const raw=Math.hypot(dx,dy);
+
+  if(raw<JOY_DEADZONE){
+    joy.x=0;joy.y=0;joy.strength=0;
+    floatingKnob.style.transform="translate(0,0)";
+    return;
+  }
+
+  const limited=Math.min(JOY_MAX,raw);
+  const nx=dx/raw,ny=dy/raw;
+  dx=nx*limited;dy=ny*limited;
+
+  joy.strength=clamp((raw-JOY_DEADZONE)/(JOY_MAX-JOY_DEADZONE),0,1);
+  joy.x=nx*joy.strength;
+  joy.y=ny*joy.strength;
+  floatingKnob.style.transform="translate("+dx+"px,"+dy+"px)";
+}
+
+function resetJoy(e){
+  if(e&&joy.id!==null&&e.pointerId!==undefined&&e.pointerId!==joy.id)return;
+  joy.x=0;joy.y=0;joy.strength=0;joy.id=null;
+  floatingKnob.style.transform="translate(0,0)";
+  floatingStick.classList.remove("active");
+  floatingStick.setAttribute("aria-hidden","true");
+}
+
+canvas.addEventListener("pointerdown",beginFloatingJoy);
+canvas.addEventListener("pointermove",updateFloatingJoy);
+for(const name of ["pointerup","pointercancel","lostpointercapture"]){
+  canvas.addEventListener(name,resetJoy);
+}
 
 loadGame();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
 player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
+motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
+motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
 renderQuickbar();updateBuildPanel();updateUI();
 setTimeout(()=>document.getElementById("loading").classList.add("hidden"),450);
 showToast("Bienvenue à Val-des-Roches.");
