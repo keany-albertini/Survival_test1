@@ -193,6 +193,7 @@ function createLeafLayer(seed,color,count=26,spread=[.9,.52,.78],center=[0,0,0],
     side:THREE.DoubleSide,
     depthWrite:true
   });
+  material.userData.isLeafCard=true;
   const inst=new THREE.InstancedMesh(geo,material,count);
   inst.castShadow=true;
   inst.receiveShadow=true;
