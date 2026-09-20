@@ -12,7 +12,8 @@ export const ITEM_DATA = {
   gold_ore: { label: "Or", icon: "🟡", description: "Minerai d'or brut." },
   arrows: { label: "Flèches", icon: "➶", description: "Munitions pour l'arc." },
   berries: { label: "Baies", icon: "🫐", description: "Restaure faim et un peu de soif.", usable: true },
-  meat: { label: "Viande", icon: "🥩", description: "Restaure un peu de faim.", usable: true },
+  meat: { label: "Viande crue", icon: "🥩", description: "Viande fraîche à faire cuire sur un feu de camp." },
+  cooked_meat: { label: "Viande cuite", icon: "🍖", description: "Viande grillée nourrissante.", usable: true },
   water: { label: "Eau", icon: "💧", description: "Restaure fortement la soif.", usable: true },
   hide: { label: "Peau", icon: "🟫", description: "Peau animale utile pour les armures." },
   bandage: { label: "Bandage", icon: "🩹", description: "Restaure 25 points de vie.", usable: true },
@@ -40,7 +41,7 @@ export const TOOL_DATA = {
   shield: { label: "Bouclier", icon: "🛡️" }
 };
 
-export const QUICKBAR_ORDER = ["axe","pickaxe","spear","bow","sword","shield","berries","meat","water","bandage"];
+export const QUICKBAR_ORDER = ["axe","pickaxe","spear","bow","sword","shield","berries","cooked_meat","water","bandage"];
 
 export const ARMOR_DATA = {
   leather_helmet: { label: "Coiffe en cuir", icon: "🪖", slot: "head" },
@@ -120,7 +121,7 @@ export const state = {
   camera: { x: 0, y: 0 },
   inventory: {
     branch: 0, fiber: 0, stone: 0, ore: 0, copper_ore: 0, tin_ore: 0, gold_ore: 0,
-    arrows: 0, berries: 0, meat: 0, water: 0, hide: 0, bandage: 0,
+    arrows: 0, berries: 0, meat: 0, cooked_meat: 0, water: 0, hide: 0, bandage: 0,
     campfire: 0, workbench: 0, forge: 0, bed: 0, chest: 0, wood_foundation: 0, wood_wall: 0,
     leather_helmet: 0, leather_chest: 0, leather_legs: 0, leather_boots: 0
   },
