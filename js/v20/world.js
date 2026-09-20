@@ -95,7 +95,7 @@ function createBridge(){
     const rail=new THREE.Mesh(new THREE.BoxGeometry(8.2,.12,.12),wood);rail.position.set(cx,.72,z+side*1.03);g.add(rail);
     for(let i=-6;i<=6;i+=3){const post=new THREE.Mesh(new THREE.BoxGeometry(.13,.82,.13),wood);post.position.set(cx+i*.55,.38,z+side*1.03);g.add(post);}
   }
-  g.position.y=terrainHeight(cx,z)+.05;return g;
+  g.position.y=.08;return g;
 }
 
 function createRuins(){
