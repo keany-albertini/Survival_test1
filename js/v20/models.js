@@ -142,6 +142,91 @@ function branchBetween(a,b,rBase,rTip,material,segments=9){
   return m;
 }
 
+let leafTextureCache=null;
+function getLeafTexture(){
+  if(leafTextureCache)return leafTextureCache;
+  const canvas=document.createElement("canvas");
+  canvas.width=96;canvas.height=64;
+  const ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,96,64);
+
+  const grad=ctx.createLinearGradient(18,32,78,32);
+  grad.addColorStop(0,"rgba(255,255,255,.04)");
+  grad.addColorStop(.35,"rgba(255,255,255,.96)");
+  grad.addColorStop(1,"rgba(255,255,255,.10)");
+  ctx.fillStyle=grad;
+
+  ctx.beginPath();
+  ctx.moveTo(8,32);
+  ctx.bezierCurveTo(24,9,62,8,88,31);
+  ctx.bezierCurveTo(64,56,25,55,8,32);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle="rgba(255,255,255,.65)";
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(14,32);ctx.lineTo(82,31);ctx.stroke();
+  ctx.lineWidth=1;
+  for(let i=0;i<5;i++){
+    const x=25+i*11;
+    ctx.beginPath();ctx.moveTo(x,31);ctx.lineTo(x-6,20+i%2*3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,32);ctx.lineTo(x-5,43-i%2*2);ctx.stroke();
+  }
+
+  const tex=new THREE.CanvasTexture(canvas);
+  tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=THREE.ClampToEdgeWrapping;
+  leafTextureCache=tex;
+  return tex;
+}
+
+function createLeafLayer(seed,color,count=26,spread=[.9,.52,.78],center=[0,0,0],scale=.22){
+  const group=new THREE.Group();
+  const geo=new THREE.PlaneGeometry(1.0,.58);
+  const material=new THREE.MeshStandardMaterial({
+    color,
+    map:getLeafTexture(),
+    transparent:true,
+    alphaTest:.26,
+    roughness:.90,
+    metalness:0,
+    side:THREE.DoubleSide,
+    depthWrite:true
+  });
+  const inst=new THREE.InstancedMesh(geo,material,count);
+  inst.castShadow=true;
+  inst.receiveShadow=true;
+
+  let s=seed>>>0;
+  const rnd=()=>{
+    s=(s*1664525+1013904223)>>>0;
+    return s/4294967296;
+  };
+  const dummy=new THREE.Object3D();
+
+  for(let i=0;i<count;i++){
+    const a=rnd()*Math.PI*2;
+    const r=Math.sqrt(rnd());
+    const x=center[0]+Math.cos(a)*spread[0]*r;
+    const y=center[1]+(rnd()-.5)*spread[1];
+    const z=center[2]+Math.sin(a)*spread[2]*r;
+    dummy.position.set(x,y,z);
+    dummy.rotation.set(
+      (rnd()-.5)*1.15,
+      rnd()*Math.PI*2,
+      (rnd()-.5)*1.0
+    );
+    const sc=scale*(.72+rnd()*.70);
+    dummy.scale.set(sc,sc,sc);
+    dummy.updateMatrix();
+    inst.setMatrixAt(i,dummy.matrix);
+  }
+  inst.instanceMatrix.needsUpdate=true;
+  group.add(inst);
+  group.userData.leafMesh=inst;
+  return group;
+}
+
 export function createPlayer() {
   const g=new THREE.Group();
   g.name="player";
@@ -305,70 +390,84 @@ export function createTree(variant=0, season=0) {
 
   const barkColors=[0x6a4930,0x735037,0x5e422d,0x68472f];
   const bark=organicMaterial("bark",barkColors[variant%4],.96,0);
-  const darkBark=organicMaterial("bark",0x4c3322,.97,0);
+  const darkBark=organicMaterial("bark",0x4a3120,.98,0);
 
-  const lean=(variant-1.5)*.07;
-  const p0=new THREE.Vector3(0,.05,0);
-  const p1=new THREE.Vector3(lean*.35,1.10,lean*.10);
-  const p2=new THREE.Vector3(lean*.72,2.12,-lean*.20);
-  const p3=new THREE.Vector3(lean,2.82,lean*.12);
+  const lean=(variant-1.5)*.065;
+  const p0=new THREE.Vector3(0,.04,0);
+  const p1=new THREE.Vector3(lean*.25,1.00,lean*.08);
+  const p2=new THREE.Vector3(lean*.60,2.08,-lean*.15);
+  const p3=new THREE.Vector3(lean,2.96,lean*.10);
 
-  g.add(branchBetween(p0,p1,.34,.29,bark,11));
-  g.add(branchBetween(p1,p2,.29,.22,bark,11));
-  g.add(branchBetween(p2,p3,.22,.15,bark,10));
+  const trunkPieces=[
+    branchBetween(p0,p1,.36,.30,bark,12),
+    branchBetween(p1,p2,.30,.22,bark,12),
+    branchBetween(p2,p3,.22,.12,bark,11)
+  ];
+  trunkPieces.forEach(x=>g.add(x));
 
-  for(let i=0;i<6;i++){
-    const a=i/6*Math.PI*2+(variant*.31);
-    const end=new THREE.Vector3(Math.cos(a)*(.58+(i%2)*.12),.12,Math.sin(a)*(.58+(i%3)*.08));
-    g.add(branchBetween(new THREE.Vector3(0,.13,0),end,.12,.035,darkBark,7));
+  // Racines visibles au sol.
+  for(let i=0;i<7;i++){
+    const a=i/7*Math.PI*2+variant*.19;
+    const endRoot=new THREE.Vector3(Math.cos(a)*(.55+(i%2)*.15),.10,Math.sin(a)*(.55+(i%3)*.08));
+    g.add(branchBetween(new THREE.Vector3(0,.12,0),endRoot,.12,.026,darkBark,7));
   }
 
-  const branchSpecs=variant===2
-    ? [
-      [p2,new THREE.Vector3(-.78,2.60,.15),.12,.055],
-      [p2,new THREE.Vector3(.72,2.53,-.18),.12,.05],
-      [p1,new THREE.Vector3(.54,1.83,.36),.095,.035]
-    ]
-    : [
-      [p2,new THREE.Vector3(-.92,2.60,.18),.13,.052],
-      [p2,new THREE.Vector3(.86,2.68,-.12),.13,.052],
-      [p1,new THREE.Vector3(-.56,1.82,-.35),.09,.035],
-      [p2,new THREE.Vector3(.38,3.05,.42),.085,.03]
-    ];
+  // Grosses branches + branches secondaires.
+  const branches=new THREE.Group();
+  const branchEnds=[
+    [-.92,2.52,.18],[.88,2.63,-.18],[-.52,2.88,-.62],[.56,3.02,.54],
+    [-.42,3.30,.22],[.40,3.36,-.26]
+  ];
+  branchEnds.forEach((v,i)=>{
+    const startP=i<2?p2:new THREE.Vector3(lean*.82,2.48+(i%2)*.18,0);
+    const endP=new THREE.Vector3(v[0]+lean*.55,v[1],v[2]);
+    branches.add(branchBetween(startP,endP,.115-(i*.008),.026,bark,8));
 
-  for(const s of branchSpecs)g.add(branchBetween(s[0],s[1],s[2],s[3],bark,8));
+    const sideDir=new THREE.Vector3(
+      endP.x+(i%2?-.26:.27),
+      endP.y+.24,
+      endP.z+(i%3===0?.24:-.20)
+    );
+    branches.add(branchBetween(
+      new THREE.Vector3().lerpVectors(startP,endP,.72),
+      sideDir,
+      .045,.012,bark,7
+    ));
+  });
+  g.add(branches);
 
   const palettes=[
-    [0x274d2e,0x3e713b,0x69954f,0x8baa60],
-    [0x21462a,0x35643a,0x5d8948,0x779d55],
-    [0x6b3d28,0xa55231,0xd17a35,0xe09a43],
-    [0x455348,0x5c6a5d,0x7e8979,0x939b8f]
+    [0x244b2c,0x3b703a,0x63934b,0x8daf64],
+    [0x20462a,0x35653a,0x5d8a48,0x789f56],
+    [0x6b3b25,0xa34e2e,0xcf7634,0xe3a04a],
+    [0x465349,0x5f6b60,0x7f8a7d,0x9aa397]
   ];
   const pal=palettes[season]||palettes[0];
+
   const crown=new THREE.Group();
+  const massData=variant===2
+    ? [[-.52,2.74,.02,.65,.50,.58],[.48,2.86,.06,.67,.53,.60],[.04,3.26,-.04,.74,.64,.68],[-.12,3.66,.02,.55,.46,.51]]
+    : [[-.72,2.66,.02,.73,.54,.65],[.70,2.72,.02,.75,.56,.67],[-.18,3.08,.10,.83,.65,.72],[.42,3.24,-.12,.68,.52,.61],[0,3.58,.02,.59,.45,.53]];
 
-  const profile=variant===0
-    ? [[-.78,2.63,.05,.78,.57,.68],[.76,2.70,-.06,.82,.61,.72],[-.18,3.11,.12,.92,.72,.80],[.45,3.34,-.12,.72,.54,.64],[-.12,3.62,.03,.62,.48,.56]]
-    : variant===2
-    ? [[-.54,2.75,0,.67,.56,.62],[.45,2.86,.08,.70,.58,.64],[.05,3.28,-.04,.76,.70,.70],[-.16,3.72,.04,.55,.50,.54]]
-    : [[-.72,2.66,.0,.74,.58,.66],[.69,2.72,.02,.76,.60,.68],[-.22,3.12,.10,.82,.67,.72],[.43,3.24,-.12,.69,.55,.62],[0,3.58,.02,.60,.47,.54]];
-
-  profile.forEach((b,i)=>{
-    const leaf=mesh(organicGeometry(variant*17+i*11+3,1,.08),leafMaterial(pal[i%pal.length]));
-    leaf.scale.set(b[3],b[4],b[5]);
-    leaf.position.set(b[0]+lean*.8,b[1],b[2]);
-    crown.add(leaf);
-
-    if(i<profile.length-1){
-      const hi=mesh(organicGeometry(variant*29+i*7+9,1,.07),leafMaterial(pal[(i+2)%pal.length]));
-      hi.scale.set(b[3]*.54,b[4]*.40,b[5]*.50);
-      hi.position.set(b[0]-.13,b[1]+b[4]*.26,b[2]+.08);
-      crown.add(hi);
-    }
+  massData.forEach((b,i)=>{
+    const leafMass=mesh(organicGeometry(variant*17+i*11+3,2,.065),leafMaterial(pal[i%pal.length]));
+    leafMass.scale.set(b[3],b[4],b[5]);
+    leafMass.position.set(b[0]+lean*.7,b[1],b[2]);
+    crown.add(leafMass);
   });
+
+  // Vraies feuilles visibles en deux couches qui peuvent bouger séparément.
+  const leafLayers=[
+    createLeafLayer(1000+variant*31,pal[2],34,[1.02,.78,.90],[0,3.05,0],.23),
+    createLeafLayer(2000+variant*47,pal[3],28,[.82,.66,.72],[-.08,3.45,.04],.21),
+    createLeafLayer(3000+variant*59,pal[1],22,[.95,.52,.80],[.12,2.72,-.03],.20)
+  ];
+  leafLayers.forEach(l=>crown.add(l));
 
   g.add(crown);
   g.userData.crown=crown;
+  g.userData.leafLayers=leafLayers;
+  g.userData.branches=branches;
   g.userData.foliageMeshes=crown.children;
   g.userData.trunkMaterial=bark;
   return g;
@@ -435,30 +534,42 @@ export function createBush(variant=0, season=0, berries=false) {
   g.userData.kind="bush";
   g.userData.windPhase=Math.random()*9;
 
-  const twig=organicMaterial("bark",0x594029,.96,0);
-  for(let i=0;i<7;i++){
-    const a=i/7*Math.PI*2;
-    const end=new THREE.Vector3(Math.cos(a)*(.30+(i%2)*.12),.56+(i%3)*.08,Math.sin(a)*(.30+(i%2)*.12));
-    g.add(branchBetween(new THREE.Vector3(0,.04,0),end,.035,.012,twig,6));
+  const twig=organicMaterial("bark",0x594029,.97,0);
+  const branches=new THREE.Group();
+  for(let i=0;i<9;i++){
+    const a=i/9*Math.PI*2;
+    const end=new THREE.Vector3(
+      Math.cos(a)*(.34+(i%2)*.13),
+      .48+(i%4)*.075,
+      Math.sin(a)*(.34+(i%3)*.11)
+    );
+    branches.add(branchBetween(new THREE.Vector3(0,.035,0),end,.035,.010,twig,6));
   }
+  g.add(branches);
 
   const palettes=[
-    [0x29502f,0x3f733c,0x679552,0x7da35d],
-    [0x22472c,0x356838,0x5b8845,0x759b55],
-    [0x683a28,0xa45131,0xcc7137,0xde9446],
-    [0x4b584e,0x647064,0x7e897e,0x929b90]
+    [0x28512f,0x3f763d,0x699953,0x83aa63],
+    [0x22492d,0x356a3a,0x5f8c49,0x789e57],
+    [0x663824,0xa24d2d,0xcc7037,0xe09a48],
+    [0x4b584e,0x647064,0x7e897e,0x939d92]
   ];
   const p=palettes[season]||palettes[0];
+
   const crown=new THREE.Group();
   const clusters=[
-    [-.30,.40,-.02,.34,.25,.32],[.28,.43,.05,.38,.27,.35],[0,.62,-.04,.42,.30,.38],
-    [-.12,.32,.26,.32,.23,.30],[.12,.35,-.25,.31,.22,.29]
+    [-.32,.39,-.04,.33,.23,.30],[.30,.41,.05,.37,.26,.34],[0,.61,-.05,.40,.29,.36],
+    [-.15,.32,.28,.31,.22,.29],[.13,.34,-.27,.30,.21,.28]
   ];
-
   clusters.forEach((a,i)=>{
-    const s=mesh(organicGeometry(variant*19+i*9+5,1,.10),leafMaterial(p[(i+variant)%p.length]));
+    const s=mesh(organicGeometry(variant*19+i*9+5,2,.075),leafMaterial(p[(i+variant)%p.length]));
     s.scale.set(a[3],a[4],a[5]);s.position.set(a[0],a[1],a[2]);crown.add(s);
   });
+
+  const leafLayers=[
+    createLeafLayer(4100+variant*41,p[2],18,[.52,.36,.47],[0,.48,0],.15),
+    createLeafLayer(5200+variant*53,p[3],14,[.43,.30,.39],[.02,.64,.01],.14)
+  ];
+  leafLayers.forEach(l=>crown.add(l));
 
   if(season===3){
     const snow=mesh(new THREE.SphereGeometry(.44,12,8),mat(0xdce4df,.98,0));
@@ -472,65 +583,101 @@ export function createBush(variant=0, season=0, berries=false) {
     }
   }
 
-  g.add(crown);g.userData.crown=crown;return g;
+  g.add(crown);
+  g.userData.crown=crown;
+  g.userData.leafLayers=leafLayers;
+  g.userData.branches=branches;
+  return g;
 }
 
 export function createRockCluster(kind="rock",variant=0,season=0) {
   const g=new THREE.Group();
   g.userData.kind=kind;
 
-  const rockColors=season===3?[0x737b79,0x8b9491,0x5e6765]:[0x5d655f,0x747c75,0x90978f,0x68726a];
+  const rockColors=season===3
+    ? [0x747d7a,0x8d9692,0x606966,0x818984]
+    : [0x5d655f,0x747c75,0x90978f,0x68726a,0x808780];
   const mossMat=leafMaterial(season===2?0x65703b:0x506c3f);
 
-  const positions=variant%2===0
-    ? [[-.42,.27,-.03,.58,.48,.54],[.16,.40,-.08,.73,.66,.65],[.58,.24,.17,.45,.40,.48],[-.03,.18,.46,.40,.34,.43]]
-    : [[-.34,.31,.12,.50,.55,.50],[.22,.43,-.10,.69,.72,.64],[.55,.27,.22,.48,.45,.44],[-.12,.20,.43,.43,.35,.45]];
+  const positions=[
+    [-.46,.28,-.04,.62,.50,.56],
+    [.14,.43,-.10,.78,.69,.68],
+    [.62,.25,.16,.47,.41,.50],
+    [-.04,.17,.49,.42,.34,.45],
+    [-.54,.13,.42,.28,.22,.30],
+    [.49,.12,-.35,.31,.24,.28]
+  ];
 
   positions.forEach((p,i)=>{
-    const geo=organicGeometry(variant*41+i*17+11,1,.20);
-    const r=mesh(geo,organicMaterial("stone",rockColors[(i+variant)%rockColors.length],.96,.01));
+    const geo=organicGeometry(variant*41+i*17+11,2,.16);
+    const r=mesh(geo,organicMaterial("stone",rockColors[(i+variant)%rockColors.length],.97,.01));
     r.scale.set(p[3],p[4],p[5]);
     r.position.set(p[0],p[1],p[2]);
     r.rotation.set(i*.18+.05,variant*.36+i*.61,i*.07);
     g.add(r);
 
-    if(kind==="rock"&&season!==3&&i<2){
-      const moss=mesh(new THREE.SphereGeometry(.22,10,7),mossMat);
-      moss.scale.set(1.4,.12,.9);
-      moss.position.set(p[0]-.06,p[1]+p[4]*.84,p[2]+.04);
-      moss.rotation.y=i*.8;
+    if(kind==="rock"&&season!==3&&i<3){
+      const moss=mesh(new THREE.SphereGeometry(.20+i*.015,12,8),mossMat);
+      moss.scale.set(1.35,.10,.86);
+      moss.position.set(p[0]-.05,p[1]+p[4]*.88,p[2]+.03);
+      moss.rotation.y=i*.78;
       g.add(moss);
     }
   });
 
+  // Éclats au pied pour casser la forme "patate".
+  for(let i=0;i<7;i++){
+    const a=i/7*Math.PI*2+variant*.23;
+    const chip=mesh(
+      organicGeometry(900+variant*23+i*7,1,.18),
+      organicMaterial("stone",rockColors[(i+2)%rockColors.length],.98,.005)
+    );
+    const s=.09+(i%3)*.025;
+    chip.scale.set(s*1.4,s*.65,s);
+    chip.position.set(Math.cos(a)*(.65+(i%2)*.12),.055,Math.sin(a)*(.58+(i%3)*.06));
+    chip.rotation.set(.2,i*.7,.1);
+    g.add(chip);
+  }
+
+  // Fissures sombres visibles depuis la caméra isométrique.
+  const crackMat=mat(0x353b37,.98,0);
+  for(let i=0;i<3;i++){
+    const crack=mesh(new THREE.CylinderGeometry(.012,.018,.42,5),crackMat);
+    crack.position.set(-.18+i*.24,.50+i*.035,.48);
+    crack.rotation.x=1.30;
+    crack.rotation.z=.68-i*.33;
+    g.add(crack);
+  }
+
   if(season===3){
-    const snow=mesh(new THREE.SphereGeometry(.52,12,8),mat(0xdde5e1,.98,0));
-    snow.scale.set(1.55,.16,1.05);snow.position.set(.02,.92,-.03);g.add(snow);
+    const snow=mesh(new THREE.SphereGeometry(.54,14,9),mat(0xdde5e1,.98,0));
+    snow.scale.set(1.55,.15,1.05);snow.position.set(.02,.96,-.03);g.add(snow);
   }
 
   if(kind!=="rock"){
     const oreColor=kind==="copper"?0xc27345:kind==="gold"?0xd6b64b:kind==="tin"?0xc9d1cf:0x6f8fa9;
     const oreMat=new THREE.MeshStandardMaterial({
-      color:oreColor,roughness:.38,metalness:.48,
-      emissive:new THREE.Color(oreColor).multiplyScalar(.055)
+      color:oreColor,roughness:.33,metalness:.52,
+      emissive:new THREE.Color(oreColor).multiplyScalar(.05)
     });
 
     const veins=[
-      [-.31,.54,.43,.12,.30],[.08,.70,.46,.15,-.22],[.43,.42,.38,.11,.55],[-.08,.36,.57,.09,-.40]
+      [-.31,.54,.43,.13,.30],[.08,.73,.46,.16,-.22],[.43,.42,.38,.115,.55],[-.08,.36,.57,.10,-.40],
+      [.27,.55,-.34,.095,.18]
     ];
     veins.forEach((v,i)=>{
-      const crystal=mesh(organicGeometry(variant*71+i*13+4,0,.13),oreMat);
-      crystal.scale.set(v[3],v[3]*1.45,v[3]*.62);
+      const crystal=mesh(organicGeometry(variant*71+i*13+4,1,.10),oreMat);
+      crystal.scale.set(v[3],v[3]*1.55,v[3]*.66);
       crystal.position.set(v[0],v[1],v[2]);
       crystal.rotation.set(v[4],i*.8,.15);
       g.add(crystal);
     });
 
-    for(let i=0;i<3;i++){
-      const vein=mesh(new THREE.CylinderGeometry(.018,.028,.52,6),oreMat);
-      vein.position.set(-.28+i*.25,.47+i*.05,.48);
-      vein.rotation.z=.75-i*.30;
-      vein.rotation.x=1.25;
+    for(let i=0;i<4;i++){
+      const vein=mesh(new THREE.CylinderGeometry(.016,.027,.55,6),oreMat);
+      vein.position.set(-.32+i*.21,.45+i*.07,.49);
+      vein.rotation.z=.78-i*.28;
+      vein.rotation.x=1.24;
       g.add(vein);
     }
   }
