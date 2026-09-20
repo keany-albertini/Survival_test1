@@ -1,14 +1,14 @@
 :root{
   color-scheme:dark;
-  --panel:rgba(11,18,13,.90);
-  --panel2:rgba(18,28,20,.96);
+  --panel:rgba(16,25,18,.88);
+  --panel2:rgba(24,36,26,.95);
   --line:rgba(255,255,255,.12);
   --text:#f5f7f1;
   --muted:#abb5a8;
   --accent:#d8f0a5;
 }
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172117;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#263825;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
 button{font:inherit;color:inherit}
 button:focus-visible{outline:3px solid #efe1a2;outline-offset:2px}
 #gameShell{position:relative;width:100%;height:100%;overflow:hidden}
@@ -46,7 +46,7 @@ button:focus-visible{outline:3px solid #efe1a2;outline-offset:2px}
   min-width:78px;
   padding:8px 10px;
   border-radius:14px;
-  background:linear-gradient(180deg,rgba(19,29,21,.92),rgba(10,17,12,.88));
+  background:linear-gradient(180deg,rgba(28,41,30,.90),rgba(15,24,17,.86));
   border:1px solid var(--line);
   box-shadow:0 8px 20px rgba(0,0,0,.24);
   text-align:right;
@@ -103,7 +103,7 @@ button:focus-visible{outline:3px solid #efe1a2;outline-offset:2px}
   gap:4px;
   padding:5px;
   border-radius:15px;
-  background:linear-gradient(180deg,rgba(19,29,21,.94),rgba(8,14,10,.90));
+  background:linear-gradient(180deg,rgba(27,40,29,.92),rgba(13,22,15,.88));
   border:1px solid rgba(255,255,255,.13);
   box-shadow:0 10px 25px rgba(0,0,0,.30);
   backdrop-filter:blur(9px);
