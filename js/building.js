@@ -14,6 +14,26 @@ export function isBuildMode() {
   return Boolean(state.buildMode);
 }
 
+export function isPlayerBlockedByWall(x, y, radius = 9) {
+  for (const wall of state.buildings) {
+    if (wall.type !== "wood_wall") continue;
+
+    const vertical = wall.orientation === "v";
+    const halfW = vertical ? 9 : 38;
+    const halfH = vertical ? 29 : 9;
+
+    if (
+      x + radius > wall.x - halfW &&
+      x - radius < wall.x + halfW &&
+      y + radius > wall.y - halfH &&
+      y - radius < wall.y + halfH
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function startPlacement(itemId, notify) {
   const item = ITEM_DATA[itemId];
   if (!item?.placeable || !BUILDING_DATA[item.placeable]) {
