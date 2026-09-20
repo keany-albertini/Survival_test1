@@ -476,3 +476,55 @@ kbd{display:inline-block;padding:2px 5px;border-radius:5px;border:1px solid rgba
   .storage-actions{justify-content:stretch}
   .storage-actions button{flex:1}
 }
+
+
+/* V17 — interactive campfire */
+.campfire-panel{width:min(430px,calc(100vw - 20px))}
+.campfire-cooking{display:grid;gap:12px}
+.campfire-visual{
+  min-height:126px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  background:radial-gradient(circle at center,rgba(188,92,38,.18),rgba(255,255,255,.025) 62%);
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:4px
+}
+.campfire-flame{
+  font-size:58px;
+  line-height:1;
+  transform-origin:50% 85%;
+  animation:campfireUiFlicker .72s ease-in-out infinite alternate
+}
+.campfire-visual small{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
+@keyframes campfireUiFlicker{
+  0%{transform:translateY(1px) scale(.96) rotate(-2deg);filter:brightness(.96)}
+  100%{transform:translateY(-2px) scale(1.06) rotate(2deg);filter:brightness(1.12)}
+}
+.campfire-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.campfire-stats>div{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:10px 11px;border-radius:11px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.035);font-size:10px
+}
+.campfire-stats b{font-size:12px;color:#f2dfb1}
+.campfire-progress-track{
+  height:11px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.30);
+  border:1px solid rgba(255,255,255,.08)
+}
+.campfire-progress-track i{
+  display:block;width:0;height:100%;border-radius:inherit;
+  background:linear-gradient(90deg,#9f4d2b,#e99a3f,#f2d16c);
+  transition:width .12s linear
+}
+.campfire-status{margin:0;text-align:center;color:#d7dfd1;font-size:10px;font-weight:800}
+.campfire-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.campfire-actions button{
+  min-height:42px;border:0;border-radius:10px;padding:9px;
+  background:#d8f0a5;color:#172015;font-weight:900;font-size:10px
+}
+.campfire-actions button.secondary{background:rgba(255,255,255,.09);color:var(--text)}
+.campfire-actions button:disabled{opacity:.35}
+@media(max-width:420px){.campfire-actions{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.campfire-flame{animation:none}}
