@@ -677,8 +677,24 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
       dirX/=dl;dirZ/=dl;
     }
 
-    const nextX=animal.position.x+dirX*ai.speed*dt;
-    const nextZ=animal.position.z+dirZ*ai.speed*dt;
+    // Les modèles cerf/lapin sont dessinés avec leur tête vers +X.
+    // On oriente donc cet axe vers la destination, puis on avance réellement
+    // dans l'axe du corps pour supprimer l'effet "crabe".
+    const targetYaw=Math.atan2(dirX,dirZ)-Math.PI/2;
+    const headingError=Math.atan2(
+      Math.sin(targetYaw-animal.rotation.y),
+      Math.cos(targetYaw-animal.rotation.y)
+    );
+    animal.rotation.y+=headingError*(1-Math.exp(-dt*(ai.state==="run"?8.6:6.4)));
+
+    const forwardX=Math.cos(animal.rotation.y);
+    const forwardZ=-Math.sin(animal.rotation.y);
+    const alignment=Math.max(0,Math.cos(headingError));
+    const turnSpeedFactor=.28+.72*alignment;
+    const travel=ai.speed*turnSpeedFactor*dt;
+
+    const nextX=animal.position.x+forwardX*travel;
+    const nextZ=animal.position.z+forwardZ*travel;
 
     const riverGap=Math.abs(nextX-riverX(nextZ));
     if(riverGap>5.6){
@@ -688,10 +704,6 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
       ai.routeIndex=(ai.routeIndex+1)%Math.max(1,ai.route.length);
       ai.timer=.2;
     }
-
-    const yaw=Math.atan2(dirX,dirZ);
-    const delta=Math.atan2(Math.sin(yaw-animal.rotation.y),Math.cos(yaw-animal.rotation.y));
-    animal.rotation.y+=delta*(1-Math.exp(-dt*7.2));
   }
 
   const ratio=Math.min(1,ai.speed/Math.max(.01,ai.runSpeed));
