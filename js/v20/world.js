@@ -37,15 +37,19 @@ function addShadowFlags(obj,cast=true,receive=true){
 }
 
 function createGroundTextures(){
-  const size=512;
+  const size=1024;
   const colorCanvas=document.createElement("canvas");
   const bumpCanvas=document.createElement("canvas");
+  const roughCanvas=document.createElement("canvas");
   colorCanvas.width=colorCanvas.height=size;
   bumpCanvas.width=bumpCanvas.height=size;
+  roughCanvas.width=roughCanvas.height=size;
+
   const c=colorCanvas.getContext("2d");
   const b=bumpCanvas.getContext("2d");
+  const rctx=roughCanvas.getContext("2d");
 
-  let seed=192837;
+  let seed=931247;
   const rand=()=>{
     seed=(seed*1664525+1013904223)>>>0;
     return seed/4294967296;
@@ -53,47 +57,94 @@ function createGroundTextures(){
 
   const img=c.createImageData(size,size);
   const bumpImg=b.createImageData(size,size);
+  const roughImg=rctx.createImageData(size,size);
 
-  for(let i=0;i<img.data.length;i+=4){
-    const n=(rand()+rand()+rand()+rand())/4;
-    const v=175+Math.floor(n*70);
-    img.data[i]=v-7;
-    img.data[i+1]=v;
-    img.data[i+2]=v-12;
-    img.data[i+3]=255;
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const i=(y*size+x)*4;
 
-    const bv=118+Math.floor(n*116);
-    bumpImg.data[i]=bv;
-    bumpImg.data[i+1]=bv;
-    bumpImg.data[i+2]=bv;
-    bumpImg.data[i+3]=255;
+      const broad=
+        Math.sin(x*.010)+Math.cos(y*.012)+
+        Math.sin((x+y)*.0065)*.7+
+        Math.cos((x-y)*.0048)*.55;
+      const medium=
+        Math.sin(x*.051+y*.017)*.55+
+        Math.cos(y*.043-x*.013)*.45;
+      const grain=(rand()+rand()+rand())/3-.5;
+
+      const dirtMask=Math.max(0,Math.min(1,.42+broad*.12+medium*.14+grain*.22));
+      const mossMask=Math.max(0,Math.min(1,.30-broad*.10+Math.sin((x+y)*.021)*.16+grain*.13));
+
+      const grass=[84,112,62];
+      const dirt=[116,91,59];
+      const moss=[60,91,52];
+
+      let rr=grass[0]*(1-dirtMask*.36)+dirt[0]*(dirtMask*.36);
+      let gg=grass[1]*(1-dirtMask*.36)+dirt[1]*(dirtMask*.36);
+      let bb=grass[2]*(1-dirtMask*.36)+dirt[2]*(dirtMask*.36);
+
+      rr=rr*(1-mossMask*.26)+moss[0]*(mossMask*.26);
+      gg=gg*(1-mossMask*.26)+moss[1]*(mossMask*.26);
+      bb=bb*(1-mossMask*.26)+moss[2]*(mossMask*.26);
+
+      const fine=grain*18+medium*5;
+      img.data[i]=Math.max(0,Math.min(255,rr+fine));
+      img.data[i+1]=Math.max(0,Math.min(255,gg+fine*.72));
+      img.data[i+2]=Math.max(0,Math.min(255,bb+fine*.48));
+      img.data[i+3]=255;
+
+      const height=126+medium*22+grain*42+mossMask*10-dirtMask*5;
+      const hv=Math.max(0,Math.min(255,height));
+      bumpImg.data[i]=bumpImg.data[i+1]=bumpImg.data[i+2]=hv;
+      bumpImg.data[i+3]=255;
+
+      const rough=218+mossMask*18-dirtMask*12+grain*14;
+      const rv=Math.max(0,Math.min(255,rough));
+      roughImg.data[i]=roughImg.data[i+1]=roughImg.data[i+2]=rv;
+      roughImg.data[i+3]=255;
+    }
   }
+
   c.putImageData(img,0,0);
   b.putImageData(bumpImg,0,0);
+  rctx.putImageData(roughImg,0,0);
 
-  for(let i=0;i<78;i++){
-    const x=rand()*size,y=rand()*size,rx=8+rand()*38,ry=5+rand()*24;
-    c.fillStyle="rgba("+(90+Math.floor(rand()*35))+","+(82+Math.floor(rand()*32))+","+(64+Math.floor(rand()*24))+","+(0.035+rand()*.07)+")";
-    c.beginPath();c.ellipse(x,y,rx,ry,rand()*Math.PI,0,Math.PI*2);c.fill();
-  }
-
-  for(let i=0;i<120;i++){
+  // Micro-détails peints : pierres, terre nue, feuilles et mousse.
+  for(let i=0;i<520;i++){
     const x=rand()*size,y=rand()*size;
-    c.fillStyle="rgba(52,64,42,"+(0.05+rand()*.08)+")";
-    c.beginPath();c.arc(x,y,1+rand()*2.6,0,Math.PI*2);c.fill();
+    const kind=rand();
+    if(kind<.28){
+      const rad=1.5+rand()*5.5;
+      c.fillStyle="rgba(110,112,102,"+(0.08+rand()*.13)+")";
+      c.beginPath();c.ellipse(x,y,rad,rad*(.45+rand()*.35),rand()*Math.PI,0,Math.PI*2);c.fill();
+    }else if(kind<.58){
+      c.strokeStyle="rgba(72,54,34,"+(0.07+rand()*.12)+")";
+      c.lineWidth=.6+rand()*1.7;
+      c.beginPath();c.moveTo(x,y);c.lineTo(x+4+rand()*10,y+rand()*4-2);c.stroke();
+    }else{
+      const rad=3+rand()*13;
+      c.fillStyle="rgba(47,79,42,"+(0.025+rand()*.055)+")";
+      c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.fill();
+    }
   }
 
   const map=new THREE.CanvasTexture(colorCanvas);
   map.wrapS=map.wrapT=THREE.RepeatWrapping;
-  map.repeat.set(9,9);
+  map.repeat.set(6.5,6.5);
   map.colorSpace=THREE.SRGBColorSpace;
+  map.anisotropy=8;
 
   const bump=new THREE.CanvasTexture(bumpCanvas);
   bump.wrapS=bump.wrapT=THREE.RepeatWrapping;
-  bump.repeat.set(9,9);
+  bump.repeat.copy(map.repeat);
   bump.colorSpace=THREE.NoColorSpace;
 
-  return {map,bump};
+  const roughness=new THREE.CanvasTexture(roughCanvas);
+  roughness.wrapS=roughness.wrapT=THREE.RepeatWrapping;
+  roughness.repeat.copy(map.repeat);
+  roughness.colorSpace=THREE.NoColorSpace;
+
+  return {map,bump,roughness};
 }
 
 function createGroundScatter(){
@@ -261,7 +312,7 @@ function createGrassMaterial(){
 }
 
 function createTerrain(){
-  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,70,70);
+  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,96,96);
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];
@@ -284,14 +335,15 @@ function createTerrain(){
     map:textures.map,
     bumpMap:textures.bump,
     bumpScale:.22,
-    roughnessMap:textures.bump,
-    roughness:.94,
+    roughnessMap:textures.roughness,
+    roughness:.90,
     metalness:0
   });
 
   const terrain=new THREE.Mesh(geo,m);
   terrain.receiveShadow=true;
   terrain.userData.surfaceTextures=textures;
+  terrain.material.color.set(0xffffff);
   return terrain;
 }
 
