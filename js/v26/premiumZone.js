@@ -1,9 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=264";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=265";
 
 const ASSETS={
-  oak:"assets/v26/trees/oak_01.gltf",
-  pine:"assets/v26/trees/pine_01.gltf",
+  oak:"assets/v26/trees/oak_02.gltf",
+  pine:"assets/v26/trees/pine_02.gltf",
   rock:"assets/v26/rocks/rock_01.gltf",
   shelter:"assets/v26/camp/shelter_01.gltf"
 };
@@ -314,20 +314,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   if(world.campfire)world.campfire.visible=false;
   if(world.hut)world.hut.visible=false;
 
-  const groundPatches=[
-    [-8.2,8.0,4.9,3.8,0xb69a6b,.64,11],
-    [-12.2,12.1,4.2,3.0,0xa98e63,.58,17],
-    [-5.1,6.0,3.6,2.0,0xb79c70,.50,23],
-    [-9.8,9.8,6.5,4.7,0x6f7d50,.18,31]
-  ];
-  for(const [x,z,rx,rz,color,opacity,seed] of groundPatches){
-    const patch=createGroundPatch(renderer,rx,rz,color,opacity,seed);
-    patch.position.set(x,terrainHeight(x,z)+.030,z);
-    patch.rotation.y=seed*.17;
-    zone.group.add(patch);
-    zone.ground.push(patch);
-  }
-
+  // V26.5 : plus de plaques de sol artificielles. Le terrain global porte désormais la matière PBR.
   createPathPatches(zone.group,terrainHeight);
 
   const shelter=clonePremium(shelterBase);
