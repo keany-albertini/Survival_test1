@@ -5,7 +5,9 @@ const ASSETS={
   oak:"assets/v26/trees/oak_02.gltf",
   pine:"assets/v26/trees/pine_02.gltf",
   rock:"assets/v26/rocks/rock_01.gltf",
-  shelter:"assets/v26/camp/shelter_01.gltf"
+  shelter:"assets/v26/camp/shelter_01.gltf",
+  deer:"assets/v26/animals/deer/deer_01.gltf",
+  rabbit:"assets/v26/animals/rabbit/rabbit_01.gltf"
 };
 
 function seeded(n){
@@ -284,6 +286,59 @@ function collectFoliage(model){
   model.userData.foliageNodes=arr;
 }
 
+function installPremiumAnimalVisual(animal,base,kind){
+  for(const child of [...animal.children])animal.remove(child);
+
+  const visual=clonePremium(base);
+  visual.position.set(0,0,0);
+  visual.rotation.set(0,0,0);
+  visual.scale.setScalar(kind==="deer"?1.0:.95);
+  animal.add(visual);
+  animal.userData.visual=visual;
+
+  if(kind==="deer"){
+    const legs=["FL","FR","RL","RR"].map(tag=>({
+      hip:visual.getObjectByName("Hip_"+tag),
+      knee:visual.getObjectByName("Knee_"+tag),
+      hoof:visual.getObjectByName("Hoof_"+tag)
+    })).filter(x=>x.hip&&x.knee);
+
+    animal.userData.legRigs=legs;
+    animal.userData.legs=legs.map(x=>x.hip);
+    animal.userData.bodyRoot=visual.getObjectByName("BodyRoot")||visual;
+    animal.userData.body=visual.getObjectByName("BodyRoot")||visual;
+    animal.userData.neck=visual.getObjectByName("NeckPivot");
+    animal.userData.head=visual.getObjectByName("HeadPivot");
+    animal.userData.ears=[
+      visual.getObjectByName("Ear_L"),
+      visual.getObjectByName("Ear_R")
+    ].filter(Boolean);
+    animal.userData.tail=visual.getObjectByName("TailPivot");
+  }else{
+    animal.userData.bodyRoot=visual.getObjectByName("BodyRoot")||visual;
+    animal.userData.body=visual.getObjectByName("BodyRoot")||visual;
+    animal.userData.head=visual.getObjectByName("HeadPivot");
+    animal.userData.ears=[
+      visual.getObjectByName("Ear_L"),
+      visual.getObjectByName("Ear_R")
+    ].filter(Boolean);
+    animal.userData.hind=[
+      visual.getObjectByName("Hind_L"),
+      visual.getObjectByName("Hind_R")
+    ].filter(Boolean);
+    animal.userData.fore=[
+      visual.getObjectByName("Fore_L"),
+      visual.getObjectByName("Fore_R")
+    ].filter(Boolean);
+    animal.userData.tail=visual.getObjectByName("Tail");
+  }
+
+  for(const ear of animal.userData.ears||[]){
+    ear.userData.baseX=ear.rotation.x;
+    ear.userData.baseZ=ear.rotation.z;
+  }
+}
+
 export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgress){
   const zone={
     group:new THREE.Group(),trees:[],rocks:[],plants:[],fires:[],ground:[],
@@ -295,19 +350,26 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   const center={x:-8,z:8};
   removeLegacyZone(world,center.x,center.z,19);
 
-  let oakP=0,pineP=0,rockP=0,shelterP=0;
+  let oakP=0,pineP=0,rockP=0,shelterP=0,deerP=0,rabbitP=0;
   const report=(label)=>{
-    const value=(oakP+pineP+rockP+shelterP)/4;
+    const value=(oakP+pineP+rockP+shelterP+deerP+rabbitP)/6;
     onProgress?.(value,label);
   };
 
-  const [oakBase,pineBase,rockBase,shelterBase]=await Promise.all([
+  const [oakBase,pineBase,rockBase,shelterBase,deerBase,rabbitBase]=await Promise.all([
     loadPremiumModel(ASSETS.oak,renderer,p=>{oakP=p;report("Chêne premium");}),
     loadPremiumModel(ASSETS.pine,renderer,p=>{pineP=p;report("Conifère premium");}),
     loadPremiumModel(ASSETS.rock,renderer,p=>{rockP=p;report("Pierre premium");}),
-    loadPremiumModel(ASSETS.shelter,renderer,p=>{shelterP=p;report("Abri premium");})
+    loadPremiumModel(ASSETS.shelter,renderer,p=>{shelterP=p;report("Abri premium");}),
+    loadPremiumModel(ASSETS.deer,renderer,p=>{deerP=p;report("Cerf GLTF");}),
+    loadPremiumModel(ASSETS.rabbit,renderer,p=>{rabbitP=p;report("Lapin GLTF");})
   ]);
   onProgress?.(1,"Zone premium prête");
+
+  for(const animal of world.ambientAnimals||[]){
+    if(animal.userData.kind==="deer")installPremiumAnimalVisual(animal,deerBase,"deer");
+    else if(animal.userData.kind==="rabbit")installPremiumAnimalVisual(animal,rabbitBase,"rabbit");
+  }
 
   // On ne masque l'ancien camp qu'une fois les nouveaux assets prêts.
   if(world.campGroup)world.campGroup.visible=false;
