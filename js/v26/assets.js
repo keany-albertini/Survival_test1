@@ -178,6 +178,63 @@ function makeTexture(kind,renderer){
   return {map:tex,bump};
 }
 
+function attachWindShader(material,mode="foliage"){
+  material.onBeforeCompile=shader=>{
+    shader.uniforms.uWindTime={value:0};
+    shader.uniforms.uWindSeed={value:0};
+    material.userData.windShader=shader;
+
+    shader.vertexShader=shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nuniform float uWindTime;\nuniform float uWindSeed;"
+      );
+
+    if(mode==="foliage"){
+      shader.vertexShader=shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+        float windPhase =
+          position.x * 3.17 +
+          position.y * 2.41 +
+          position.z * 4.13 +
+          uWindSeed;
+
+        float slowGust =
+          sin(uWindTime * 0.47 + windPhase * 0.11) * 0.5 + 0.5;
+
+        float branchSway =
+          sin(uWindTime * 1.05 + windPhase * 0.19) *
+          (0.010 + slowGust * 0.024);
+
+        float leafFlutter =
+          sin(uWindTime * 3.9 + windPhase * 1.73) *
+          0.010;
+
+        float leafFlutter2 =
+          cos(uWindTime * 5.4 + windPhase * 1.21) *
+          0.006;
+
+        transformed.x += branchSway + leafFlutter;
+        transformed.z += branchSway * 0.55 + leafFlutter2;
+        transformed.y += leafFlutter2 * 0.55;`
+      );
+    }else if(mode==="bark"){
+      shader.vertexShader=shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+        float heightMask = smoothstep(1.4, 4.8, position.y);
+        float trunkGust = sin(uWindTime * 0.42 + uWindSeed) * 0.0045;
+        transformed.x += trunkGust * heightMask;
+        transformed.z += cos(uWindTime * 0.37 + uWindSeed * 1.3) * 0.0025 * heightMask;`
+      );
+    }
+  };
+
+  material.customProgramCacheKey=()=>`survival-wind-${mode}-v2`;
+  material.needsUpdate=true;
+}
+
 function enhanceMaterials(root,renderer){
   const mats={
     bark:makeTexture("bark",renderer),
@@ -226,6 +283,11 @@ function enhanceMaterials(root,renderer){
         material.transparent=false;
         material.alphaTest=name.includes("needle")?.20:.26;
         material.depthWrite=true;
+        material.userData.isFoliage=true;
+        attachWindShader(material,"foliage");
+      }else if(name.includes("bark") && (o.name||"").toLowerCase().includes("bark")){
+        material.userData.isTreeBark=true;
+        attachWindShader(material,"bark");
       }
 
       material.needsUpdate=true;
@@ -263,7 +325,15 @@ export async function loadPremiumModel(url,renderer,onProgress){
 export function clonePremium(model){
   const clone=model.clone(true);
   clone.traverse(o=>{
-    if(o.isMesh&&o.material)o.material=o.material.clone();
+    if(o.isMesh&&o.material){
+      const original=o.material;
+      const cloned=original.clone();
+      cloned.userData={...original.userData};
+      cloned.onBeforeCompile=original.onBeforeCompile;
+      cloned.customProgramCacheKey=original.customProgramCacheKey;
+      cloned.needsUpdate=true;
+      o.material=cloned;
+    }
   });
   return clone;
 }
