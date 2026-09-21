@@ -91,23 +91,49 @@ function makeGroundTexture(renderer){
   return {map,bumpMap};
 }
 
-function createGroundPatch(renderer,radius,color=0xd5c08a){
+function createGroundPatch(renderer,rx,rz,color=0xd5c08a,opacity=.68,seed=1){
   const tex=makeGroundTexture(renderer);
+  const segments=64;
+  const positions=[0,0,0];
+  const normals=[0,1,0];
+  const uvs=[.5,.5];
+  const indices=[];
+
+  for(let i=0;i<=segments;i++){
+    const a=i/segments*Math.PI*2;
+    const wobble=1+
+      Math.sin(a*3+seed*.7)*.07+
+      Math.sin(a*7+seed*1.3)*.035+
+      (seeded(seed*97+i*11)-.5)*.07;
+    const x=Math.cos(a)*rx*wobble;
+    const z=Math.sin(a)*rz*wobble;
+    positions.push(x,0,z);
+    normals.push(0,1,0);
+    uvs.push(.5+x/(rx*2.25),.5+z/(rz*2.25));
+    if(i<segments)indices.push(0,i+1,i+2);
+  }
+
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute("normal",new THREE.Float32BufferAttribute(normals,3));
+  geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));
+  geo.setIndex(indices);
+
   const mat=new THREE.MeshStandardMaterial({
     map:tex.map,
     bumpMap:tex.bumpMap,
-    bumpScale:.18,
+    bumpScale:.16,
     color,
-    roughness:.94,
+    roughness:.96,
     metalness:0,
     transparent:true,
-    opacity:.96,
+    opacity,
     depthWrite:false,
     polygonOffset:true,
     polygonOffsetFactor:-3
   });
-  const mesh=new THREE.Mesh(new THREE.CircleGeometry(radius,72),mat);
-  mesh.rotation.x=-Math.PI/2;
+
+  const mesh=new THREE.Mesh(geo,mat);
   mesh.receiveShadow=true;
   return mesh;
 }
@@ -267,7 +293,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   scene.add(zone.group);
 
   const center={x:-8,z:8};
-  removeLegacyZone(world,center.x,center.z,15);
+  removeLegacyZone(world,center.x,center.z,19);
 
   let oakP=0,pineP=0,rockP=0,shelterP=0;
   const report=(label)=>{
@@ -288,14 +314,19 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   if(world.campfire)world.campfire.visible=false;
   if(world.hut)world.hut.visible=false;
 
-  const ground=createGroundPatch(renderer,12.7,0xcdb77f);
-  ground.position.set(center.x,terrainHeight(center.x,center.z)+.032,center.z);
-  zone.group.add(ground);zone.ground.push(ground);
-
-  const moss=createGroundPatch(renderer,14.4,0x768454);
-  moss.material.opacity=.28;
-  moss.position.set(center.x+.3,terrainHeight(center.x+.3,center.z-.1)+.026,center.z-.1);
-  zone.group.add(moss);zone.ground.push(moss);
+  const groundPatches=[
+    [-8.2,8.0,4.9,3.8,0xb69a6b,.64,11],
+    [-12.2,12.1,4.2,3.0,0xa98e63,.58,17],
+    [-5.1,6.0,3.6,2.0,0xb79c70,.50,23],
+    [-9.8,9.8,6.5,4.7,0x6f7d50,.18,31]
+  ];
+  for(const [x,z,rx,rz,color,opacity,seed] of groundPatches){
+    const patch=createGroundPatch(renderer,rx,rz,color,opacity,seed);
+    patch.position.set(x,terrainHeight(x,z)+.030,z);
+    patch.rotation.y=seed*.17;
+    zone.group.add(patch);
+    zone.ground.push(patch);
+  }
 
   createPathPatches(zone.group,terrainHeight);
 
@@ -317,8 +348,13 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   const logs=createLogPile();logs.position.set(-5.7,terrainHeight(-5.7,9.1),9.1);logs.rotation.y=-.25;zone.group.add(logs);
 
   const treeSpots=[
-    ["oak",-13.8,4.7,1.18,.10],["oak",-3.2,10.8,1.02,-.58],["oak",-10.2,15.1,.95,.68],
-    ["pine",1.6,3.0,1.02,-.35],["pine",-16.2,8.3,.90,.48]
+    ["oak",-15.4,3.5,1.24,.10],
+    ["oak",-2.2,11.3,1.06,-.58],
+    ["oak",-10.6,16.6,1.02,.68],
+    ["oak",3.2,8.8,.90,-.30],
+    ["pine",2.3,2.0,1.08,-.35],
+    ["pine",-17.6,8.8,.96,.48],
+    ["pine",-4.0,17.2,.84,.18]
   ];
   for(let i=0;i<treeSpots.length;i++){
     const [kind,x,z,s,r]=treeSpots[i];
