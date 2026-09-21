@@ -38,6 +38,9 @@ function makeTexture(kind,renderer){
         r=92+n*46+stripe*18; g=69+n*38+stripe*14; b=36+n*23+stripe*8;
       }else if(kind==="needle"){
         r=24+n*28; g=64+n*58; b=34+n*34;
+      }else if(kind==="fur"){
+        const streak=Math.sin((x*.48+y*.10)+Math.sin(y*.07)*1.8)*.5+.5;
+        r=112+n*74+streak*20; g=101+n*62+streak*15; b=83+n*52+streak*10;
       }else{
         r=61+n*40; g=88+n*48; b=48+n*30;
       }
@@ -81,6 +84,14 @@ function makeTexture(kind,renderer){
       ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+30,size);ctx.stroke();
     }
   }
+  if(kind==="fur"){
+    ctx.strokeStyle="rgba(55,45,36,.22)";
+    ctx.lineWidth=.7;
+    for(let i=0;i<900;i++){
+      const x=hash(i,7,31)*size,y=hash(i,13,37)*size,len=2+hash(i,17,41)*7;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len,y+len*.18);ctx.stroke();
+    }
+  }
 
   const tex=new THREE.CanvasTexture(canvas);
   tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
@@ -105,7 +116,8 @@ function enhanceMaterials(root,renderer){
     moss:makeTexture("moss",renderer),
     wood:makeTexture("wood",renderer),
     thatch:makeTexture("thatch",renderer),
-    needle:makeTexture("needle",renderer)
+    needle:makeTexture("needle",renderer),
+    fur:makeTexture("fur",renderer)
   };
 
   root.traverse(o=>{
@@ -117,7 +129,8 @@ function enhanceMaterials(root,renderer){
     const material=o.material?.clone?.()||new THREE.MeshStandardMaterial();
     let pack=null;
 
-    if(name.includes("bark"))pack=mats.bark;
+    if(name.includes("bark")||name.includes("antler"))pack=mats.bark;
+    else if(name.includes("fur"))pack=mats.fur;
     else if(name.includes("needle"))pack=mats.needle;
     else if(name.includes("leaf")||name.includes("foliage"))pack=name.includes("light")?mats.leafLight:mats.leaf;
     else if(name.includes("moss"))pack=mats.moss;
