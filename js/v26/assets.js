@@ -10,7 +10,7 @@ function hash(x,y,seed){
 }
 
 function makeTexture(kind,renderer){
-  const size=128;
+  const size=256;
   const canvas=document.createElement("canvas");
   canvas.width=canvas.height=size;
   const ctx=canvas.getContext("2d");
@@ -128,13 +128,21 @@ function enhanceMaterials(root,renderer){
     if(pack){
       material.map=pack.map;
       material.bumpMap=pack.bump;
-      material.bumpScale=name.includes("stone")?.12:name.includes("bark")?.10:name.includes("wood")?.08:name.includes("thatch")?.10:.035;
-      material.roughness=name.includes("leaf")||name.includes("needle")?.86:name.includes("stone")?.94:name.includes("thatch")?.98:.94;
+
+      // La texture contient déjà sa couleur. On neutralise le BaseColor GLTF
+      // afin d'éviter la double multiplication qui rendait certains pins noirs.
+      material.color.set(0xffffff);
+
+      material.bumpScale=name.includes("stone")?.14:name.includes("bark")?.12:name.includes("wood")?.09:name.includes("thatch")?.11:.045;
+      material.roughness=(name.includes("leaf")||name.includes("needle"))?.84:name.includes("stone")?.93:name.includes("thatch")?.98:.93;
       material.metalness=0;
-      if(name.includes("leaf")){
+
+      if(name.includes("leaf")||name.includes("needle")){
         material.side=THREE.DoubleSide;
-        material.alphaTest=.12;
+        material.alphaTest=.08;
+        material.depthWrite=true;
       }
+
       material.needsUpdate=true;
     }
 
