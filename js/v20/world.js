@@ -697,7 +697,8 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
   }
 
   const desiredSpeed=ai.state==="run"?ai.runSpeed:ai.state==="walk"?ai.walkSpeed:0;
-  ai.speed+= (desiredSpeed-ai.speed)*(1-Math.exp(-dt*(ai.state==="run"?6.5:4.0)));
+  const accel=ai.state==="run"?4.8:ai.state==="walk"?3.2:5.5;
+  ai.speed+=(desiredSpeed-ai.speed)*(1-Math.exp(-dt*accel));
 
   let dirX=0,dirZ=0;
   if(target&&ai.speed>.015){
@@ -742,7 +743,9 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
     const forwardX=Math.cos(animal.rotation.y);
     const forwardZ=-Math.sin(animal.rotation.y);
     const alignment=Math.max(0,Math.cos(headingError));
-    const turnSpeedFactor=.28+.72*alignment;
+    // Virage serré = presque pas d'avancement. L'animal pivote d'abord,
+    // puis repart seulement lorsque son axe avant est correctement aligné.
+    const turnSpeedFactor=Math.pow(alignment,2.6);
     const travel=ai.speed*turnSpeedFactor*dt;
 
     const nextX=animal.position.x+forwardX*travel;
