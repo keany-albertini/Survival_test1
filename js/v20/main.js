@@ -43,7 +43,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=266");
+    const premiumModule=await import("../v26/premiumZone.js?v=267");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -863,7 +863,10 @@ function forceCleanSpawnUI(){
 
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
-  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();updateWorld(world,dt,elapsed,new THREE.Vector3(state.x,0,state.z));if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed);updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
+  updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();const playerWorldPos=new THREE.Vector3(state.x,0,state.z);
+  updateWorld(world,dt,elapsed,playerWorldPos);
+  if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed,playerWorldPos);
+  updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
   requestAnimationFrame(frame);
