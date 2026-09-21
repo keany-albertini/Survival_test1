@@ -33,7 +33,7 @@ function makeSurfaceTexture(kind){
   ctx.fillStyle="#c8c8c8";
   ctx.fillRect(0,0,size,size);
 
-  let seed=kind==="bark"?771:kind==="stone"?993:517;
+  let seed=kind==="bark"?771:kind==="stone"?993:kind==="fur"?641:517;
   const rand=()=>{
     seed=(seed*1664525+1013904223)>>>0;
     return seed/4294967296;
@@ -75,6 +75,28 @@ function makeSurfaceTexture(kind){
       g.addColorStop(1,"rgba(220,220,220,0)");
       ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
     }
+  }else if(kind==="fur"){
+    const img=ctx.createImageData(size,size);
+    for(let i=0;i<img.data.length;i+=4){
+      const n=(rand()+rand()+rand()+rand())/4;
+      const v=Math.floor(160+n*62);
+      img.data[i]=v;img.data[i+1]=v;img.data[i+2]=v;img.data[i+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    ctx.strokeStyle="rgba(65,65,65,.16)";
+    ctx.lineWidth=1;
+    for(let i=0;i<520;i++){
+      const x=rand()*size,y=rand()*size,len=3+rand()*9;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x+len*(.55+rand()*.35),y+len*(.15+rand()*.25));
+      ctx.stroke();
+    }
+    ctx.strokeStyle="rgba(245,245,245,.08)";
+    for(let i=0;i<180;i++){
+      const x=rand()*size,y=rand()*size,len=2+rand()*6;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len,y+len*.18);ctx.stroke();
+    }
   }else{
     const img=ctx.createImageData(size,size);
     for(let i=0;i<img.data.length;i+=4){
@@ -87,7 +109,7 @@ function makeSurfaceTexture(kind){
 
   const map=new THREE.CanvasTexture(canvas);
   map.wrapS=map.wrapT=THREE.RepeatWrapping;
-  map.repeat.set(kind==="bark"?1.5:2.4,kind==="bark"?4.5:2.4);
+  map.repeat.set(kind==="bark"?1.5:kind==="fur"?3.2:2.4,kind==="bark"?4.5:kind==="fur"?3.2:2.4);
   map.colorSpace=THREE.SRGBColorSpace;
 
   const bump=map.clone();
@@ -106,7 +128,7 @@ function organicMaterial(kind,color,roughness=.92,metalness=.01){
     metalness,
     map:tex.map,
     bumpMap:tex.bump,
-    bumpScale:kind==="bark"?.12:kind==="stone"?.10:.06
+    bumpScale:kind==="bark"?.12:kind==="stone"?.10:kind==="fur"?.035:.06
   });
 }
 
@@ -770,7 +792,7 @@ export function createDeer(male=false,variant=0) {
   g.userData.kind="deer";
 
   const coatColors=[0x855f3d,0x916b46,0x76543a];
-  const coat=mat(coatColors[variant%coatColors.length],.90,0);
+  const coat=organicMaterial("fur",coatColors[variant%coatColors.length],.92,0);
   const dark=mat(0x443328,.96,0);
   const cream=mat(0xd7c19a,.92,0);
   const noseMat=mat(0x241f1b,.78,.02);
@@ -781,14 +803,17 @@ export function createDeer(male=false,variant=0) {
   g.add(bodyRoot);
 
   const chest=sphere(.34,coatColors[variant%coatColors.length],[1.05,1.12,.88],2);
+  chest.material=coat;
   chest.position.set(.26,0,0);
   bodyRoot.add(chest);
 
   const belly=sphere(.40,coatColors[variant%coatColors.length],[1.55,.92,.95],2);
+  belly.material=coat;
   belly.position.set(-.16,-.02,0);
   bodyRoot.add(belly);
 
   const rump=sphere(.35,coatColors[variant%coatColors.length],[1.05,1.0,.92],2);
+  rump.material=coat;
   rump.position.set(-.55,.03,0);
   bodyRoot.add(rump);
 
@@ -810,6 +835,7 @@ export function createDeer(male=false,variant=0) {
   neckPivot.add(headRoot);
 
   const head=sphere(.20,coatColors[variant%coatColors.length],[1.22,.88,.78],2);
+  head.material=coat;
   head.position.set(.04,0,0);
   headRoot.add(head);
 
@@ -921,7 +947,7 @@ export function createRabbit(variant=0) {
   g.userData.kind="rabbit";
 
   const furColors=[0x8f806d,0x9b8d77,0x7d7467];
-  const fur=mat(furColors[variant%furColors.length],.94,0);
+  const fur=organicMaterial("fur",furColors[variant%furColors.length],.94,0);
   const dark=mat(0x5b554d,.96,0);
   const light=mat(0xd9cfbd,.94,0);
 
@@ -930,10 +956,12 @@ export function createRabbit(variant=0) {
   g.add(bodyRoot);
 
   const body=sphere(.27,furColors[variant%furColors.length],[1.34,.92,1.0],2);
+  body.material=fur;
   body.position.set(-.10,0,0);
   bodyRoot.add(body);
 
   const chest=sphere(.20,furColors[variant%furColors.length],[.92,1.10,.90],2);
+  chest.material=fur;
   chest.position.set(.16,.04,0);
   bodyRoot.add(chest);
 
@@ -942,6 +970,7 @@ export function createRabbit(variant=0) {
   bodyRoot.add(headPivot);
 
   const head=sphere(.17,furColors[variant%furColors.length],[1.02,.97,.92],2);
+  head.material=fur;
   headPivot.add(head);
 
   const muzzle=sphere(.075,0xc6b39a,[1.28,.72,.80],1);
