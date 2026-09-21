@@ -1,9 +1,10 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=265";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=266";
 
 const ASSETS={
-  oak:"assets/v26/trees/oak_02.gltf",
-  pine:"assets/v26/trees/pine_02.gltf",
+  oak:"assets/v26/trees/oak_03.gltf",
+  oakAlt:"assets/v26/trees/oak_04.gltf",
+  pine:"assets/v26/trees/pine_03.gltf",
   rock:"assets/v26/rocks/rock_01.gltf",
   shelter:"assets/v26/camp/shelter_01.gltf",
   deer:"assets/v26/animals/deer/deer_01.gltf",
@@ -344,21 +345,22 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
     group:new THREE.Group(),trees:[],rocks:[],plants:[],fires:[],ground:[],
     shelter:null,light:null
   };
-  zone.group.name="V26_3_Premium_Spawn_Zone";
+  zone.group.name="V26_6_Natural_Tree_Zone";
   scene.add(zone.group);
 
   const center={x:-8,z:8};
-  removeLegacyZone(world,center.x,center.z,19);
+  removeLegacyZone(world,center.x,center.z,24);
 
-  let oakP=0,pineP=0,rockP=0,shelterP=0,deerP=0,rabbitP=0;
+  let oakP=0,oakAltP=0,pineP=0,rockP=0,shelterP=0,deerP=0,rabbitP=0;
   const report=(label)=>{
-    const value=(oakP+pineP+rockP+shelterP+deerP+rabbitP)/6;
+    const value=(oakP+oakAltP+pineP+rockP+shelterP+deerP+rabbitP)/7;
     onProgress?.(value,label);
   };
 
-  const [oakBase,pineBase,rockBase,shelterBase,deerBase,rabbitBase]=await Promise.all([
-    loadPremiumModel(ASSETS.oak,renderer,p=>{oakP=p;report("Chêne premium");}),
-    loadPremiumModel(ASSETS.pine,renderer,p=>{pineP=p;report("Conifère premium");}),
+  const [oakBase,oakAltBase,pineBase,rockBase,shelterBase,deerBase,rabbitBase]=await Promise.all([
+    loadPremiumModel(ASSETS.oak,renderer,p=>{oakP=p;report("Chêne naturel");}),
+    loadPremiumModel(ASSETS.oakAlt,renderer,p=>{oakAltP=p;report("Feuillu naturel");}),
+    loadPremiumModel(ASSETS.pine,renderer,p=>{pineP=p;report("Pin naturel");}),
     loadPremiumModel(ASSETS.rock,renderer,p=>{rockP=p;report("Pierre premium");}),
     loadPremiumModel(ASSETS.shelter,renderer,p=>{shelterP=p;report("Abri premium");}),
     loadPremiumModel(ASSETS.deer,renderer,p=>{deerP=p;report("Cerf GLTF");}),
@@ -397,22 +399,25 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   const logs=createLogPile();logs.position.set(-5.7,terrainHeight(-5.7,9.1),9.1);logs.rotation.y=-.25;zone.group.add(logs);
 
   const treeSpots=[
-    ["oak",-15.4,3.5,1.24,.10],
-    ["oak",-2.2,11.3,1.06,-.58],
-    ["oak",-10.6,16.6,1.02,.68],
-    ["oak",3.2,8.8,.90,-.30],
-    ["oak",-18.6,15.2,.92,.42],
-    ["oak",5.0,15.5,.84,-.76],
-    ["pine",2.3,2.0,1.08,-.35],
-    ["pine",-17.6,8.8,.96,.48],
-    ["pine",-4.0,17.2,.84,.18],
-    ["pine",5.4,3.6,.82,.64],
-    ["pine",-20.0,1.8,.88,-.18],
-    ["pine",1.4,19.2,.78,.30]
+    ["oak",-16.4,2.8,1.20,.10],
+    ["oakAlt",-2.2,11.8,1.08,-.58],
+    ["oak",-10.8,17.4,1.00,.68],
+    ["oakAlt",4.2,9.1,.92,-.30],
+    ["oak",-19.5,15.7,.94,.42],
+    ["oakAlt",6.5,16.4,.88,-.76],
+    ["oak",-7.2,-4.8,.82,.25],
+    ["oakAlt",10.2,4.5,.80,-.48],
+    ["pine",2.5,1.0,1.08,-.35],
+    ["pine",-18.5,8.5,.98,.48],
+    ["pine",-3.0,18.4,.88,.18],
+    ["pine",6.8,2.9,.86,.64],
+    ["pine",-21.0,.5,.90,-.18],
+    ["pine",2.6,21.0,.82,.30]
   ];
   for(let i=0;i<treeSpots.length;i++){
     const [kind,x,z,s,r]=treeSpots[i];
-    const tree=clonePremium(kind==="oak"?oakBase:pineBase);
+    const base=kind==="oak"?oakBase:kind==="oakAlt"?oakAltBase:pineBase;
+    const tree=clonePremium(base);
     tree.position.set(x,terrainHeight(x,z),z);
     tree.scale.setScalar(s);
     tree.rotation.y=r;
