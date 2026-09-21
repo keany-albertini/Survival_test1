@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=264";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=264";
+import { createPlayer, makeGhost } from "./models.js?v=265";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=265";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -43,7 +43,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=264");
+    const premiumModule=await import("../v26/premiumZone.js?v=265");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -52,7 +52,7 @@ async function bootPremiumZone(){
     );
 
     const timeout=new Promise((_,reject)=>
-      setTimeout(()=>reject(new Error("premium-timeout")),9000)
+      setTimeout(()=>reject(new Error("premium-timeout")),12000)
     );
 
     premiumZone=await Promise.race([premiumPromise,timeout]);
