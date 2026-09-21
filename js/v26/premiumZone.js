@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=263";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=264";
 
 const ASSETS={
   oak:"assets/v26/trees/oak_01.gltf",
@@ -352,9 +352,14 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
     ["oak",-2.2,11.3,1.06,-.58],
     ["oak",-10.6,16.6,1.02,.68],
     ["oak",3.2,8.8,.90,-.30],
+    ["oak",-18.6,15.2,.92,.42],
+    ["oak",5.0,15.5,.84,-.76],
     ["pine",2.3,2.0,1.08,-.35],
     ["pine",-17.6,8.8,.96,.48],
-    ["pine",-4.0,17.2,.84,.18]
+    ["pine",-4.0,17.2,.84,.18],
+    ["pine",5.4,3.6,.82,.64],
+    ["pine",-20.0,1.8,.88,-.18],
+    ["pine",1.4,19.2,.78,.30]
   ];
   for(let i=0;i<treeSpots.length;i++){
     const [kind,x,z,s,r]=treeSpots[i];
