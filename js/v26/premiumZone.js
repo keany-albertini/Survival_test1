@@ -20,7 +20,7 @@ function removeLegacyZone(world,cx,cz,radius){
   const r2=radius*radius;
   for(const it of world.interactables){
     if(it.removed||!it.object)continue;
-    if(!["tree","rock","ore","berries"].includes(it.type))continue;
+    if(!["rock","ore","berries"].includes(it.type))continue;
     const dx=it.object.position.x-cx,dz=it.object.position.z-cz;
     if(dx*dx+dz*dz>r2)continue;
     it.object.visible=false;
@@ -29,7 +29,7 @@ function removeLegacyZone(world,cx,cz,radius){
     if(col)col.active=false;
   }
 
-  for(const obj of [...(world.treeGroups||[]),...(world.bushGroups||[])]){
+  for(const obj of [...(world.bushGroups||[])]){
     const dx=obj.position.x-cx,dz=obj.position.z-cz;
     if(dx*dx+dz*dz<=r2)obj.visible=false;
   }
@@ -275,16 +275,151 @@ function createFernCluster(seed=1){
   return g;
 }
 
-function collectFoliage(model){
-  const arr=[];
+function collectFoliage(model,seed=0){
+  const foliageNodes=[];
+  const windMaterials=[];
+  const seen=new Set();
+
+  model.userData.windPhase=seed*.731+seeded(seed*17)*6.28;
+
   model.traverse(o=>{
+    if(!o.isMesh)return;
+
     const name=(o.name||"").toLowerCase();
-    if(name.includes("foliage")||name.includes("needle")||name.includes("leaf")) {
+    const material=o.material;
+
+    if(name.includes("foliage")||name.includes("needle")||name.includes("leaf")){
       o.userData.baseRot={x:o.rotation.x,y:o.rotation.y,z:o.rotation.z};
-      arr.push(o);
+      o.userData.windLocalPhase=seeded(seed*31+foliageNodes.length*13)*6.28;
+      foliageNodes.push(o);
+    }
+
+    if(material?.userData?.isFoliage||material?.userData?.isTreeBark){
+      if(!seen.has(material.uuid)){
+        material.userData.windSeed=seed*.917+seeded(seed*41+windMaterials.length*19)*12.0;
+        windMaterials.push(material);
+        seen.add(material.uuid);
+      }
     }
   });
-  model.userData.foliageNodes=arr;
+
+  model.userData.foliageNodes=foliageNodes;
+  model.userData.windMaterials=windMaterials;
+}
+
+function chooseTreeBase(index,oakBase,oakAltBase,pineBase){
+  const roll=seeded(5000+index*31);
+  if(roll<.30)return {base:pineBase,kind:"pine"};
+  if(roll<.64)return {base:oakAltBase,kind:"oakAlt"};
+  return {base:oakBase,kind:"oak"};
+}
+
+function installWorldTreeReplacements(world,zone,oakBase,oakAltBase,pineBase){
+  zone.treePairs=[];
+
+  const legacyTrees=[...(world.treeGroups||[])];
+
+  for(let i=0;i<legacyTrees.length;i++){
+    const legacy=legacyTrees[i];
+    if(!legacy)continue;
+
+    const picked=chooseTreeBase(i,oakBase,oakAltBase,pineBase);
+    const premium=clonePremium(picked.base);
+
+    premium.position.copy(legacy.position);
+    premium.rotation.y=legacy.rotation.y+(seeded(6200+i*17)-.5)*.18;
+
+    // The authored premium trees are a little taller; retain natural variation
+    // while keeping collision/readability close to the legacy footprint.
+    const legacyScale=Math.max(.72,legacy.scale.x||1);
+    const scaleFactor=picked.kind==="pine"?.84:.88;
+    const sx=legacyScale*scaleFactor*(.94+seeded(6400+i*23)*.12);
+    const sy=sx*(.94+seeded(6600+i*29)*.16);
+    premium.scale.set(sx,sy,sx);
+
+    collectFoliage(premium,100+i);
+    premium.userData.treeKind=picked.kind;
+    premium.visible=false;
+    zone.group.add(premium);
+    zone.trees.push(premium);
+
+    const interactable=world.interactables.find(it=>it.object===legacy&&it.type==="tree")||null;
+    if(interactable){
+      interactable.object=premium;
+      interactable.position=()=>premium.position;
+      interactable.maxHits=4;
+      interactable.yield={wood:picked.kind==="pine"?7:9};
+    }
+
+    const collider=world.colliders.find(col=>col.object===legacy)||null;
+    if(collider){
+      collider.object=premium;
+      collider.radius=Math.max(.52,.50*sx);
+    }
+
+    zone.treePairs.push({
+      legacy,
+      premium,
+      interactable,
+      premiumDistance:34+seeded(6800+i*37)*8
+    });
+  }
+
+  // Legacy tree animations no longer need to run while they are only distant LOD.
+  const legacySet=new Set(legacyTrees);
+  world.animated=(world.animated||[]).filter(item=>!legacySet.has(item));
+}
+
+function updateTreeLOD(zone,playerPos){
+  if(!playerPos||!zone.treePairs)return;
+
+  for(const pair of zone.treePairs){
+    const removed=Boolean(pair.interactable?.removed);
+    if(removed){
+      pair.premium.visible=false;
+      pair.legacy.visible=false;
+      continue;
+    }
+
+    const dx=pair.premium.position.x-playerPos.x;
+    const dz=pair.premium.position.z-playerPos.z;
+    const near=dx*dx+dz*dz<pair.premiumDistance*pair.premiumDistance;
+
+    pair.premium.visible=near;
+    pair.legacy.visible=!near;
+  }
+}
+
+function updateNaturalTreeWind(tree,time,index){
+  const phase=tree.userData.windPhase||0;
+  const gust=
+    .45+
+    .30*(Math.sin(time*.21+phase)*.5+.5)+
+    .25*(Math.sin(time*.071+phase*1.7)*.5+.5);
+
+  const materials=tree.userData.windMaterials||[];
+  for(const material of materials){
+    const shader=material.userData.windShader;
+    if(!shader)continue;
+    shader.uniforms.uWindTime.value=time*(.82+gust*.30);
+    shader.uniforms.uWindSeed.value=material.userData.windSeed||phase;
+  }
+
+  // Very slow movement of whole foliage clusters. Fine flutter is done in shader.
+  const foliage=tree.userData.foliageNodes||[];
+  for(let j=0;j<foliage.length;j++){
+    const node=foliage[j];
+    const base=node.userData.baseRot||{x:0,y:0,z:0};
+    const local=node.userData.windLocalPhase||0;
+
+    node.rotation.z=
+      base.z+
+      Math.sin(time*.34+phase+local)*.0035*gust;
+
+    node.rotation.x=
+      base.x+
+      Math.cos(time*.29+phase*.8+local)*.0018*gust;
+  }
 }
 
 function installPremiumAnimalVisual(animal,base,kind){
@@ -368,6 +503,8 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   ]);
   onProgress?.(1,"Zone premium prête");
 
+  installWorldTreeReplacements(world,zone,oakBase,oakAltBase,pineBase);
+
   for(const animal of world.ambientAnimals||[]){
     if(animal.userData.kind==="deer")installPremiumAnimalVisual(animal,deerBase,"deer");
     else if(animal.userData.kind==="rabbit")installPremiumAnimalVisual(animal,rabbitBase,"rabbit");
@@ -421,7 +558,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
     tree.position.set(x,terrainHeight(x,z),z);
     tree.scale.setScalar(s);
     tree.rotation.y=r;
-    collectFoliage(tree);
+    collectFoliage(tree,700+i);
     zone.group.add(tree);zone.trees.push(tree);
     addResource(world,tree,"tree",1.8,4,{yield:{wood:kind==="oak"?9:7}});
   }
@@ -476,18 +613,15 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   return zone;
 }
 
-export function updatePremiumZone(zone,time){
+export function updatePremiumZone(zone,time,playerPos){
   if(!zone)return;
+
+  updateTreeLOD(zone,playerPos);
 
   for(let i=0;i<zone.trees.length;i++){
     const tree=zone.trees[i];
-    const foliage=tree.userData.foliageNodes||[];
-    for(let j=0;j<foliage.length;j++){
-      const node=foliage[j],base=node.userData.baseRot||{x:0,y:0,z:0};
-      const gust=.55+.45*Math.sin(time*.18+i);
-      node.rotation.z=base.z+Math.sin(time*(.72+j*.018)+i*1.7+j*.24)*.015*gust;
-      node.rotation.x=base.x+Math.cos(time*(.59+j*.016)+i+j*.13)*.007*gust;
-    }
+    if(!tree.visible)continue;
+    updateNaturalTreeWind(tree,time,i);
   }
 
   for(let i=0;i<zone.plants.length;i++){
