@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=25";
+} from "./models.js?v=264";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -328,7 +328,7 @@ function createRuins(){
   const g=new THREE.Group();const stoneMats=[0x777970,0x8b8b80,0x666a63];
   function block(x,y,z,sx,sy,sz,i=0){const b=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),new THREE.MeshStandardMaterial({color:stoneMats[i%3],roughness:.96}));b.position.set(x,y,z);b.castShadow=true;b.receiveShadow=true;g.add(b);}
   for(let i=0;i<7;i++)block(-3+i*.85,.34,0,.82,.68,.72,i);
-  for(let y=1;y<4;y++)for(let i=0;i<7;i++){if((i===2||i===3)&&y<3)continue;if(y===3&&i>4)continue;block(-3+i*.85,.34+y*.64,0,.82,.62,.72,i+y);}
+  for(let y=1;y<4;y++)for(let i=0;i<5;i++){if((i===2||i===3)&&y<3)continue;if(y===3&&i>4)continue;block(-3+i*.85,.34+y*.64,0,.82,.62,.72,i+y);}
   for(let i=0;i<5;i++)block(-3,.34,1+i*.78,.72,.68,.75,i);
   for(let y=1;y<3;y++)for(let i=0;i<5;i++){if(i===3&&y===2)continue;block(-3,.34+y*.64,1+i*.78,.72,.62,.75,i+y);}
   const columnGeo=new THREE.CylinderGeometry(.31,.38,2.9,9);
@@ -465,7 +465,7 @@ export function createWorld(scene){
     world.ambientAnimals.push(deer);
   }
 
-  for(let i=0;i<9;i++){
+  for(let i=0;i<6;i++){
     const rabbit=createRabbit(i%3);
     const x=-16+(i%5)*6.5;
     const z=18+Math.floor(i/5)*7+(i%2)*2.4;
