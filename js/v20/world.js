@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=265";
+} from "./models.js?v=280";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -130,7 +130,7 @@ function createGroundTextures(){
 
   const map=new THREE.CanvasTexture(colorCanvas);
   map.wrapS=map.wrapT=THREE.RepeatWrapping;
-  map.repeat.set(6.5,6.5);
+  map.repeat.set(24,24);
   map.colorSpace=THREE.SRGBColorSpace;
   map.anisotropy=8;
 
@@ -299,7 +299,7 @@ function createGrassMaterial(){
     roughness:.90,
     side:THREE.DoubleSide,
     emissive:0x193019,
-    emissiveIntensity:.14
+    emissiveIntensity:.04
   });
   m.onBeforeCompile=shader=>{
     shader.uniforms.uTime={value:0};
@@ -316,11 +316,11 @@ function createTerrain(){
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];
-  const c1=new THREE.Color(0x6f8956),c2=new THREE.Color(0x9cab6a),soil=new THREE.Color(0x987b57);
+  const c1=new THREE.Color(0xb7c49e),c2=new THREE.Color(0xd4d2aa),soil=new THREE.Color(0xc9b699);
   for(let i=0;i<pos.count;i++){
     const x=pos.getX(i), z=pos.getZ(i), y=terrainHeight(x,z);
     pos.setY(i,y);
-    const n=seeded(i*1.73);
+    const n=.5+.25*Math.sin(x*.12+Math.cos(z*.07))+.25*Math.cos(z*.14+x*.05);
     const river=Math.abs(x-riverX(z));
     const col=river<8?soil.clone().lerp(c1,.45):c1.clone().lerp(c2,n*.42);
     if(y>1.8)col.lerp(new THREE.Color(0x78806d),.35);
@@ -334,7 +334,7 @@ function createTerrain(){
     vertexColors:true,
     map:textures.map,
     bumpMap:textures.bump,
-    bumpScale:.22,
+    bumpScale:.08,
     roughnessMap:textures.roughness,
     roughness:.90,
     metalness:0
@@ -413,10 +413,19 @@ function createSmallHut(){
 }
 
 function createGrassField(){
-  const geo=new THREE.BoxGeometry(.045,.48,.026);
-  geo.translate(0,.24,0);
+  // Curved, tapered blades instead of rigid rectangular stakes.
+  const verts=[],indices=[];
+  for(let blade=0;blade<5;blade++){
+    const angle=blade/5*Math.PI*2,base=verts.length/3;
+    for(let j=0;j<4;j++){
+      const t=j/3,width=.035*(1-t)+.002,bend=t*t*.16;
+      for(const side of [-1,1])verts.push(Math.cos(angle)*bend+Math.sin(angle)*width*side,t*(.24+blade*.026),Math.sin(angle)*bend-Math.cos(angle)*width*side);
+      if(j<3){const n=base+j*2;indices.push(n,n+1,n+2,n+1,n+3,n+2);}
+    }
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();
   const material=createGrassMaterial();
-  const count=1280;const inst=new THREE.InstancedMesh(geo,material,count);inst.castShadow=false;inst.receiveShadow=true;
+  const count=2400;const inst=new THREE.InstancedMesh(geo,material,count);inst.castShadow=false;inst.receiveShadow=true;
   const dummy=new THREE.Object3D();let n=0;
   for(let i=0;i<count*2&&n<count;i++){
     const x=randRange(i*2.1,-HALF+2,HALF-2),z=randRange(i*4.7+8,-HALF+2,HALF-2);

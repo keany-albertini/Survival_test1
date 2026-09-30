@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const loader=new GLTFLoader();
@@ -61,21 +62,25 @@ function makeTexture(kind,renderer){
     ctx.globalCompositeOperation="source-over";
   }else if(kind==="needle"){
     ctx.clearRect(0,0,size,size);
-    ctx.strokeStyle="rgba(43,104,53,.96)";
     ctx.lineCap="round";
-
-    ctx.lineWidth=size*.020;
-    ctx.beginPath();ctx.moveTo(size*.10,size*.52);ctx.lineTo(size*.90,size*.48);ctx.stroke();
-
-    for(let i=0;i<18;i++){
-      const t=(i+1)/19;
-      const x=size*(.12+t*.76);
-      const spread=size*(.12*(1-Math.abs(t-.5)*.9));
-      ctx.lineWidth=size*(.006+hash(i,4,29)*.004);
-
-      ctx.strokeStyle=i%3===0?"rgba(93,151,76,.96)":"rgba(35,88,45,.96)";
-      ctx.beginPath();ctx.moveTo(x,size*.50);ctx.lineTo(x-size*.045,size*.50-spread);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(x,size*.50);ctx.lineTo(x-size*.045,size*.50+spread);ctx.stroke();
+    // A full needle spray per card, rather than one thin twig disappearing in mipmaps.
+    const sprays=[[.16,.78,.55,.12],[.30,.90,.61,.08],[.48,.94,.62,.06],
+      [.62,.89,.73,.17],[.77,.83,.79,.27],[.12,.61,.48,.20],[.27,.72,.70,.18]];
+    for(let k=0;k<sprays.length;k++){
+      const [sx,sy,ex,ey]=sprays[k];
+      const dx=ex-sx,dy=ey-sy,length=Math.hypot(dx,dy),nx=-dy/length,ny=dx/length;
+      ctx.strokeStyle="rgba(46,83,42,1)";ctx.lineWidth=size*.012;
+      ctx.beginPath();ctx.moveTo(sx*size,sy*size);ctx.lineTo(ex*size,ey*size);ctx.stroke();
+      for(let i=0;i<32;i++){
+        const t=(i+1)/34,x=sx+dx*t,y=sy+dy*t;
+        const spread=.105*Math.sin(Math.PI*(t*.85+.08));
+        ctx.lineWidth=size*(.006+hash(i,k,29)*.004);
+        ctx.strokeStyle=(i+k)%3===0?"rgba(91,133,62,1)":"rgba(43,91,46,1)";
+        for(const sign of [-1,1]){
+          ctx.beginPath();ctx.moveTo(x*size,y*size);
+          ctx.lineTo((x+nx*spread*sign+dx*.04)*size,(y+ny*spread*sign+dy*.04)*size);ctx.stroke();
+        }
+      }
     }
   }else{
     const img=ctx.createImageData(size,size);
@@ -254,6 +259,12 @@ function enhanceMaterials(root,renderer){
     o.receiveShadow=true;
 
     const name=(o.material?.name||"").toLowerCase();
+    if(name.includes("needle")){
+      const a=o.geometry.clone().rotateY(Math.PI/3),b=o.geometry.clone().rotateY(-Math.PI/3);
+      const fuller=mergeGeometries([o.geometry,a,b]);
+      if(fuller){o.geometry=fuller;o.geometry.computeBoundingSphere();}
+      a.dispose();b.dispose();
+    }
     const material=o.material?.clone?.()||new THREE.MeshStandardMaterial();
     let pack=null;
 

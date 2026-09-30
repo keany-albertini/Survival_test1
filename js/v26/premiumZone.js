@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=270";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=280";
 
 const ASSETS={
   oak:"assets/v26/trees/oak_03.gltf",
@@ -142,22 +142,36 @@ function createGroundPatch(renderer,rx,rz,color=0xd5c08a,opacity=.68,seed=1){
 }
 
 function createPathPatches(group,terrainHeight){
-  const mat=new THREE.MeshStandardMaterial({
-    color:0x8f7652,roughness:.98,transparent:true,opacity:.70,
-    polygonOffset:true,polygonOffsetFactor:-4
-  });
-  const points=[
-    [-8,8],[-6.6,6.8],[-5.0,5.9],[-3.2,5.3],[-1.3,5.1],[.8,5.4],[2.7,6.2]
-  ];
-  points.forEach((p,i)=>{
-    const patch=new THREE.Mesh(new THREE.CircleGeometry(.72+(i%3)*.12,24),mat);
-    patch.scale.set(1.7,.72,1);
-    patch.rotation.x=-Math.PI/2;
-    patch.rotation.z=.3+Math.sin(i)*.35;
-    patch.position.set(p[0],terrainHeight(p[0],p[1])+.038,p[1]);
-    patch.receiveShadow=true;
-    group.add(patch);
-  });
+  const canvas=document.createElement("canvas");canvas.width=canvas.height=256;
+  const ctx=canvas.getContext("2d"),img=ctx.createImageData(256,256);
+  for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+    const i=(y*256+x)*4,grain=seeded(x*3+y*719)*24;
+    const edge=Math.min(x,255-x)/48;
+    img.data[i]=105+grain;img.data[i+1]=87+grain*.8;img.data[i+2]=60+grain*.5;
+    img.data[i+3]=Math.min(1,edge)*150;
+  }
+  ctx.putImageData(img,0,0);
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+  texture.wrapT=THREE.RepeatWrapping;texture.repeat.y=8;
+  const curve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-16,0,13),new THREE.Vector3(-8,0,8),
+    new THREE.Vector3(-1,0,5),new THREE.Vector3(9,0,8),new THREE.Vector3(19,0,6)
+  ]);
+  const vertices=[],uvs=[],indices=[],segments=90;
+  for(let i=0;i<=segments;i++){
+    const t=i/segments,p=curve.getPoint(t),tangent=curve.getTangent(t);
+    const width=.85+Math.sin(t*17)*.14;
+    for(const side of [-1,1]){
+      const x=p.x-tangent.z*width*side,z=p.z+tangent.x*width*side;
+      vertices.push(x,terrainHeight(x,z)+.028,z);uvs.push((side+1)/2,t);
+    }
+    if(i<segments){const n=i*2;indices.push(n,n+2,n+1,n+1,n+2,n+3);}
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute("position",new THREE.Float32BufferAttribute(vertices,3));
+  geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();
+  const mat=new THREE.MeshStandardMaterial({map:texture,roughness:1,transparent:true,depthWrite:false,
+    polygonOffset:true,polygonOffsetFactor:-2,side:THREE.DoubleSide});
+  const path=new THREE.Mesh(geo,mat);path.name="WoodlandTrail";path.receiveShadow=true;group.add(path);
 }
 
 function createWoodMaterial(){

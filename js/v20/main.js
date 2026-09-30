@@ -1,8 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=265";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=265";
+import { createPlayer, makeGhost } from "./models.js?v=280";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=280";
 
-import { createAmbience } from "../v27/ambience.js?v=270";
+import { updateCharacter } from "../v28/animation.js?v=280";
+import { createAmbience } from "../v27/ambience.js?v=280";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
@@ -46,7 +47,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=270");
+    const premiumModule=await import("../v26/premiumZone.js?v=280");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -319,11 +320,14 @@ function faceTarget(it){
 function beginAction(kind,it){
   if(actionState.active)return false;
   const defs={
-    chop:{duration:.82,impactAt:.49,lockMovement:true},
-    mine:{duration:.92,impactAt:.56,lockMovement:true},
-    attack:{duration:.60,impactAt:.31,lockMovement:true},
+    chop:{duration:1.02,impactAt:.60,lockMovement:true},
+    mine:{duration:1.12,impactAt:.68,lockMovement:true},
+    attack:{duration:.72,impactAt:.39,lockMovement:true},
     gather:{duration:.66,impactAt:.39,lockMovement:true},
-    interact:{duration:.62,impactAt:.34,lockMovement:true}
+    interact:{duration:.85,impactAt:.48,lockMovement:true},
+    eat:{duration:1.20,impactAt:.72,lockMovement:true},
+    drink:{duration:1.20,impactAt:.72,lockMovement:true},
+    build:{duration:.82,impactAt:.48,lockMovement:true}
   };
   const def=defs[kind]||defs.interact;
   actionState.active=true;
@@ -346,6 +350,13 @@ function triggerImpactPulse(it){
 }
 
 function resolveActionImpact(it){
+  if(actionState.kind==="build"){placeBuild();return;}
+  if(actionState.kind==="eat"){
+    const food=actionState.food;
+    if((state.inventory[food]||0)>0){state.inventory[food]--;state.hunger=clamp(state.hunger+(food==="cooked"?32:10),0,100);if(food==="berries")state.thirst=clamp(state.thirst+4,0,100);showToast("Tu reprends des forces.");renderQuickbar();renderBag();}
+    return;
+  }
+  if(actionState.kind==="drink"){state.thirst=clamp(state.thirst+35,0,100);showToast("Tu bois à la rivière.");return;}
   if(!it||it.removed||!it.object?.visible)return;
 
   if(it.type==="tree"){
@@ -411,89 +422,21 @@ function resolveActionImpact(it){
   updateUI();
 }
 
-function actionCurve(t,start,end){
-  return clamp((t-start)/(end-start),0,1);
-}
-
 function updateActionAnimation(dt){
-  const rig=player.userData;
-  if(!rig?.arms||!rig?.torso)return;
-
-  if(!actionState.active){
-    if(rig.toolRoot){
-      dampRotation(rig.toolRoot,"x",0,13,dt);
-      dampRotation(rig.toolRoot,"z",0,13,dt);
-    }
-    return;
-  }
-
-  actionState.time+=dt;
-  const n=clamp(actionState.time/actionState.duration,0,1);
-  const impactN=actionState.impactAt/actionState.duration;
-  const before=n<=impactN;
-  const wind=actionCurve(n,0,impactN);
-  const recover=actionCurve(n,impactN,1);
-
-  let rightX=0,leftX=0,rightZ=0,leftZ=0,torsoX=0,torsoY=0,toolX=0,toolZ=0;
-
-  if(actionState.kind==="chop"){
-    if(before){
-      const e=wind*wind*(3-2*wind);
-      rightX=-1.55*e;leftX=-.86*e;rightZ=-.18*e;leftZ=.12*e;torsoX=-.16*e;torsoY=-.34*e;toolX=-.24*e;
-    }else{
-      const snap=1-Math.pow(recover,1.8);
-      rightX=.92*snap;leftX=.32*snap;rightZ=.12*snap;torsoX=.22*snap;torsoY=.28*snap;toolX=.18*snap;
-    }
-  } else if(actionState.kind==="mine"){
-    if(before){
-      const e=wind*wind*(3-2*wind);
-      rightX=-1.72*e;leftX=-1.30*e;rightZ=-.12*e;leftZ=.10*e;torsoX=-.12*e;toolX=-.35*e;
-    }else{
-      const snap=1-Math.pow(recover,1.7);
-      rightX=1.02*snap;leftX=.72*snap;torsoX=.28*snap;toolX=.24*snap;
-    }
-  } else if(actionState.kind==="attack"){
-    if(before){
-      const e=wind*wind*(3-2*wind);
-      rightX=-.68*e;rightZ=-1.02*e;leftX=.18*e;torsoY=-.52*e;toolZ=-.45*e;
-    }else{
-      const snap=1-Math.pow(recover,2.0);
-      rightX=.35*snap;rightZ=.92*snap;torsoY=.58*snap;toolZ=.38*snap;
-    }
-  } else {
-    const dip=Math.sin(Math.PI*n);
-    rightX=-.78*dip;leftX=-.52*dip;torsoX=.34*dip;
-  }
-
-  rig.arms[0].rotation.x=leftX;
-  rig.arms[0].rotation.z=leftZ;
-  rig.arms[1].rotation.x=rightX;
-  rig.arms[1].rotation.z=rightZ;
-  rig.torso.rotation.x=torsoX;
-  rig.torso.rotation.y=torsoY;
-  if(rig.toolRoot){
-    rig.toolRoot.rotation.x=toolX;
-    rig.toolRoot.rotation.z=toolZ;
-  }
-
+  if(!actionState.active)return;
+  actionState.time=Math.min(actionState.duration,actionState.time+dt);
   if(!actionState.impacted&&actionState.time>=actionState.impactAt){
-    actionState.impacted=true;
-    resolveActionImpact(actionState.target);
+    actionState.impacted=true;resolveActionImpact(actionState.target);
   }
-
-  if(n>=1){
-    actionState.active=false;
-    actionState.kind=null;
-    actionState.target=null;
-    actionState.time=0;
-    actionState.impacted=false;
-    actionState.lockMovement=false;
+  if(actionState.time>=actionState.duration){
+    actionState.active=false;actionState.kind=null;actionState.target=null;
+    actionState.time=0;actionState.impacted=false;actionState.lockMovement=false;
   }
 }
 
 function doAction(){
   if(state.hp<=0||actionState.active)return;
-  if(state.buildMode){placeBuild();return;}
+  if(state.buildMode){if(buildValid)beginAction("build",null);else showToast("Placement impossible ou ressources insuffisantes.");return;}
 
   if(state.mounted){
     state.mounted=false;
@@ -501,7 +444,12 @@ function doAction(){
     player.scale.setScalar(1);showToast("Tu descends du cheval.");return;
   }
 
+  if(["berries","cooked"].includes(state.selected)){
+    if((state.inventory[state.selected]||0)<=0){showToast("Tu n’as plus de cette nourriture.");return;}
+    actionState.food=state.selected;beginAction("eat",null);return;
+  }
   const it=nearestInteraction();
+  if(!it&&Math.abs(state.x-getRiverX(state.z))<5.5){beginAction("drink",null);return;}
   if(!it){showToast("Rien à portée.");return;}
 
   if(it.type==="tree"){
@@ -634,12 +582,15 @@ function placeBuild(){
 }
 
 function updatePrompt(){
+  if(actionState.active){ui.prompt.textContent={chop:"Abattage…",mine:"Extraction…",attack:"Attaque…",gather:"Récolte…",interact:"Interaction…",eat:"Repas…",drink:"Boire…",build:"Construction…"}[actionState.kind];return;}
+  if(!state.buildMode&&!state.mounted&&["berries","cooked"].includes(state.selected)){ui.prompt.textContent="E / Action — Manger";return;}
+
   if(state.buildMode){
     const b=buildTypes[state.buildIndex];ui.prompt.textContent=(buildValid?"E — Construire ":"Ressources requises — ")+b.label+" · R : changer";return;
   }
   if(state.mounted){ui.prompt.textContent="E — Descendre de la monture";return;}
   nearest=nearestInteraction();
-  if(!nearest){ui.prompt.textContent="Explore, récolte, construis, survis";return;}
+  if(!nearest){ui.prompt.textContent=Math.abs(state.x-getRiverX(state.z))<5.5?"E / Action — Boire à la rivière":"Explore, récolte, construis, survis";return;}
   if(nearest.type==="horse"&&nearest.object.userData.tamed)ui.prompt.textContent="E — Monter à cheval";
   else if(nearest.type==="farm"&&nearest.object.userData.ready)ui.prompt.textContent="E — Récolter les cultures";
   else ui.prompt.textContent="E — "+nearest.label;
@@ -682,7 +633,7 @@ function saveGame(){
     localStorage.setItem("survival-v20-save",JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,objectives:state.objectives,version:27
+      buildings:state.buildings,objectives:state.objectives,version:28
     }));
   }catch(_){}
 }
@@ -716,40 +667,6 @@ function loadGame(){
   }catch(_){}
 }
 
-function updatePlayerLocomotion(dt,speed01,isMoving,isSprinting){
-  const rig=player.userData;
-  const phaseSpeed=isSprinting?10.4:7.0;
-  rig.walkPhase=(rig.walkPhase||0)+dt*phaseSpeed*(.35+speed01*.9);
-
-  const phase=rig.walkPhase;
-  const swing=Math.sin(phase)*(isSprinting?.72:.52)*speed01;
-  const armSwing=-swing*.78;
-  const bob=Math.abs(Math.sin(phase*2))*0.035*speed01;
-  const side=Math.sin(phase)*.022*speed01;
-
-  if(rig.legs?.length===2){
-    dampRotation(rig.legs[0],"x",isMoving?swing:0,11,dt);
-    dampRotation(rig.legs[1],"x",isMoving?-swing:0,11,dt);
-  }
-  if(rig.arms?.length===2){
-    dampRotation(rig.arms[0],"x",isMoving?armSwing:0,10,dt);
-    dampRotation(rig.arms[1],"x",isMoving?-armSwing*.78:0,10,dt);
-  }
-  if(rig.hips){
-    dampRotation(rig.hips,"y",isMoving?side:0,12,dt);
-    dampRotation(rig.hips,"z",isMoving?-side*.45:0,12,dt);
-  }
-  if(rig.torso){
-    dampRotation(rig.torso,"x",isMoving?(isSprinting?-.10:-.045):0,8,dt);
-    dampRotation(rig.torso,"z",isMoving?-side*.55:0,10,dt);
-    rig.torso.position.y=damp(rig.torso.position.y,.80+bob,14,dt);
-  }
-  if(rig.shadow){
-    const squash=1-speed01*.08;
-    rig.shadow.scale.x=damp(rig.shadow.scale.x,1+speed01*.05,10,dt);
-    rig.shadow.scale.y=damp(rig.shadow.scale.y,.52*squash,10,dt);
-  }
-}
 
 function updateMovement(dt,time){
   const v=actionState.active&&actionState.lockMovement?{x:0,z:0,strength:0}:inputVector();
@@ -806,11 +723,10 @@ function updateMovement(dt,time){
     world.horse.position.set(state.x,ground+Math.abs(gait)*.45,state.z);
     player.position.set(state.x,ground+1.48+Math.abs(gait),state.z);
     player.rotation.y=world.horse.rotation.y;
-    updatePlayerLocomotion(dt,0,false,false);
+    player.userData.moveSpeed=actualSpeed;player.userData.sprinting=false;
   }else{
-    if(!actionState.active)updatePlayerLocomotion(dt,speed01,actualSpeed>.08,sprint);
-    const bob=actionState.active?0:Math.abs(Math.sin((player.userData.walkPhase||0)*2))*0.022*speed01;
-    player.position.set(state.x,ground+bob,state.z);
+    player.userData.moveSpeed=actualSpeed;player.userData.sprinting=sprint;
+    player.position.set(state.x,ground,state.z);
   }
 }
 
@@ -828,7 +744,7 @@ function updateEnemyDamage(){
     if(!sk.visible||sk.userData.hp<=0)continue;
     const d=Math.hypot(state.x-sk.position.x,state.z-sk.position.z);
     if(d<1.65&&sk.userData.cooldown<=0){
-      sk.userData.cooldown=1.15;state.hp=clamp(state.hp-12,0,100);showToast("Le squelette te frappe !");
+      sk.userData.cooldown=1.15;player.userData.hurt=1;state.hp=clamp(state.hp-12,0,100);showToast("Le squelette te frappe !");
       if(state.hp<=0){showToast("Tu es tombé au combat. Retour au camp.");state.x=-5;state.z=6;state.hp=65;state.hunger=55;state.thirst=55;}
     }
   }
@@ -836,7 +752,7 @@ function updateEnemyDamage(){
 
 function updateDayLight(){
   const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.66+.46,.18,1);
-  hemi.intensity=.58+daylight*.66;sun.intensity=.48+daylight*2.10;
+  hemi.intensity=.78+daylight*.68;sun.intensity=.48+daylight*1.95;
   sun.color.set(daylight>.55?0xffdda0:0xc1b4b0);
   sun.position.set(state.x+Math.cos(a)*28,10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,0,state.z);scene.add(sun.target);
   const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
@@ -878,7 +794,9 @@ function frame(now){
   updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();const playerWorldPos=new THREE.Vector3(state.x,0,state.z);
   updateWorld(world,dt,elapsed,playerWorldPos);
   if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed,playerWorldPos);
-  updateEnemyDamage();updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();
+  updateEnemyDamage();
+  updateCharacter(player,dt,{time:elapsed,speed:player.userData.moveSpeed||0,sprinting:player.userData.sprinting,mounted:state.mounted,action:actionState,ground:terrainHeight(state.x,state.z),height:terrainHeight,x:state.x,z:state.z,yaw:player.rotation.y});
+  updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();
   if(now-lastMinimap>100){drawMinimap();lastMinimap=now;}
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
