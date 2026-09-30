@@ -295,3 +295,14 @@ kbd{padding:2px 5px;border:1px solid rgba(255,255,255,.14);border-radius:4px;bac
 .cinema-vignette{
   background:radial-gradient(circle at 50% 43%,transparent 64%,rgba(4,7,5,.045) 84%,rgba(2,4,3,.16) 100%)
 }
+
+/* V27: clearer framing, compact mobile controls and objective progression. */
+.camera-controls{position:absolute;right:max(18px,env(safe-area-inset-right));top:260px;z-index:8;display:flex;gap:6px}
+.camera-controls button{width:38px;height:38px;border:1px solid var(--line);border-radius:10px;background:rgba(12,23,19,.85);color:#f1dfb4;font-size:23px;cursor:pointer;touch-action:manipulation}
+.camera-controls button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.quest-card{border-radius:10px;background:linear-gradient(110deg,rgba(11,23,19,.9),rgba(13,24,20,.65));border:1px solid rgba(216,188,121,.22);text-align:left}
+.quest-card b{font-size:10px;letter-spacing:.12em;color:var(--gold);margin-top:6px}
+.world-title small{letter-spacing:.08em;color:#d4c59f}
+.cinema-vignette{background:radial-gradient(ellipse at 50% 43%,transparent 58%,rgba(2,8,6,.22) 100%)}
+@media(max-width:900px){.camera-controls{top:190px;right:12px}.camera-controls button{width:34px;height:34px}.quest-card{width:160px;bottom:auto;top:12px;right:180px;padding:8px 10px}.quest-card small{font-size:9px}}
+@media(max-width:560px){.quest-card{top:75px;left:12px;right:auto;width:150px}.quest-card small{display:none}.quest-card strong{font-size:12px}.quest-card b{margin-top:2px}.camera-controls{top:200px}.desktop-help{display:none}}

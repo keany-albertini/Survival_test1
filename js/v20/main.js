@@ -2,6 +2,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.m
 import { createPlayer, makeGhost } from "./models.js?v=265";
 import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=265";
 
+import { createAmbience } from "../v27/ambience.js?v=270";
+
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
 renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.7));
@@ -26,11 +28,12 @@ sun.shadow.bias=-.00035;
 scene.add(sun);
 const fill=new THREE.DirectionalLight(0x9fb6cf,.34);fill.position.set(-20,14,-18);scene.add(fill);
 
-let viewSize=18;
+let viewSize=15;
 const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,.1,160);
 camera.position.set(14,17,14);
 
 const world=createWorld(scene);
+const ambience=createAmbience(scene,world,terrainHeight,getRiverX);
 let premiumZone=null;
 let premiumZoneUpdater=null;
 
@@ -43,7 +46,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=267");
+    const premiumModule=await import("../v26/premiumZone.js?v=270");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -51,11 +54,8 @@ async function bootPremiumZone(){
       (value,label)=>loadingProgress(76+value*.20,label)
     );
 
-    const timeout=new Promise((_,reject)=>
-      setTimeout(()=>reject(new Error("premium-timeout")),12000)
-    );
-
-    premiumZone=await Promise.race([premiumPromise,timeout]);
+    // Keep the late result: slow mobile connections still receive animated models.
+    premiumZone=await premiumPromise;
     premiumZoneUpdater=premiumModule.updatePremiumZone;
     loadingProgress(100,"Monde prêt");
   }catch(err){
@@ -76,7 +76,7 @@ const state={
   hp:100,hunger:100,thirst:100,stamina:100,
   inventory:{wood:64,stone:96,ore:12,gold:2,berries:10,meat:3,cooked:2,seeds:10,grain:0},
   bagCapacity:260,
-  selected:"axe",mounted:false,day:1,dayProgress:.31,season:0,
+  objectives:{cooked:false},selected:"axe",mounted:false,day:1,dayProgress:.31,season:0,
   buildMode:false,buildIndex:0,buildings:[],lastSave:0
 };
 
@@ -383,7 +383,7 @@ function resolveActionImpact(it){
     showToast("Butin des ruines récupéré.");
   } else if(it.type==="campfire"){
     if(state.inventory.meat<=0){showToast("Tu n'as pas de viande crue.");return;}
-    state.inventory.meat--;state.inventory.cooked++;
+    state.inventory.meat--;state.inventory.cooked++;state.objectives.cooked=true;
     addLoot("🍖","Viande cuite",1);
     showToast("La viande grille sur le feu.");
     renderQuickbar();
@@ -649,6 +649,16 @@ function updateUI(){
   setBar(ui.hpBar,ui.hpText,state.hp);setBar(ui.hungerBar,ui.hungerText,state.hunger);setBar(ui.thirstBar,ui.thirstText,state.thirst);setBar(ui.staminaBar,ui.staminaText,state.stamina);
   if(ui.bagWeightMini)ui.bagWeightMini.textContent=Math.round(bagWeight())+" / "+state.bagCapacity;
   const mins=Math.floor(state.dayProgress*24*60),h=Math.floor(mins/60)%24,m=mins%60;
+  const tasks=[
+    ["Prépare ton camp", "Approche du feu et cuis une viande : équipe l’action avec E ou Action.",state.objectives.cooked],
+    ["Bâtis ton domaine", "Construis trois pièces : B ou 🏰, puis R pour changer de pièce.",state.buildings.length>=3],
+    ["Explore les ruines", "Le coffre se trouve au nord-ouest. Garde ton épée à portée.",Boolean(world.chest.userData.opened)],
+    ["Trouve ta monture", "Offre trois baies au cheval près de la rivière.",Boolean(world.horse.userData.tamed)]
+  ];
+  const next=tasks.find(t=>!t[2]);
+  document.getElementById("questTitle").textContent=next?.[0]||"Ton domaine prend vie";
+  document.getElementById("questDetail").textContent=next?.[1]||"Développe tes fortifications et continue ton exploration.";
+  document.getElementById("questProgress").textContent=tasks.filter(t=>t[2]).length+" / 4";
   ui.day.textContent="Jour "+state.day;ui.clock.textContent=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");ui.season.textContent=seasonNames[state.season];
 }
 
@@ -672,7 +682,7 @@ function saveGame(){
     localStorage.setItem("survival-v20-save",JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,version:25
+      buildings:state.buildings,objectives:state.objectives,version:27
     }));
   }catch(_){}
 }
@@ -696,6 +706,7 @@ function loadGame(){
 
     if(typeof s.selected==="string")state.selected=s.selected;
     world.horse.userData.tamed=Boolean(s.horseTamed);
+    state.objectives.cooked=Boolean(s.objectives?.cooked||s.inventory?.cooked>=3);
     if(s.chestOpened){world.chest.userData.opened=true;if(world.chest.userData.lid)world.chest.userData.lid.rotation.y=-.9;}
     if(Array.isArray(s.buildings))for(const b of s.buildings){
       if(!b||!buildTypes.some(x=>x.id===b.type)||!Number.isFinite(b.x)||!Number.isFinite(b.z))continue;
@@ -825,7 +836,7 @@ function updateEnemyDamage(){
 
 function updateDayLight(){
   const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.66+.46,.18,1);
-  hemi.intensity=.72+daylight*.78;sun.intensity=.58+daylight*1.72;
+  hemi.intensity=.58+daylight*.66;sun.intensity=.48+daylight*2.10;
   sun.color.set(daylight>.55?0xffdda0:0xc1b4b0);
   sun.position.set(state.x+Math.cos(a)*28,10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,0,state.z);scene.add(sun.target);
   const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
@@ -861,12 +872,14 @@ function forceCleanSpawnUI(){
   if(state.selected==="build")state.selected="axe";
 }
 
+let lastMinimap=0;
 function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
   updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();const playerWorldPos=new THREE.Vector3(state.x,0,state.z);
   updateWorld(world,dt,elapsed,playerWorldPos);
   if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed,playerWorldPos);
-  updateEnemyDamage();updateDayLight();updateCamera(dt);updatePrompt();updateUI();drawMinimap();
+  updateEnemyDamage();updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();
+  if(now-lastMinimap>100){drawMinimap();lastMinimap=now;}
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
   requestAnimationFrame(frame);
@@ -884,7 +897,11 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>keys[e.code]=false);
 addEventListener("blur",()=>{for(const k of Object.keys(keys))keys[k]=false;resetJoy();});
 addEventListener("beforeunload",saveGame);
-addEventListener("wheel",e=>{viewSize=clamp(viewSize+Math.sign(e.deltaY)*1.2,13,26);resize();},{passive:true});
+function changeZoom(delta){viewSize=clamp(viewSize+delta,10,26);resize();}
+canvas.addEventListener("wheel",e=>changeZoom(Math.sign(e.deltaY)*1.2),{passive:true});
+document.getElementById("zoomIn").addEventListener("click",()=>changeZoom(-2));
+document.getElementById("zoomOut").addEventListener("click",()=>changeZoom(2));
+
 
 ui.actionBtn.addEventListener("pointerdown",e=>{e.preventDefault();doAction();});
 ui.buildBtn.addEventListener("click",()=>toggleBuild());

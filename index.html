@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1a251b">
-  <title>Survival V26.7 — Medieval Fantasy 3D</title>
-  <link rel="stylesheet" href="v20.css?v=267">
+  <title>Survival V27 — Medieval Fantasy 3D</title>
+  <link rel="stylesheet" href="v20.css?v=270">
 </head>
 <body>
   <div id="game">
@@ -40,13 +40,14 @@
       </div>
     </section>
 
+    <div class="camera-controls" aria-label="Caméra"><button id="zoomIn" aria-label="Rapprocher la caméra">+</button><button id="zoomOut" aria-label="Éloigner la caméra">−</button></div>
     <div id="prompt" class="prompt">Explore, récolte, construis, survis</div>
     <div id="toast" class="toast"></div>
 
     <section class="quest-card">
       <span>OBJECTIF</span>
-      <strong>Bâtis ton domaine</strong>
-      <small>Récolte pierre et bois, explore les ruines et prépare ta forteresse.</small>
+      <strong id="questTitle">Prépare ton camp</strong>
+      <small id="questDetail">Installe-toi, bâtis et explore.</small><b id="questProgress">0 / 4</b>
     </section>
 
     <section id="quickbar" class="quickbar"></section>
@@ -137,7 +138,7 @@
         if (bar) bar.style.width = value + "%";
         if (pct) pct.textContent = Math.round(value) + "%";
         if (text && label) text.textContent = label;
-        if (hint) hint.textContent = value < 100 ? "Chargement sécurisé · V26.7" : "Prêt";
+        if (hint) hint.textContent = value < 100 ? "Chargement sécurisé · V27" : "Prêt";
       }
 
       window.addEventListener("survival-loading", e => {
@@ -155,10 +156,16 @@
 
       updateLoading(6, "Chargement du moteur 3D");
 
+      window.addEventListener("survival-fatal", () => {
+        const overlay=document.getElementById("loading");
+        overlay.classList.remove("hidden");overlay.dataset.failed="true";
+        document.getElementById("loadingLabel").textContent="Le moteur 3D n’a pas pu démarrer.";
+        document.getElementById("loadingHint").textContent="Recharge la page dans Chrome ou active l’accélération graphique de ton navigateur.";
+      });
       // Anti-écran-infini : le jeu de base ne reste jamais prisonnier du loader.
       setTimeout(() => {
         const overlay = document.getElementById("loading");
-        if (!overlay || overlay.classList.contains("hidden")) return;
+        if (!overlay || overlay.dataset.failed || overlay.classList.contains("hidden")) return;
 
         updateLoading(100, "Mode compatible activé");
         const hint = document.getElementById("loadingHint");
@@ -168,6 +175,6 @@
       }, 9000);
     })();
   </script>
-  <script type="module" src="js/v26/main.js?v=267"></script>
+  <script type="module" src="js/v26/main.js?v=270"></script>
 </body>
 </html>

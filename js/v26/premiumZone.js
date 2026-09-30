@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=267";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=270";
 
 const ASSETS={
   oak:"assets/v26/trees/oak_03.gltf",
@@ -511,6 +511,9 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   }
 
   // On ne masque l'ancien camp qu'une fois les nouveaux assets prêts.
+  for(const it of world.interactables){
+    if(it.object===world.campfire)it.removed=true;
+  }
   if(world.campGroup)world.campGroup.visible=false;
   if(world.campfire)world.campfire.visible=false;
   if(world.hut)world.hut.visible=false;
