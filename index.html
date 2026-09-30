@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1a251b">
-  <title>Survival V28 — Medieval Fantasy 3D</title>
-  <link rel="stylesheet" href="v20.css?v=280">
+  <title>Everwild — Terres sauvages</title>
+  <link rel="stylesheet" href="v20.css?v=ew1"
+  ><link rel="stylesheet" href="everwild.css?v=ew1">
 </head>
 <body>
   <div id="game">
@@ -15,12 +16,13 @@
 
     <section class="top-left">
       <div class="world-title">
-        <span>VAL-DES-ROCHES</span>
-        <small>Survie médiéval-fantasy</small>
+        <span>EVERWILD</span>
+        <small>Les Marches verdoyantes</small>
       </div>
       <div class="loot-feed" id="lootFeed"></div>
     </section>
 
+    <div class="survivor-card"><strong id="survivorName">Voyageur</strong><span id="survivorRace">Humains</span><small id="survivorLevel">Niv. 1</small></div>
     <section class="stats" aria-label="Statistiques">
       <div class="stat health"><span>❤</span><i><b id="hpBar"></b></i><em id="hpText">100</em></div>
       <div class="stat hunger"><span>🍗</span><i><b id="hungerBar"></b></i><em id="hungerText">100</em></div>
@@ -46,14 +48,14 @@
 
     <section class="quest-card">
       <span>OBJECTIF</span>
-      <strong id="questTitle">Prépare ton camp</strong>
+      <strong id="questTitle">Établis ton refuge</strong>
       <small id="questDetail">Installe-toi, bâtis et explore.</small><b id="questProgress">0 / 4</b>
     </section>
 
     <section id="quickbar" class="quickbar"></section>
 
     <button id="bagBtn" class="bag-button" type="button" aria-label="Inventaire">
-      <span>🎒</span><small id="bagWeightMini">0 / 260</small>
+      <span>🎒</span><small id="bagWeightMini">0 / 80</small>
     </button>
 
     <aside id="bagPanel" class="bag-panel" aria-hidden="true">
@@ -65,11 +67,11 @@
         <button id="bagClose" type="button">×</button>
       </header>
       <div class="bag-capacity">
-        <div><span>Charge</span><b id="bagWeightText">0 / 260</b></div>
+        <div><span>Charge</span><b id="bagWeightText">0 / 80</b></div>
         <i><b id="bagWeightBar"></b></i>
       </div>
       <div id="bagGrid" class="bag-grid"></div>
-      <p class="bag-note">Capacité étendue pour permettre la construction continue de fortifications.</p>
+      <p class="bag-note">La charge dépend de tes points de Poids. Les objets restent dans ton sac de mort lorsque tu tombes.</p>
     </aside>
 
     <section class="desktop-help">
@@ -88,7 +90,7 @@
     <section class="touch-controls">
       <div class="touch-actions">
         <button id="bagTouchBtn" class="small-action" aria-label="Inventaire">🎒</button>
-        <button id="buildBtn" class="small-action" aria-label="Construction">🏰</button>
+        <button id="buildBtn" class="small-action" aria-label="Construction">🔨</button>
         <button id="actionBtn" class="main-action"><span>✋</span><small>Action</small></button>
       </div>
     </section>
@@ -99,20 +101,61 @@
         <strong id="buildPieceLabel">Mur de pierre</strong>
         <small id="buildCostLabel">8 pierre • 2 bois</small>
       </div>
-      <button id="buildClose">×</button>
+      <div><button id="buildCycle" aria-label="Changer de pièce">⇄</button><button id="buildClose" aria-label="Fermer la construction">×</button></div>
     </aside>
 
-    <div id="loading" class="loading">
+    <div id="loading" class="loading hidden">
       <div class="crest">⚔</div>
-      <h1>Val-des-Roches</h1>
+      <h1>Everwild</h1>
       <p id="loadingLabel">Initialisation du moteur…</p>
       <div class="loading-progress" aria-label="Progression du chargement">
         <i><b id="loadingBar"></b></i>
         <span id="loadingPercent">0%</span>
       </div>
-      <small id="loadingHint">Préparation du monde</small>
+      <small id="loadingHint">Préparation des terres sauvages</small><button id="loadingErrorBack" type="button" hidden>Retour au menu</button>
     </div>
   </div>
+
+
+  <section id="ewMenu" class="ew-menu" aria-label="Menu principal d’Everwild">
+    <div class="ew-landscape" aria-hidden="true">
+      <div class="ew-sun"></div>
+      <svg class="ew-mountains" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <path fill="#4a6661" d="M0 480 140 370 280 410 510 220 650 325 800 70 990 290 1100 195 1260 350 1450 310 1600 420V900H0Z"/>
+        <path fill="#aebdb1" opacity=".6" d="m800 70-125 190 83-32 39 38 33-92 45 65 52-14-127-155Zm300 125-64 102 43-22 28 9 21-35Z"/>
+        <path fill="#304d48" d="M0 490 180 425 360 570 580 430 710 510 970 365 1250 475 1440 385 1600 485V900H0Z"/>
+        <path fill="#203b34" d="M0 595 230 530 500 650 760 500 1050 570 1400 470 1600 580V900H0Z"/>
+        <path fill="#152a22" d="M0 790 270 650 570 775 1040 685 1260 660 1600 730V900H0Z"/>
+        <path fill="#adbdac" opacity=".15" d="M500 900c200-125 780-65 800-230-130 120-740 95-925 230Z"/>
+        <g fill="#0d211a"><path d="M95 900V540L40 680h30l-56 91h58l-51 78h65v51Zm1310 0V470l-63 164h40l-80 120h65l-66 98h90v48Zm115 0V575l-70 120h40l-79 105h64l-55 70h83v30Z"/></g>
+      </svg>
+      <div class="ew-haze"></div>
+    </div>
+    <header class="ew-menu-header"><a class="ew-wordmark" href="#">EVERWILD<span>TERRES SAUVAGES</span></a><span class="ew-version">CHAPITRE I · PROTOTYPE WEB</span></header>
+    <div id="ewHome" class="ew-page ew-home">
+      <div class="ew-intro"><span class="ew-eyebrow">UN MONDE À HABITER</span><h1>La nature ne<br>fait aucune<br><em>promesse.</em></h1><p>Choisis ton peuple. Apprends du monde.<br>Bâtis un refuge dans les terres d’Everwild.</p></div>
+      <nav class="ew-main-nav" aria-label="Actions principales">
+        <button id="ewPlay" class="ew-primary">Commencer l’aventure <span>↗</span></button>
+        <button id="ewWorld">L’univers <span>01</span></button>
+        <button id="ewServers">Serveurs <span>02</span></button>
+        <button id="ewSettings">Paramètres <span>03</span></button>
+      </nav>
+    </div>
+    <section id="ewCharacter" class="ew-page ew-character" hidden>
+      <button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">TON HISTOIRE COMMENCE ICI</span><h2>Choisis ton peuple.</h2>
+      <p class="ew-copy">Huit origines. Les mêmes statistiques de départ. Un choix définitif pour ton personnage.</p>
+      <form id="characterForm"><div class="ew-form-row"><label>Nom du personnage<input id="characterName" required maxlength="24" placeholder="Ton nom dans Everwild" autocomplete="off"></label><label>Silhouette<select id="characterBody"><option value="male">Homme</option><option value="female">Femme</option></select></label></div>
+        <div id="raceGrid" class="ew-race-grid" aria-label="Peuples jouables"></div>
+        <div class="ew-create-footer"><p>Ton peuple : <strong id="chosenRace">Humains</strong></p><button type="submit" class="ew-primary">Entrer dans Everwild <span>↗</span></button></div>
+      </form>
+    </section>
+    <section id="ewSettingsPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">À TA MESURE</span><h2>Paramètres.</h2><label class="ew-setting-label">Qualité graphique<select id="qualitySelect"><option value="light">Légère · téléphone</option><option value="balanced">Équilibrée</option><option value="high">Élevée</option></select></label><button id="fullscreenBtn" class="ew-secondary">Basculer en plein écran</button><p id="settingsFeedback" class="ew-copy"></p><div class="ew-info-card"><strong>Commandes</strong><p>Sur téléphone : déplace ton doigt sur la gauche pour marcher. Pousse davantage pour courir. Action permet d’interagir.</p><p>Sur ordinateur : ZQSD / WASD, Maj pour courir, E pour agir, B pour construire, R pour changer de pièce, I pour le sac et P pour la progression.</p></div></section>
+    <section id="ewWorldPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">LE MONDE D’EVERWILD</span><h2>Des terres à découvrir.</h2><p class="ew-copy">Un monde médiéval-fantasy, où la pratique forge les compétences et où chaque refuge se construit à la main.</p><div class="ew-world-grid"><article class="ew-info-card"><strong>Le Vantuman</strong><p>Le massif central, les forêts tempérées, les plaines, le désert et les terres glaciaires forment le monde prévu d’Everwild.</p></article><article class="ew-info-card"><strong>Les Marches verdoyantes</strong><p>La zone jouable de ce premier chapitre : un camp, des ruines, une rivière, des ressources et un cheval à apprivoiser.</p></article><article class="ew-info-card"><strong>Un monde persistant</strong><p>Ta progression et tes constructions sont conservées sur cet appareil. À la mort, ton sac reste récupérable dans le monde.</p></article></div><p class="ew-copy ew-fine">La carte finale de 10 × 10 km, son continent et ses cinq îles seront adaptés dans les prochains chapitres.</p></section>
+    <section id="ewServersPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">CHOISIS TON AVENTURE</span><h2>Les terres d’accueil.</h2><div class="ew-info-card"><span class="ew-status">DISPONIBLE</span><h3>Exploration solo</h3><p>Découvre la première zone et garde ta progression sur cet appareil.</p><button class="ew-secondary" data-home>Retour à l’aventure</button></div><div class="ew-info-card"><span class="ew-status ew-muted">À VENIR</span><h3>Serveurs PvE et PvP</h3><p>Les serveurs persistants, clans et transferts entre mondes ne sont pas encore disponibles dans cette version web.</p></div></section>
+    <footer class="ew-menu-footer"><span>EXPLORER · APPRENDRE · BÂTIR</span><span>VERSION WEB 0.1</span></footer>
+  </section>
+  <div class="ew-game-tools"><button id="journeyBtn" aria-label="Progression et artisanat">✧</button><button id="menuBtn" aria-label="Menu principal">☰</button></div>
+  <aside id="journeyPanel" class="ew-journey" hidden aria-label="Progression et artisanat"><header><div><span class="ew-eyebrow">TON PARCOURS</span><h2>Devenir.</h2></div><button id="journeyClose" aria-label="Fermer la progression">×</button></header><div class="ew-xp"><strong id="levelLabel">Niveau 1</strong><span id="xpLabel">0 / 50 XP</span><i><b id="xpBar"></b></i></div><h3>Attributs <small id="pointsLabel">0 point à distribuer</small></h3><div id="statGrid"></div><h3>La pratique forge le savoir</h3><div id="practiceGrid"></div><h3>Recherche <small id="researchPoints">1 point de recherche</small></h3><div id="researchGrid"></div><h3>Artisanat</h3><div id="craftGrid"></div></aside>
 
   <script type="importmap">
     {
@@ -122,59 +165,6 @@
       }
     }
   </script>
-  <script>
-    (() => {
-      const started = performance.now();
-      let lastPercent = 0;
-
-      function updateLoading(percent, label) {
-        const bar = document.getElementById("loadingBar");
-        const pct = document.getElementById("loadingPercent");
-        const text = document.getElementById("loadingLabel");
-        const hint = document.getElementById("loadingHint");
-        const value = Math.max(lastPercent, Math.min(100, Number(percent) || 0));
-        lastPercent = value;
-
-        if (bar) bar.style.width = value + "%";
-        if (pct) pct.textContent = Math.round(value) + "%";
-        if (text && label) text.textContent = label;
-        if (hint) hint.textContent = value < 100 ? "Chargement sécurisé · V28" : "Prêt";
-      }
-
-      window.addEventListener("survival-loading", e => {
-        const d = e.detail || {};
-        updateLoading(d.percent, d.label);
-      });
-
-      window.addEventListener("error", e => {
-        console.warn("Startup error captured:", e.error || e.message);
-      });
-
-      window.addEventListener("unhandledrejection", e => {
-        console.warn("Startup promise rejection captured:", e.reason);
-      });
-
-      updateLoading(6, "Chargement du moteur 3D");
-
-      window.addEventListener("survival-fatal", () => {
-        const overlay=document.getElementById("loading");
-        overlay.classList.remove("hidden");overlay.dataset.failed="true";
-        document.getElementById("loadingLabel").textContent="Le moteur 3D n’a pas pu démarrer.";
-        document.getElementById("loadingHint").textContent="Recharge la page dans Chrome ou active l’accélération graphique de ton navigateur.";
-      });
-      // Anti-écran-infini : le jeu de base ne reste jamais prisonnier du loader.
-      setTimeout(() => {
-        const overlay = document.getElementById("loading");
-        if (!overlay || overlay.dataset.failed || overlay.classList.contains("hidden")) return;
-
-        updateLoading(100, "Mode compatible activé");
-        const hint = document.getElementById("loadingHint");
-        if (hint) hint.textContent = "Les assets premium continueront de charger si possible";
-
-        setTimeout(() => overlay.classList.add("hidden"), 650);
-      }, 9000);
-    })();
-  </script>
-  <script type="module" src="js/v26/main.js?v=280"></script>
+  <script type="module" src="js/everwild/app.js?v=ew1"></script>
 </body>
 </html>

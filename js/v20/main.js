@@ -1,14 +1,21 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=280";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=280";
+import { createPlayer, makeGhost } from "./models.js?v=ew1";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew1";
 
-import { updateCharacter } from "../v28/animation.js?v=280";
-import { createAmbience } from "../v27/ambience.js?v=280";
+import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew1";
+import { applyAppearance } from "../everwild/appearance.js?v=ew1";
+import { updateCharacter } from "../v28/animation.js?v=ew1";
+import { createAmbience } from "../v27/ambience.js?v=ew1";
 
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.7));
-renderer.shadowMap.enabled=true;
+function graphicsQuality(settings={}){
+  const quality=settings.quality||"balanced",ratio=quality==="light"?1:quality==="high"?1.7:1.3;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,ratio));renderer.shadowMap.enabled=quality!=="light";
+}
+graphicsQuality(window.everwildSettings);
+window.addEventListener("everwild-settings",event=>{graphicsQuality(event.detail);resize();});
+renderer.shadowMap.enabled=window.everwildSettings?.quality!=="light";
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -47,12 +54,12 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=280");
+    const premiumModule=await import("../v26/premiumZone.js?v=ew1");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
       scene,world,renderer,terrainHeight,
-      (value,label)=>loadingProgress(76+value*.20,label)
+      (value,label)=>loadingProgress(76+value*20,label)
     );
 
     // Keep the late result: slow mobile connections still receive animated models.
@@ -70,20 +77,23 @@ async function bootPremiumZone(){
 }
 
 const player=createPlayer();
+applyAppearance(player,window.everwildProfile||{race:"human",body:"male"});
+const SAVE_KEY="everwild-save-"+(window.everwildProfile?.id||"local");
 scene.add(player);
 
 const state={
   x:-4,z:4,facing:new THREE.Vector3(0,0,1),
   hp:100,hunger:100,thirst:100,stamina:100,
-  inventory:{wood:64,stone:96,ore:12,gold:2,berries:10,meat:3,cooked:2,seeds:10,grain:0},
-  bagCapacity:260,
+  inventory:{wood:8,stone:12,ore:0,gold:0,berries:5,meat:0,cooked:0,seeds:2,grain:0},
+  bagCapacity:80,progress:newProgress(),ownedTools:["axe"],deathBags:[],
   objectives:{cooked:false},selected:"axe",mounted:false,day:1,dayProgress:.31,season:0,
   buildMode:false,buildIndex:0,buildings:[],lastSave:0
 };
 
 const buildTypes=[
-  {id:"stone_wall",label:"Mur de pierre",cost:{stone:8,wood:2},radius:1.65,chainStep:3.35},
-  {id:"stone_tower",label:"Tour de guet",cost:{stone:22,wood:6},radius:1.45,chainStep:0},
+  {id:"base_core",label:"Cœur de base",cost:{stone:12,wood:8},radius:1.1,chainStep:0},
+  {id:"stone_wall",tech:"structures",label:"Mur de pierre",cost:{stone:8,wood:2},radius:1.65,chainStep:3.35},
+  {id:"stone_tower",tech:"structures",label:"Tour de guet",cost:{stone:22,wood:6},radius:1.45,chainStep:0},
   {id:"palisade",label:"Palissade",cost:{wood:10},radius:1.8,chainStep:3.45}
 ];
 let buildPreview=null;
@@ -146,7 +156,7 @@ function dampAngle(current,target,lambda,dt){
 function dampRotation(obj,axis,target,lambda,dt){
   obj.rotation[axis]=damp(obj.rotation[axis],target,lambda,dt);
 }
-function setBar(el,text,val){const v=clamp(val,0,100);el.style.width=v+"%";text.textContent=Math.round(v);}
+function setBar(el,text,val,max=100){const v=clamp(val,0,max);el.style.width=(v/max*100)+"%";text.textContent=Math.round(v);}
 function showToast(msg){
   clearTimeout(toastTimer);ui.toast.textContent=msg;ui.toast.classList.add("show");
   toastTimer=setTimeout(()=>ui.toast.classList.remove("show"),1800);
@@ -156,6 +166,7 @@ function addLoot(icon,label,amount=1){
   ui.loot.prepend(line);while(ui.loot.children.length>5)ui.loot.lastChild.remove();
   setTimeout(()=>{line.style.opacity="0";setTimeout(()=>line.remove(),240)},5200);
 }
+const gearWeights={axe:2,pickaxe:2.5,sword:3};
 const itemWeights={wood:.50,stone:.72,ore:.85,gold:.25,berries:.08,meat:.40,cooked:.40,seeds:.04,grain:.10};
 const bagItems=[
   {id:"wood",icon:"🪵",label:"Bois"},
@@ -170,7 +181,7 @@ const bagItems=[
 ];
 
 function bagWeight(){
-  return Object.entries(state.inventory).reduce((sum,[id,count])=>sum+(itemWeights[id]||0)*Math.max(0,count||0),0);
+  return Object.entries(state.inventory).reduce((sum,[id,count])=>sum+(itemWeights[id]||0)*Math.max(0,count||0),0)+state.ownedTools.reduce((sum,id)=>sum+(gearWeights[id]||0),0);
 }
 function bagRemaining(){return Math.max(0,state.bagCapacity-bagWeight());}
 function maxFit(id,amount){
@@ -210,28 +221,97 @@ function give(id,amount,icon,label){
   return accepted;
 }
 function hasCost(cost){return Object.entries(cost).every(([k,v])=>(state.inventory[k]||0)>=v);}
+function learn(id){
+  const gained=train(state.progress,id);
+  if(gained)showToast("Niveau "+state.progress.level+" · nouveaux points d’attributs et de recherche.");
+}
+function emitProgress(){
+  window.dispatchEvent(new CustomEvent("everwild-state",{detail:{progress:structuredClone(state.progress),inventory:{...state.inventory},ownedTools:[...state.ownedTools]}}));
+}
+function refreshLimits(){
+  const max=limits(state.progress);state.bagCapacity=max.weight;
+  state.hp=Math.min(state.hp,max.health);state.stamina=Math.min(state.stamina,max.stamina);
+  state.hunger=Math.min(state.hunger,max.hunger);state.thirst=Math.min(state.thirst,max.thirst);
+}
+window.addEventListener("everwild-command",event=>{
+  const {type,id}=event.detail||{};
+  if(type==="stat"){
+    if(["resistance","oxygen"].includes(id))return;
+    if(!allocate(state.progress,id))return;
+    refreshLimits();showToast("Attribut amélioré.");
+  }else if(type==="research"){
+    const branch=BRANCHES.find(b=>b.id===id);
+    if(!branch||state.progress.research.includes(id)||state.progress.researchPoints<1||!hasCost(branch.cost))return;
+    payCost(branch.cost);state.progress.researchPoints--;state.progress.research.push(id);showToast(branch.name+" appris.");
+  }else if(type==="craft"){
+    const recipe=RECIPES.find(r=>r.id===id);
+    if(!recipe||!hasCost(recipe.cost)||(recipe.tech&&!state.progress.research.includes(recipe.tech))||(recipe.gear&&state.ownedTools.includes(id)))return;
+    if(recipe.gear&&bagRemaining()+Object.entries(recipe.cost).reduce((sum,[key,n])=>sum+(itemWeights[key]||0)*n,0)<gearWeights[id]){showToast("Le sac est trop chargé.");return;}
+    payCost(recipe.cost);
+    if(recipe.gear){state.ownedTools.push(id);state.selected=id;syncEquippedTool();}
+    else if(id==="respec"){
+      state.progress.points+=Object.values(state.progress.stats).reduce((sum,n)=>sum+n,0);
+      for(const key of Object.keys(state.progress.stats))state.progress.stats[key]=0;refreshLimits();
+    }
+    learn("craft");showToast(recipe.name+" fabriqué.");
+  }else return;
+  renderQuickbar();renderBag();emitProgress();saveGame();
+});
+function addDeathBag(data){
+  const object=new THREE.Group();object.name="DeathBag";
+  const bag=new THREE.Mesh(new THREE.SphereGeometry(.28,12,9),new THREE.MeshStandardMaterial({color:0x927248,roughness:.94}));
+  bag.scale.set(1,.72,.82);bag.position.y=.19;bag.castShadow=true;object.add(bag);
+  const strap=new THREE.Mesh(new THREE.TorusGeometry(.14,.027,6,16),new THREE.MeshStandardMaterial({color:0xc4ac7b,roughness:.9}));strap.position.y=.38;strap.rotation.x=Math.PI/2;object.add(strap);
+  object.position.set(data.x,terrainHeight(data.x,data.z),data.z);scene.add(object);
+  const item={...data,object,removed:false};state.deathBags.push(item);
+  world.interactables.push({type:"deathbag",object,radius:2,label:"Récupérer le sac de mort",position:()=>object.position,data:item});
+}
+function recoverBag(it){
+  const bag=it.data;
+  if(bag.expires<=Date.now()){it.removed=true;bag.removed=true;bag.object.visible=false;return;}
+  for(const [id,n] of Object.entries(bag.inventory)){
+    const accepted=maxFit(id,n);state.inventory[id]+=accepted;bag.inventory[id]-=accepted;
+  }
+  for(const id of [...bag.tools]){
+    if(state.ownedTools.includes(id)||bagRemaining()>=gearWeights[id]){if(!state.ownedTools.includes(id))state.ownedTools.push(id);bag.tools.splice(bag.tools.indexOf(id),1);}
+  }
+  if(Object.values(bag.inventory).every(n=>n<=0)&&bag.tools.length===0){it.removed=true;bag.removed=true;bag.object.visible=false;}
+  state.selected=state.ownedTools[0]||"hands";syncEquippedTool();renderQuickbar();renderBag();saveGame();
+  showToast(bag.removed?"Ton sac et ton équipement sont récupérés.":"Sac partiellement récupéré : libère de la place.");
+}
+function die(){
+  const tools=[...state.ownedTools];
+  if(Object.values(state.inventory).some(n=>n>0)||tools.length)addDeathBag({x:state.x,z:state.z,expires:Date.now()+3600000,inventory:{...state.inventory},tools});
+  for(const id of Object.keys(state.inventory))state.inventory[id]=0;
+  state.ownedTools=[];state.selected="hands";state.mounted=false;
+  player.scale.setScalar(player.userData.baseScale||1);state.x=-5;state.z=6;
+  state.hp=limits(state.progress).health;state.hunger=60;state.thirst=60;state.stamina=limits(state.progress).stamina;
+  actionState.active=false;actionState.bare=false;actionState.lockMovement=false;motion.velocity.set(0,0);
+  forceCleanSpawnUI();syncEquippedTool();renderQuickbar();renderBag();emitProgress();saveGame();
+  showToast("Tu es tombé. Ton sac reste récupérable pendant une heure.");
+}
 function payCost(cost){for(const [k,v] of Object.entries(cost))state.inventory[k]-=v;renderQuickbar();renderBag();}
 function costText(cost){const names={wood:"bois",stone:"pierre"};return Object.entries(cost).map(([k,v])=>v+" "+(names[k]||k)).join(" • ");}
 
 const quickItems=[
-  {id:"axe",icon:"🪓",key:"1"},{id:"pickaxe",icon:"⛏️",key:"2"},{id:"sword",icon:"🗡️",key:"3"},
-  {id:"build",icon:"🏰",key:"4"},{id:"berries",icon:"🍒",key:"5",count:"berries"},
-  {id:"cooked",icon:"🍖",key:"6",count:"cooked"},{id:"wood",icon:"🪵",key:"7",count:"wood"},
-  {id:"stone",icon:"🪨",key:"8",count:"stone"},{id:"ore",icon:"💎",key:"9",count:"ore"}
+  {id:"axe",icon:"🪓",key:"1"},{id:"pickaxe",icon:"⛏",key:"2"},{id:"sword",icon:"⚔",key:"3"},
+  {id:"build",icon:"🔨",key:"4"},{id:"berries",icon:"🍒",key:"5",count:"berries"},{id:"cooked",icon:"🍖",key:"6",count:"cooked"}
 ];
 function renderQuickbar(){
   ui.quickbar.innerHTML="";
   for(const it of quickItems){
     const b=document.createElement("button");b.className="qslot"+(state.selected===it.id?" active":"");b.innerHTML="<span>"+it.icon+"</span><small>"+it.key+"</small>"+(it.count?"<b>"+(state.inventory[it.count]||0)+"</b>":"");
+    if(gearWeights[it.id]&&!state.ownedTools.includes(it.id)){b.disabled=true;b.title="À fabriquer dans Artisanat";}
     b.addEventListener("click",()=>selectItem(it.id));ui.quickbar.appendChild(b);
   }
 }
 function syncEquippedTool(){
   const tools=player.userData.tools;
   if(!tools)return;
-  for(const [id,obj] of Object.entries(tools))obj.visible=state.selected===id;
+  for(const [id,obj] of Object.entries(tools))obj.visible=state.selected===id&&state.ownedTools.includes(id);
 }
 function selectItem(id){
+  if(gearWeights[id]&&!state.ownedTools.includes(id)){showToast("Fabrique cet outil dans Artisanat (✧).");return;}
   if(id==="build"){toggleBuild(true);return;}
   state.selected=id;
   syncEquippedTool();
@@ -243,7 +323,7 @@ const inputRight=new THREE.Vector3();
 const worldUp=new THREE.Vector3(0,1,0);
 
 function inputVector(){
-  if(isBagOpen())return {x:0,z:0,strength:0};
+  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||isBagOpen())return {x:0,z:0,strength:0};
   let sx=0,sy=0;
   if(keys.KeyA||keys.KeyQ||keys.ArrowLeft)sx-=1;
   if(keys.KeyD||keys.ArrowRight)sx+=1;
@@ -318,6 +398,7 @@ function faceTarget(it){
 }
 
 function beginAction(kind,it){
+  if(window.everwildPaused)return false;
   if(actionState.active)return false;
   const defs={
     chop:{duration:1.02,impactAt:.60,lockMovement:true},
@@ -334,6 +415,7 @@ function beginAction(kind,it){
   actionState.kind=kind;
   actionState.target=it;
   actionState.time=0;
+  if(kind!=="gather")actionState.bare=false;
   actionState.duration=def.duration;
   actionState.impactAt=def.impactAt;
   actionState.impacted=false;
@@ -353,24 +435,27 @@ function resolveActionImpact(it){
   if(actionState.kind==="build"){placeBuild();return;}
   if(actionState.kind==="eat"){
     const food=actionState.food;
-    if((state.inventory[food]||0)>0){state.inventory[food]--;state.hunger=clamp(state.hunger+(food==="cooked"?32:10),0,100);if(food==="berries")state.thirst=clamp(state.thirst+4,0,100);showToast("Tu reprends des forces.");renderQuickbar();renderBag();}
+    if((state.inventory[food]||0)>0){state.inventory[food]--;state.hunger=clamp(state.hunger+(food==="cooked"?32:10),0,limits(state.progress).hunger);if(food==="berries")state.thirst=clamp(state.thirst+4,0,limits(state.progress).thirst);showToast("Tu reprends des forces.");renderQuickbar();renderBag();}
     return;
   }
-  if(actionState.kind==="drink"){state.thirst=clamp(state.thirst+35,0,100);showToast("Tu bois à la rivière.");return;}
+  if(actionState.kind==="drink"){state.thirst=clamp(state.thirst+35,0,limits(state.progress).thirst);showToast("Tu bois à la rivière.");return;}
   if(!it||it.removed||!it.object?.visible)return;
+  if(it.type==="deathbag"){recoverBag(it);return;}
+  if(actionState.bare){actionState.bare=false;it.bareCooldown=Date.now()+10000;learn(it.type==="tree"?"wood":"stone");give(it.type==="tree"?"wood":"stone",1,it.type==="tree"?"🪵":"🪨",it.type==="tree"?"Branche":"Pierre");return;}
+
 
   if(it.type==="tree"){
-    it.hits++;
+    it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
     showToast("Coup de hache "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("wood",6,"🪵","Bois");}
+    if(it.hits>=it.maxHits){removeResource(it);give("wood",6+practiceLevel(state.progress,"wood"),"🪵","Bois");}
   } else if(it.type==="rock"){
-    it.hits++;
+    it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
     showToast("Pioche "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("stone",5,"🪨","Pierre");}
+    if(it.hits>=it.maxHits){removeResource(it);give("stone",5+practiceLevel(state.progress,"stone"),"🪨","Pierre");}
   } else if(it.type==="ore"){
-    it.hits++;
+    it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
     showToast("Extraction "+it.hits+"/"+it.maxHits);
     if(it.hits>=it.maxHits){
@@ -381,9 +466,9 @@ function resolveActionImpact(it){
   } else if(it.type==="berries"){
     const now=performance.now();
     if((it.cooldown||0)>now){showToast("Le buisson n'a pas encore repoussé.");return;}
-    it.cooldown=now+30000;
+    it.cooldown=now+30000;learn("gather");
     triggerImpactPulse(it);
-    give("berries",3,"🍒","Baies");
+    give("berries",3+practiceLevel(state.progress,"gather"),"🍒","Baies");
     give("seeds",1,"🌱","Graines");
   } else if(it.type==="chest"){
     if(it.object.userData.opened){showToast("Le coffre est vide.");return;}
@@ -394,7 +479,7 @@ function resolveActionImpact(it){
     showToast("Butin des ruines récupéré.");
   } else if(it.type==="campfire"){
     if(state.inventory.meat<=0){showToast("Tu n'as pas de viande crue.");return;}
-    state.inventory.meat--;state.inventory.cooked++;state.objectives.cooked=true;
+    learn("craft");state.inventory.meat--;state.inventory.cooked++;state.objectives.cooked=true;
     addLoot("🍖","Viande cuite",1);
     showToast("La viande grille sur le feu.");
     renderQuickbar();
@@ -410,7 +495,7 @@ function resolveActionImpact(it){
       showToast("Récolte terminée.");
     } else showToast("Les cultures poussent encore.");
   } else if(it.type==="skeleton"){
-    it.object.userData.hp-=36;
+    it.object.userData.hp-=36*limits(state.progress).damage;
     triggerImpactPulse(it);
     showToast("Squelette : "+Math.max(0,it.object.userData.hp)+" PV");
     if(it.object.userData.hp<=0){
@@ -435,13 +520,13 @@ function updateActionAnimation(dt){
 }
 
 function doAction(){
-  if(state.hp<=0||actionState.active)return;
+  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||state.hp<=0||actionState.active)return;
   if(state.buildMode){if(buildValid)beginAction("build",null);else showToast("Placement impossible ou ressources insuffisantes.");return;}
 
   if(state.mounted){
     state.mounted=false;
     world.horse.position.set(state.x+1.2,terrainHeight(state.x+1.2,state.z),state.z+.4);
-    player.scale.setScalar(1);showToast("Tu descends du cheval.");return;
+    player.scale.setScalar(player.userData.baseScale||1);showToast("Tu descends du cheval.");return;
   }
 
   if(["berries","cooked"].includes(state.selected)){
@@ -452,10 +537,13 @@ function doAction(){
   if(!it&&Math.abs(state.x-getRiverX(state.z))<5.5){beginAction("drink",null);return;}
   if(!it){showToast("Rien à portée.");return;}
 
+  if(it.type==="deathbag"){beginAction("interact",it);return;}
   if(it.type==="tree"){
+    if(!state.ownedTools.includes("axe")){if((it.bareCooldown||0)>Date.now()){showToast("Pas de branche disponible pour le moment.");return;}actionState.bare=true;beginAction("gather",it);return;}
     if(state.selected!=="axe"){showToast("Équipe la hache pour couper cet arbre.");return;}
     beginAction("chop",it);return;
   } else if(it.type==="rock"){
+    if(!state.ownedTools.includes("pickaxe")){if((it.bareCooldown||0)>Date.now()){showToast("Les pierres en surface ont été ramassées.");return;}actionState.bare=true;beginAction("gather",it);return;}
     if(state.selected!=="pickaxe"){showToast("Équipe la pioche pour casser ce rocher.");return;}
     beginAction("mine",it);return;
   } else if(it.type==="ore"){
@@ -476,9 +564,10 @@ function doAction(){
       if(state.inventory.berries<3){showToast("Il te faut 3 baies pour gagner sa confiance.");return;}
       state.inventory.berries-=3;it.object.userData.tamed=true;showToast("Cheval apprivoisé ! Approche-toi et appuie sur E pour monter.");renderQuickbar();return;
     }
-    state.mounted=true;player.scale.setScalar(.86);showToast("Monture équipée — E pour descendre.");
+    state.mounted=true;player.scale.setScalar((player.userData.baseScale||1)*.86);showToast("Monture équipée — E pour descendre.");
   } else if(it.type==="farm"){
     const f=it.object.userData;
+    if(!f.planted&&!state.progress.research.includes("agriculture")){showToast("Apprends l’agriculture dans Recherche (✧).");return;}
     if(!f.planted&&state.inventory.seeds<1){showToast("Il te faut des graines.");return;}
     beginAction("gather",it);return;
   } else if(it.type==="skeleton"){
@@ -507,7 +596,7 @@ function toggleBuild(force){
   renderQuickbar();updateBuildPanel();
 }
 function updateBuildPanel(){
-  const b=buildTypes[state.buildIndex];ui.buildPiece.textContent=b.label;ui.buildCost.textContent=costText(b.cost);
+  const b=buildTypes[state.buildIndex];ui.buildPiece.textContent=b.label;ui.buildCost.textContent=costText(b.cost)+(b.id==="base_core"?" · rayon 18 m":b.tech?" · recherche Structures":" · près du cœur");
 }
 function removeBuildPreview(){
   if(buildPreview){scene.remove(buildPreview);buildPreview=null;}
@@ -540,7 +629,10 @@ function updateBuildPreview(force=false){
     const minDist=(b.radius+existing.radius)*.72;
     return dx*dx+dz*dz>minDist*minDist;
   });
-  buildValid=hasCost(b.cost)&&clear&&Math.abs(x)<54&&Math.abs(z)<54&&Math.abs(x-getRiverX(z))>5.2;
+  const core=state.buildings.find(piece=>piece.type==="base_core");
+  const baseValid=b.id==="base_core"?!core:Boolean(core&&Math.hypot(x-core.x,z-core.z)<=18);
+  const techValid=!b.tech||state.progress.research.includes(b.tech);
+  buildValid=baseValid&&techValid&&hasCost(b.cost)&&clear&&Math.abs(x)<54&&Math.abs(z)<54&&Math.abs(x-getRiverX(z))>5.2;
   buildPreview.traverse(o=>{if(o.isMesh&&o.material){o.material.color.set(buildValid?0x86c978:0xc86460);}});
 }
 function placeBuild(){
@@ -552,7 +644,7 @@ function placeBuild(){
     return;
   }
 
-  payCost(b.cost);
+  payCost(b.cost);learn("craft");
   const obj=createBuildObject(b.id);
   obj.position.copy(buildPreview.position);
   obj.rotation.y=buildPreview.rotation.y;
@@ -586,7 +678,9 @@ function updatePrompt(){
   if(!state.buildMode&&!state.mounted&&["berries","cooked"].includes(state.selected)){ui.prompt.textContent="E / Action — Manger";return;}
 
   if(state.buildMode){
-    const b=buildTypes[state.buildIndex];ui.prompt.textContent=(buildValid?"E — Construire ":"Ressources requises — ")+b.label+" · R : changer";return;
+    const b=buildTypes[state.buildIndex];const core=state.buildings.find(piece=>piece.type==="base_core");
+    const reason=b.tech&&!state.progress.research.includes(b.tech)?"Recherche Structures requise":b.id!=="base_core"&&!core?"Pose d’abord ton cœur de base":b.id==="base_core"&&core?"Un seul cœur de base autorisé":!hasCost(b.cost)?"Ressources requises":"Placement impossible";
+    ui.prompt.textContent=(buildValid?"Action — Construire ":reason+" — ")+b.label+" · R : changer";return;
   }
   if(state.mounted){ui.prompt.textContent="E — Descendre de la monture";return;}
   nearest=nearestInteraction();
@@ -596,13 +690,18 @@ function updatePrompt(){
   else ui.prompt.textContent="E — "+nearest.label;
 }
 
+let lastStateEmit=0;
 function updateUI(){
-  setBar(ui.hpBar,ui.hpText,state.hp);setBar(ui.hungerBar,ui.hungerText,state.hunger);setBar(ui.thirstBar,ui.thirstText,state.thirst);setBar(ui.staminaBar,ui.staminaText,state.stamina);
+  const max=limits(state.progress);state.bagCapacity=max.weight;
+  setBar(ui.hpBar,ui.hpText,state.hp,max.health);setBar(ui.hungerBar,ui.hungerText,state.hunger,max.hunger);setBar(ui.thirstBar,ui.thirstText,state.thirst,max.thirst);setBar(ui.staminaBar,ui.staminaText,state.stamina,max.stamina);
+  if(performance.now()-lastStateEmit>500){lastStateEmit=performance.now();emitProgress();}
+  for(const bag of state.deathBags)if(!bag.removed&&bag.expires<=Date.now()){bag.removed=true;bag.object.visible=false;}
+
   if(ui.bagWeightMini)ui.bagWeightMini.textContent=Math.round(bagWeight())+" / "+state.bagCapacity;
   const mins=Math.floor(state.dayProgress*24*60),h=Math.floor(mins/60)%24,m=mins%60;
   const tasks=[
-    ["Prépare ton camp", "Approche du feu et cuis une viande : équipe l’action avec E ou Action.",state.objectives.cooked],
-    ["Bâtis ton domaine", "Construis trois pièces : B ou 🏰, puis R pour changer de pièce.",state.buildings.length>=3],
+    ["Établis ton refuge", "Pose ton cœur de base : 🔨, puis Action. Récolte 12 pierres et 8 bois.",state.buildings.some(b=>b.type==="base_core")],
+    ["Bâtis ton domaine", "Construis trois pièces près de ton cœur : 🔨 puis R pour changer. Recherche les structures de pierre.",state.buildings.length>=3],
     ["Explore les ruines", "Le coffre se trouve au nord-ouest. Garde ton épée à portée.",Boolean(world.chest.userData.opened)],
     ["Trouve ta monture", "Offre trois baies au cheval près de la rivière.",Boolean(world.horse.userData.tamed)]
   ];
@@ -624,37 +723,37 @@ function drawMinimap(){
   ctx.fillStyle="#d5a04e";ctx.beginPath();ctx.arc(ox-8*scale,oz+8*scale,3,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#c68d54";ctx.beginPath();ctx.arc(ox+13*scale,oz+23*scale,3,0,Math.PI*2);ctx.fill();
   if(world.horse.visible){ctx.fillStyle="#a47754";ctx.beginPath();ctx.arc(ox+world.horse.position.x*scale,oz+world.horse.position.z*scale,2.5,0,Math.PI*2);ctx.fill();}
+  for(const bag of state.deathBags){if(bag.removed)continue;ctx.fillStyle="#efbe70";ctx.beginPath();ctx.arc(ox+bag.x*scale,oz+bag.z*scale,3.5,0,Math.PI*2);ctx.fill();}
+  for(const b of state.buildings){if(b.type!=="base_core")continue;ctx.fillStyle="#acdccc";ctx.fillRect(ox+b.x*scale-3,oz+b.z*scale-3,6,6);}
   ctx.translate(w/2,h/2);ctx.rotate(-Math.atan2(state.facing.x,state.facing.z));ctx.fillStyle="#f1ead2";ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(4,5);ctx.lineTo(-4,5);ctx.closePath();ctx.fill();
   ctx.restore();
 }
 
 function saveGame(){
   try{
-    localStorage.setItem("survival-v20-save",JSON.stringify({
+    localStorage.setItem(SAVE_KEY,JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,objectives:state.objectives,version:28
+      buildings:state.buildings,objectives:state.objectives,progress:state.progress,ownedTools:state.ownedTools,deathBags:state.deathBags.filter(b=>!b.removed).map(b=>({x:b.x,z:b.z,expires:b.expires,inventory:b.inventory,tools:b.tools})),version:1
     }));
   }catch(_){}
 }
 function loadGame(){
   try{
-    const raw=localStorage.getItem("survival-v20-save");if(!raw)return;
+    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return;
     const s=JSON.parse(raw);
     if(Number.isFinite(s.x)&&Number.isFinite(s.z)){state.x=s.x;state.z=s.z;}
-    for(const k of ["hp","hunger","thirst","dayProgress"])if(Number.isFinite(s[k]))state[k]=s[k];
+    for(const k of ["hp","hunger","thirst","dayProgress"])if(Number.isFinite(s[k]))state[k]=Math.max(0,s[k]);
     if(Number.isFinite(s.day))state.day=Math.max(1,Math.floor(s.day));
     if(s.inventory&&typeof s.inventory==="object")for(const k of Object.keys(state.inventory))if(Number.isFinite(s.inventory[k]))state.inventory[k]=Math.max(0,Math.floor(s.inventory[k]));
 
-    // Migration V23 : une seule fois, on crédite un vrai stock de chantier aux anciennes sauvegardes.
-    if(!Number.isFinite(s.version)||s.version<23){
-      state.inventory.wood=(state.inventory.wood||0)+60;
-      state.inventory.stone=(state.inventory.stone||0)+90;
-      state.inventory.ore=(state.inventory.ore||0)+10;
-      state.inventory.berries=(state.inventory.berries||0)+5;
-      state.inventory.seeds=(state.inventory.seeds||0)+6;
+    state.progress=validateProgress(s.progress);state.bagCapacity=limits(state.progress).weight;
+    if(Array.isArray(s.ownedTools))state.ownedTools=s.ownedTools.filter(id=>gearWeights[id]);
+    if(Array.isArray(s.deathBags))for(const bag of s.deathBags)if(Number.isFinite(bag.x)&&Number.isFinite(bag.z)&&Number.isFinite(bag.expires)&&bag.expires>Date.now()&&Math.abs(bag.x)<58&&Math.abs(bag.z)<58){
+      const clean={x:bag.x,z:bag.z,expires:bag.expires,inventory:{},tools:Array.isArray(bag.tools)?bag.tools.filter(id=>gearWeights[id]):[]};
+      for(const key of Object.keys(state.inventory))clean.inventory[key]=Number.isFinite(bag.inventory?.[key])?Math.max(0,Math.floor(bag.inventory[key])):0;
+      addDeathBag(clean);
     }
-
     if(typeof s.selected==="string")state.selected=s.selected;
     world.horse.userData.tamed=Boolean(s.horseTamed);
     state.objectives.cooked=Boolean(s.objectives?.cooked||s.inventory?.cooked>=3);
@@ -714,8 +813,8 @@ function updateMovement(dt,time){
     else player.rotation.y=motion.yaw;
   }
 
-  if(sprint&&hasInput)state.stamina=clamp(state.stamina-dt*19*clamp(v.strength,.55,1),0,100);
-  else state.stamina=clamp(state.stamina+dt*15,0,100);
+  if(sprint&&hasInput)state.stamina=clamp(state.stamina-dt*19*clamp(v.strength,.55,1),0,limits(state.progress).stamina);
+  else state.stamina=clamp(state.stamina+dt*15,0,limits(state.progress).stamina);
 
   const ground=terrainHeight(state.x,state.z);
   if(state.mounted){
@@ -731,7 +830,7 @@ function updateMovement(dt,time){
 }
 
 function updateSurvival(dt){
-  state.hunger=clamp(state.hunger-dt*.055,0,100);state.thirst=clamp(state.thirst-dt*.078,0,100);
+  state.hunger=clamp(state.hunger-dt*(100/3600),0,limits(state.progress).hunger);state.thirst=clamp(state.thirst-dt*(100/3600),0,limits(state.progress).thirst);
   if(state.hunger<=0||state.thirst<=0)state.hp=clamp(state.hp-dt*1.7,0,100);
   state.dayProgress+=dt/300;
   if(state.dayProgress>=1){state.dayProgress-=1;state.day++;}
@@ -745,7 +844,7 @@ function updateEnemyDamage(){
     const d=Math.hypot(state.x-sk.position.x,state.z-sk.position.z);
     if(d<1.65&&sk.userData.cooldown<=0){
       sk.userData.cooldown=1.15;player.userData.hurt=1;state.hp=clamp(state.hp-12,0,100);showToast("Le squelette te frappe !");
-      if(state.hp<=0){showToast("Tu es tombé au combat. Retour au camp.");state.x=-5;state.z=6;state.hp=65;state.hunger=55;state.thirst=55;}
+      if(state.hp<=0)die();
     }
   }
 }
@@ -785,15 +884,18 @@ function forceCleanSpawnUI(){
   removeBuildPreview();
   setBuildPanelVisible(false);
 
-  if(state.selected==="build")state.selected="axe";
+  if(state.selected==="build"||gearWeights[state.selected]&&!state.ownedTools.includes(state.selected))state.selected=state.ownedTools[0]||"hands";
 }
 
 let lastMinimap=0;
 function frame(now){
-  const dt=Math.min((now-last)/1000,.05);last=now;elapsed+=dt;
+  const dt=Math.min((now-last)/1000,.05);last=now;
+  if(window.everwildPaused){motion.velocity.set(0,0);resetJoy();requestAnimationFrame(frame);return;}
+  elapsed+=dt;
   updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();const playerWorldPos=new THREE.Vector3(state.x,0,state.z);
   updateWorld(world,dt,elapsed,playerWorldPos);
   if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed,playerWorldPos);
+  if(state.hp<=0)die();
   updateEnemyDamage();
   updateCharacter(player,dt,{time:elapsed,speed:player.userData.moveSpeed||0,sprinting:player.userData.sprinting,mounted:state.mounted,action:actionState,ground:terrainHeight(state.x,state.z),height:terrainHeight,x:state.x,z:state.z,yaw:player.rotation.y});
   updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();
@@ -804,6 +906,7 @@ function frame(now){
 }
 
 addEventListener("keydown",e=>{
+  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false)return;
   keys[e.code]=true;
   if(e.code==="KeyE"||e.code==="Space"){e.preventDefault();doAction();}
   else if(e.code==="KeyB"){e.preventDefault();toggleBuild();}
@@ -826,6 +929,7 @@ ui.buildBtn.addEventListener("click",()=>toggleBuild());
 ui.bagBtn?.addEventListener("click",()=>toggleBag());
 ui.bagTouchBtn?.addEventListener("click",()=>toggleBag());
 ui.bagClose?.addEventListener("click",()=>toggleBag(false));
+document.getElementById("buildCycle").addEventListener("click",cycleBuild);
 document.getElementById("buildClose").addEventListener("click",()=>toggleBuild(false));
 
 const floatingStick=document.getElementById("floatingStick");
@@ -834,7 +938,7 @@ const JOY_MAX=38;
 const JOY_DEADZONE=5;
 
 function beginFloatingJoy(e){
-  if(e.pointerType==="mouse"||joy.id!==null)return;
+  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||e.pointerType==="mouse"||joy.id!==null)return;
   e.preventDefault();
 
   joy.id=e.pointerId;
@@ -890,13 +994,13 @@ for(const name of ["pointerup","pointercancel","lostpointercapture"]){
 }
 
 loadGame();
-forceCleanSpawnUI();
+forceCleanSpawnUI();refreshLimits();emitProgress();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
 player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
 motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
 syncEquippedTool();renderQuickbar();renderBag();updateBuildPanel();updateUI();
 loadingProgress(62,"Initialisation du joueur et de la carte");
-showToast("Bienvenue à Val-des-Roches.");
+showToast("Bienvenue dans Everwild.");
 requestAnimationFrame(frame);
 bootPremiumZone();

@@ -3,7 +3,7 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=280";
+} from "./models.js?v=ew1";
 
 const WORLD_SIZE=116;
 const HALF=WORLD_SIZE/2;
@@ -923,6 +923,12 @@ export function updateWorld(world,dt,time,playerPos){
 }
 
 export function createBuildObject(type){
+  if(type==="base_core"){
+    const core=new THREE.Group();core.name="BaseCore";
+    const stone=new THREE.Mesh(new THREE.CylinderGeometry(.63,.77,.30,8),new THREE.MeshStandardMaterial({color:0x74796c,roughness:.95}));stone.position.y=.15;stone.castShadow=true;stone.receiveShadow=true;core.add(stone);
+    const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.36,0),new THREE.MeshStandardMaterial({color:0x91b9ad,emissive:0x446b60,emissiveIntensity:.4,roughness:.34,metalness:.18}));crystal.position.y=.69;crystal.scale.y=1.45;crystal.castShadow=true;core.add(crystal);
+    return core;
+  }
   if(type==="stone_wall")return createStoneWall();
   if(type==="stone_tower")return createStoneTower();
   return createPalisade();
