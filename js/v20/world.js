@@ -3,10 +3,12 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=ew1";
+} from "./models.js?v=ew2";
 
-const WORLD_SIZE=116;
-const HALF=WORLD_SIZE/2;
+import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew2';
+import {enrichWorld} from '../everwild/fantasy.js?v=ew2';
+const WORLD_SIZE=520;
+const HALF=58;
 const SEASON_COLORS=[
   {ground:0x61794b,light:0x80965a,leaf:0x3f743d,fog:0x9eb38d,sky:0xa9bf9d},
   {ground:0x6d7d47,light:0x9aa35d,leaf:0x356838,fog:0xb6b28a,sky:0xb9b78d},
@@ -28,7 +30,8 @@ export function terrainHeight(x,z){
   h+=Math.max(0,(Math.abs(z)-44)/14)*1.4;
   const d=Math.abs(x-riverX(z));
   if(d<7.5)h-=1.0*(1-d/7.5);
-  return h;
+  const mix=Math.max(0,Math.min(1,(Math.hypot(x,z)-44)/17));
+  return h*(1-mix)+outerHeight(x,z)*mix;
 }
 export function getRiverX(z){return riverX(z);}
 
@@ -75,9 +78,9 @@ function createGroundTextures(){
       const dirtMask=Math.max(0,Math.min(1,.42+broad*.12+medium*.14+grain*.22));
       const mossMask=Math.max(0,Math.min(1,.30-broad*.10+Math.sin((x+y)*.021)*.16+grain*.13));
 
-      const grass=[84,112,62];
-      const dirt=[116,91,59];
-      const moss=[60,91,52];
+      const grass=[207,211,196];
+      const dirt=[192,182,163];
+      const moss=[185,193,175];
 
       let rr=grass[0]*(1-dirtMask*.36)+dirt[0]*(dirtMask*.36);
       let gg=grass[1]*(1-dirtMask*.36)+dirt[1]*(dirtMask*.36);
@@ -312,7 +315,7 @@ function createGrassMaterial(){
 }
 
 function createTerrain(){
-  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,96,96);
+  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,260,260);
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];
@@ -322,7 +325,11 @@ function createTerrain(){
     pos.setY(i,y);
     const n=.5+.25*Math.sin(x*.12+Math.cos(z*.07))+.25*Math.cos(z*.14+x*.05);
     const river=Math.abs(x-riverX(z));
-    const col=river<8?soil.clone().lerp(c1,.45):c1.clone().lerp(c2,n*.42);
+    const biome=regionAt(x,z);
+    const col=new THREE.Color(biome.color).multiplyScalar(.92+n*.16);
+    if(river<8&&Math.abs(z)<58)col.lerp(soil,.45);
+    if(landDistance(x,z)<9&&landDistance(x,z)>0)col.lerp(new THREE.Color(0xd6c59e),.65);
+    if(y>16)col.lerp(new THREE.Color(0xd4d9d7),.75);
     if(y>1.8)col.lerp(new THREE.Color(0x78806d),.35);
     colors.push(col.r,col.g,col.b);
   }
@@ -350,7 +357,7 @@ function createTerrain(){
 function createRiver(){
   const samples=90,width=4.9,verts=[],indices=[];
   for(let i=0;i<samples;i++){
-    const t=i/(samples-1); const z=-HALF+t*WORLD_SIZE; const x=riverX(z);
+    const t=i/(samples-1); const z=-HALF+t*116; const x=riverX(z);
     const nextZ=Math.min(HALF,z+.2), nextX=riverX(nextZ);
     const tx=nextX-x,tz=nextZ-z; const len=Math.hypot(tx,tz)||1;
     const nx=-tz/len,nz=tx/len;
@@ -585,6 +592,7 @@ export function createWorld(scene){
     p.scale.y=.28;p.position.set(x,terrainHeight(x,z)+.04,z);p.rotation.y=seeded(i+90)*6.28;p.receiveShadow=true;scene.add(p);
   }
 
+  world.expansion=enrichWorld(scene,world,terrainHeight,{tree:createTree,pine:createPine,bush:createBush,rock:createRockCluster});
   return world;
 }
 
@@ -833,6 +841,7 @@ function updateAnimalAI(animal,index,dt,time,playerPos,animals){
 }
 
 export function updateWorld(world,dt,time,playerPos){
+  world.expansion?.update(dt,time,playerPos);
   if(world.grass?.material?.userData.shader)world.grass.material.userData.shader.uniforms.uTime.value=time;
   if(world.understory?.userData.material?.userData.shader)world.understory.userData.material.userData.shader.uniforms.uTime.value=time;
 
@@ -916,8 +925,8 @@ export function updateWorld(world,dt,time,playerPos){
     if(!sk.visible||sk.userData.hp<=0)continue;
     sk.userData.cooldown=Math.max(0,(sk.userData.cooldown||0)-dt);
     const dx=playerPos.x-sk.position.x,dz=playerPos.z-sk.position.z,dist=Math.hypot(dx,dz);
-    if(dist<13&&dist>1.55){
-      const sp=.78*dt;sk.position.x+=dx/dist*sp;sk.position.z+=dz/dist*sp;sk.position.y=terrainHeight(sk.position.x,sk.position.z);sk.rotation.y=Math.atan2(dx,dz);
+    if(dist<13&&dist>(sk.userData.kind==="dragon"?3.4:1.55)){
+      const sp=(sk.userData.kind==="dragon"?1.1:.78)*dt;sk.position.x+=dx/dist*sp;sk.position.z+=dz/dist*sp;sk.position.y=terrainHeight(sk.position.x,sk.position.z);sk.rotation.y=Math.atan2(dx,dz);
     }
   }
 }

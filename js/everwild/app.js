@@ -1,7 +1,8 @@
-import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew1";
+import {REGIONS} from './geography.js?v=ew2';
+import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew2";
 const $=id=>document.getElementById(id);
 let profile=null,started=false,starting=false,selection="human",latest=null;
-let settings={quality:"balanced"};
+let settings={quality:(matchMedia("(pointer:coarse)").matches||innerWidth<=600)?"light":"balanced"};
 try{
   const saved=JSON.parse(localStorage.getItem("everwild-profile"));
   if(saved&&RACES.some(r=>r.id===saved.race)&&typeof saved.name==="string"&&typeof saved.id==="string")profile=saved;
@@ -9,8 +10,8 @@ try{
 }catch{}
 window.everwildProfile=profile;window.everwildSettings=settings;window.everwildPaused=true;
 const command=(type,id)=>window.dispatchEvent(new CustomEvent("everwild-command",{detail:{type,id}}));
-function showPanel(id){for(const panel of document.querySelectorAll(".ew-page"))panel.hidden=panel.id!==id;}
-function menu(){window.everwildPaused=true;$("ewMenu").hidden=false;$("loading").classList.add("hidden");showPanel("ewHome");$("ewPlay").textContent=started?"Reprendre l’aventure":profile?"Continuer l’aventure":"Commencer l’aventure";}
+function showPanel(id){$("ewMenu").scrollTop=0;for(const panel of document.querySelectorAll(".ew-page"))panel.hidden=panel.id!==id;}
+function menu(){window.everwildPaused=true;$("ewMenu").hidden=false;$("atlasPanel").hidden=true;$("journeyPanel").hidden=true;$("loading").classList.add("hidden");showPanel("ewHome");$("ewPlay").textContent=started?"Reprendre l’aventure":profile?"Continuer l’aventure":"Commencer l’aventure";}
 function raceSelection(){
   $("raceGrid").replaceChildren();
   for(const race of RACES){
@@ -25,12 +26,12 @@ function raceSelection(){
 }
 async function play(){
   if(starting)return;
-  if(!profile){showPanel("ewCharacter");raceSelection();$("characterName").focus();return;}
+  if(!profile){showPanel("ewCharacter");raceSelection();return;}
   $("ewMenu").hidden=true;window.everwildPaused=false;
   if(started)return;
   starting=true;$("loading").classList.remove("hidden");$("loadingLabel").textContent="Ouverture des terres d’Everwild…";$("loadingErrorBack").hidden=true;
   try{
-    await import("../v20/main.js?v=ew1");started=true;
+    await import("../v20/main.js?v=ew2");started=true;
     $("loading").classList.add("hidden");
     $("survivorName").textContent=profile.name;$("survivorRace").textContent=RACES.find(r=>r.id===profile.race).name;
   }catch(error){
@@ -105,13 +106,13 @@ function renderJourney(){
   for(const recipe of RECIPES){
     const row=document.createElement("div");row.className="ew-research";
     const label=document.createElement("strong");label.textContent=recipe.icon+" "+recipe.name;
-    const cost=document.createElement("small");cost.textContent=costText(recipe.cost);
-    const button=document.createElement("button"),owned=recipe.gear&&latest.ownedTools.includes(recipe.id),locked=recipe.tech&&!p.research.includes(recipe.tech);
-    button.textContent=owned?"Équipé":locked?"Recherche requise":"Fabriquer";button.disabled=Boolean(owned||locked||!afford(recipe.cost));
+    const cost=document.createElement("small");cost.textContent=costText(recipe.cost)+(recipe.station?' · '+({forge:'Forge',carpenter:'Menuiserie',alchemy:'Alchimie'}[recipe.station])+' '+recipe.tier:'');
+    const button=document.createElement("button"),owned=(recipe.gear&&latest.ownedTools.includes(recipe.id))||(recipe.upgrade&&p.toolTier[recipe.upgrade]>=2),locked=recipe.tech&&!p.research.includes(recipe.tech),stationLocked=recipe.station&&(!latest.station||latest.station.type!==recipe.station||latest.station.tier<recipe.tier);
+    button.textContent=owned?"Acquis":locked?"Recherche requise":stationLocked?"Atelier requis":"Fabriquer";button.disabled=Boolean(owned||locked||stationLocked||!afford(recipe.cost));
     button.addEventListener("click",()=>command("craft",recipe.id));row.append(label,cost,button);$("craftGrid").append(row);
   }
 }
-const itemNames={wood:"bois",stone:"pierre",ore:"minerai",seeds:"graines",berries:"baies"};
+const itemNames={wood:"bois",stone:"pierre",ore:"minerai",seeds:"graines",berries:"baies",ingot:"lingots",plank:"planches",grain:"grain"};
 function costText(cost){return Object.entries(cost).map(([id,n])=>n+" "+(itemNames[id]||id)).join(" · ");}
 function afford(cost){return Object.entries(cost).every(([id,n])=>(latest?.inventory[id]||0)>=n);}
 window.addEventListener("everwild-state",event=>{latest=event.detail;$("survivorLevel").textContent="Niv. "+latest.progress.level;if(!$("journeyPanel").hidden)renderJourney();});
@@ -122,3 +123,10 @@ document.addEventListener("keydown",event=>{
   if(event.code==="Escape"&&started){if(!$("journeyPanel").hidden)$("journeyPanel").hidden=true;else if($("ewMenu").hidden)menu();else play();}
 });
 menu();
+
+const biomeSymbols={meadow:'❧',steppe:'〰',desert:'☀',tropical:'♧',swamp:'♒',mountain:'△',snow:'❄',volcanic:'♜',coast:'≈',island1:'♜',island2:'♧',island3:'❧',island4:'❄',island5:'♜'};
+function fillAtlas(container,travel){for(const r of REGIONS){const card=document.createElement(travel?'button':'article');card.className='ew-destination';card.style.setProperty('--biome','#'+r.color.toString(16).padStart(6,'0'));const icon=document.createElement('i');icon.textContent=biomeSymbols[r.id];const title=document.createElement('strong');title.textContent=r.name;const desc=document.createElement('small');desc.textContent=r.subtitle;const level=document.createElement('span');level.textContent='Niv. '+r.min+'–'+r.max+(travel?' · Explorer ↗':'');card.append(icon,title,desc,level);if(travel)card.addEventListener('click',()=>command('travel',r.id));container.append(card);}}
+fillAtlas($('worldRegionGrid'),false);fillAtlas($('atlasGrid'),true);
+$('atlasBtn').addEventListener('click',()=>{if(!started)return;$('journeyPanel').hidden=true;$('atlasPanel').hidden=false;window.everwildPaused=true;});
+$('atlasClose').addEventListener('click',()=>{$('atlasPanel').hidden=true;window.everwildPaused=false;});
+$('incubateBtn').addEventListener('click',()=>{command('incubate');$('atlasPanel').hidden=true;window.everwildPaused=false;});

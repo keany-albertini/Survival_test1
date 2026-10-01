@@ -19,15 +19,26 @@ export const BRANCHES=[
   {id:"tools",name:"Outils",cost:{wood:4,stone:4},detail:"Débloque l’épée et les outils de métal."},
   {id:"structures",name:"Structures",cost:{stone:12,wood:8},detail:"Débloque les fortifications de pierre."},
   {id:"agriculture",name:"Agriculture",cost:{seeds:5,wood:4},detail:"Permet de semer le champ près du camp."},
+  {id:"workshops",name:"Ateliers",cost:{wood:12,stone:10},detail:"Débloque les améliorations des stations et les composants raffinés."},
+  {id:"hunting",name:"Chasse",cost:{wood:6,stone:6},detail:"Augmente la viande obtenue sur les créatures vaincues."},
+  {id:"fishing",name:"Pêche",cost:{wood:8,seeds:3},detail:"Permet de pêcher au rivage avec Action."},
+  {id:"taming",name:"Domptage",cost:{berries:12,grain:4},detail:"Débloque l’incubation d’un œuf de dragon au camp."},
   {id:"alchemy",name:"Alchimie",cost:{berries:8,ore:2},detail:"Débloque l’élixir de redistribution des points."}
 ];
 export const RECIPES=[
+  {id:"ingot",name:"Lingot de métal",icon:"▰",cost:{ore:2},output:{ingot:1},tech:"workshops",station:"forge",tier:1},
+  {id:"plank",name:"Planches travaillées",icon:"▤",cost:{wood:3},output:{plank:2},tech:"workshops",station:"carpenter",tier:1},
+  {id:"blade_upgrade",name:"Épée renforcée · II",icon:"⚔",cost:{ingot:5,plank:3},upgrade:"sword",tech:"tools",station:"forge",tier:2},
+  {id:"axe_upgrade",name:"Hache renforcée · II",icon:"🪓",cost:{ingot:3,plank:4},upgrade:"axe",tech:"tools",station:"carpenter",tier:2},
+  {id:"pickaxe_upgrade",name:"Pioche renforcée · II",icon:"⛏",cost:{ingot:4,plank:3},upgrade:"pickaxe",tech:"tools",station:"forge",tier:2},
+  {id:"healing",name:"Potion de soin · boire",icon:"⚗",cost:{berries:4,grain:2},heal:40,tech:"alchemy",station:"alchemy",tier:1},
+
   {id:"axe",name:"Hache",icon:"🪓",cost:{wood:4,stone:3},gear:true},
   {id:"pickaxe",name:"Pioche",icon:"⛏",cost:{wood:6,stone:8},gear:true},
   {id:"sword",name:"Épée",icon:"⚔",cost:{wood:5,ore:4},gear:true,tech:"tools"},
   {id:"respec",name:"Élixir de redistribution",icon:"⚗",cost:{berries:6,ore:2},tech:"alchemy"}
 ];
-export function newProgress(){return {level:1,xp:0,points:0,stats:Object.fromEntries(STAT_FIELDS.map(([id])=>[id,0])),practice:Object.fromEntries(PRACTICES.map(([id])=>[id,0])),research:[],researchPoints:1};}
+export function newProgress(){return {level:1,xp:0,points:0,stats:Object.fromEntries(STAT_FIELDS.map(([id])=>[id,0])),practice:Object.fromEntries(PRACTICES.map(([id])=>[id,0])),research:[],researchPoints:1,toolTier:{axe:1,pickaxe:1,sword:1}};}
 export function xpRequired(level){return 50+Math.max(0,level-1)*25;}
 export function practiceLevel(progress,id){return Math.floor((progress.practice[id]||0)/10);}
 export function train(progress,id,amount=1){
@@ -48,5 +59,6 @@ export function validateProgress(value){
   p.level=Math.max(1,p.level);
   for(const key of Object.keys(p.stats))if(Number.isFinite(value.stats?.[key])&&value.stats[key]>=0)p.stats[key]=Math.floor(value.stats[key]);
   for(const key of Object.keys(p.practice))if(Number.isFinite(value.practice?.[key])&&value.practice[key]>=0)p.practice[key]=Math.floor(value.practice[key]);
+  for(const id of Object.keys(p.toolTier))p.toolTier[id]=value.toolTier?.[id]===2?2:1;
   p.research=Array.isArray(value.research)?value.research.filter(id=>BRANCHES.some(x=>x.id===id)):[];return p;
 }

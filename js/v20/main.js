@@ -1,12 +1,14 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=ew1";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew1";
+import { createPlayer, makeGhost } from "./models.js?v=ew2";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew2";
 
-import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew1";
-import { applyAppearance } from "../everwild/appearance.js?v=ew1";
-import { updateCharacter } from "../v28/animation.js?v=ew1";
-import { createAmbience } from "../v27/ambience.js?v=ew1";
+import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew2";
+import { applyAppearance } from "../everwild/appearance.js?v=ew2";
+import { updateCharacter } from "../v28/animation.js?v=ew2";
+import { createAmbience } from "../v27/ambience.js?v=ew2";
 
+import {createDragon} from '../everwild/fantasy.js?v=ew2';
+import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew2';
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
 function graphicsQuality(settings={}){
@@ -54,7 +56,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=ew1");
+    const premiumModule=await import("../v26/premiumZone.js?v=ew2");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -84,10 +86,10 @@ scene.add(player);
 const state={
   x:-4,z:4,facing:new THREE.Vector3(0,0,1),
   hp:100,hunger:100,thirst:100,stamina:100,
-  inventory:{wood:8,stone:12,ore:0,gold:0,berries:5,meat:0,cooked:0,seeds:2,grain:0},
+  inventory:{wood:8,stone:12,ore:0,gold:0,berries:5,meat:0,cooked:0,seeds:2,grain:0,ingot:0,plank:0,egg:0},
   bagCapacity:80,progress:newProgress(),ownedTools:["axe"],deathBags:[],
   objectives:{cooked:false},selected:"axe",mounted:false,day:1,dayProgress:.31,season:0,
-  buildMode:false,buildIndex:0,buildings:[],lastSave:0
+  buildMode:false,buildIndex:0,buildings:[],stationTiers:{},pet:false,lastSave:0
 };
 
 const buildTypes=[
@@ -118,6 +120,7 @@ const actionState={
   impacted:false,
   lockMovement:false
 };
+let activeWorkshop=null;
 let last=performance.now(),elapsed=0,toastTimer=null,nearest=null;
 
 const ui={
@@ -167,7 +170,7 @@ function addLoot(icon,label,amount=1){
   setTimeout(()=>{line.style.opacity="0";setTimeout(()=>line.remove(),240)},5200);
 }
 const gearWeights={axe:2,pickaxe:2.5,sword:3};
-const itemWeights={wood:.50,stone:.72,ore:.85,gold:.25,berries:.08,meat:.40,cooked:.40,seeds:.04,grain:.10};
+const itemWeights={wood:.50,stone:.72,ore:.85,gold:.25,berries:.08,meat:.40,cooked:.40,seeds:.04,grain:.10,ingot:.65,plank:.30,egg:2};
 const bagItems=[
   {id:"wood",icon:"🪵",label:"Bois"},
   {id:"stone",icon:"🪨",label:"Pierre"},
@@ -177,7 +180,8 @@ const bagItems=[
   {id:"meat",icon:"🥩",label:"Viande crue"},
   {id:"cooked",icon:"🍖",label:"Viande cuite"},
   {id:"seeds",icon:"🌱",label:"Graines"},
-  {id:"grain",icon:"🌾",label:"Récolte"}
+  {id:"grain",icon:"🌾",label:"Récolte"},
+  {id:"ingot",icon:"▰",label:"Lingots"},{id:"plank",icon:"▤",label:"Planches"},{id:"egg",icon:"🥚",label:"Œuf de dragon"}
 ];
 
 function bagWeight(){
@@ -226,7 +230,7 @@ function learn(id){
   if(gained)showToast("Niveau "+state.progress.level+" · nouveaux points d’attributs et de recherche.");
 }
 function emitProgress(){
-  window.dispatchEvent(new CustomEvent("everwild-state",{detail:{progress:structuredClone(state.progress),inventory:{...state.inventory},ownedTools:[...state.ownedTools]}}));
+  window.dispatchEvent(new CustomEvent("everwild-state",{detail:{progress:structuredClone(state.progress),inventory:{...state.inventory},ownedTools:[...state.ownedTools],station:activeWorkshop?{type:activeWorkshop.userData.type,tier:activeWorkshop.userData.tier}:null}}));
 }
 function refreshLimits(){
   const max=limits(state.progress);state.bagCapacity=max.weight;
@@ -247,13 +251,30 @@ window.addEventListener("everwild-command",event=>{
     const recipe=RECIPES.find(r=>r.id===id);
     if(!recipe||!hasCost(recipe.cost)||(recipe.tech&&!state.progress.research.includes(recipe.tech))||(recipe.gear&&state.ownedTools.includes(id)))return;
     if(recipe.gear&&bagRemaining()+Object.entries(recipe.cost).reduce((sum,[key,n])=>sum+(itemWeights[key]||0)*n,0)<gearWeights[id]){showToast("Le sac est trop chargé.");return;}
+    if(recipe.station&&(!activeWorkshop||activeWorkshop.userData.type!==recipe.station||activeWorkshop.userData.tier<recipe.tier||Math.hypot(state.x-activeWorkshop.position.x,state.z-activeWorkshop.position.z)>4)){showToast("Approche l’atelier requis et ouvre-le avec Action.");return;}
+    if(recipe.upgrade&&(!state.ownedTools.includes(recipe.upgrade)||state.progress.toolTier[recipe.upgrade]>=2))return;
+    if(recipe.output){const after=Object.entries(recipe.output).reduce((n,[id,count])=>n+(itemWeights[id]||0)*count*(activeWorkshop?.userData.tier===3?2:1),0);const removed=Object.entries(recipe.cost).reduce((n,[id,count])=>n+(itemWeights[id]||0)*count,0);if(after>bagRemaining()+removed){showToast("Sac plein.");return;}}
     payCost(recipe.cost);
+    if(recipe.output)for(const [id,count]of Object.entries(recipe.output))state.inventory[id]+=count*(activeWorkshop.userData.tier===3?2:1);
+    if(recipe.upgrade)state.progress.toolTier[recipe.upgrade]=2;
+    if(recipe.heal)state.hp=Math.min(limits(state.progress).health,state.hp+recipe.heal);
     if(recipe.gear){state.ownedTools.push(id);state.selected=id;syncEquippedTool();}
     else if(id==="respec"){
       state.progress.points+=Object.values(state.progress.stats).reduce((sum,n)=>sum+n,0);
       for(const key of Object.keys(state.progress.stats))state.progress.stats[key]=0;refreshLimits();
     }
     learn("craft");showToast(recipe.name+" fabriqué.");
+  }else if(type==='station-upgrade'){
+    if(!activeWorkshop||Math.hypot(state.x-activeWorkshop.position.x,state.z-activeWorkshop.position.z)>4)return;
+    const tier=activeWorkshop.userData.tier,req=tier===1?{wood:12,stone:10}:{ingot:6,plank:6};
+    if(tier>=3||!state.progress.research.includes('workshops')||state.progress.level<(tier===1?3:8)||!hasCost(req)){showToast('Ateliers, niveau '+(tier===1?3:8)+' et ressources requis.');return;}
+    payCost(req);activeWorkshop.userData.tier++;activeWorkshop.scale.y=1+(activeWorkshop.userData.tier-1)*.08;state.stationTiers[stationKey(activeWorkshop)]=activeWorkshop.userData.tier;openWorkshop();learn('craft');
+  }else if(type==='travel'){
+    const target=spawnAt(id);if(!target||actionState.active)return;
+    state.x=target.x;state.z=target.z;motion.velocity.set(0,0);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);if(state.mounted){state.mounted=false;player.scale.setScalar(player.userData.baseScale||1);}resetJoy();activeWorkshop=null;closeAtlas();showToast(REGIONS.find(r=>r.id===id).name);updateUI();
+  }else if(type==='incubate'){
+    if(state.pet||!state.progress.research.includes('taming')||!hasCost({egg:1,berries:6})||Math.hypot(state.x+8,state.z-8)>8){showToast('Au camp : Domptage, 1 œuf et 6 baies requis.');return;}
+    payCost({egg:1,berries:6});state.pet=true;showToast('Un jeune dragon a rejoint ton camp.');
   }else return;
   renderQuickbar();renderBag();emitProgress();saveGame();
 });
@@ -262,7 +283,7 @@ function addDeathBag(data){
   const bag=new THREE.Mesh(new THREE.SphereGeometry(.28,12,9),new THREE.MeshStandardMaterial({color:0x927248,roughness:.94}));
   bag.scale.set(1,.72,.82);bag.position.y=.19;bag.castShadow=true;object.add(bag);
   const strap=new THREE.Mesh(new THREE.TorusGeometry(.14,.027,6,16),new THREE.MeshStandardMaterial({color:0xc4ac7b,roughness:.9}));strap.position.y=.38;strap.rotation.x=Math.PI/2;object.add(strap);
-  object.position.set(data.x,terrainHeight(data.x,data.z),data.z);scene.add(object);
+  object.position.set(data.x,surfaceHeight(data.x,data.z),data.z);scene.add(object);
   const item={...data,object,removed:false};state.deathBags.push(item);
   world.interactables.push({type:"deathbag",object,radius:2,label:"Récupérer le sac de mort",position:()=>object.position,data:item});
 }
@@ -273,7 +294,7 @@ function recoverBag(it){
     const accepted=maxFit(id,n);state.inventory[id]+=accepted;bag.inventory[id]-=accepted;
   }
   for(const id of [...bag.tools]){
-    if(state.ownedTools.includes(id)||bagRemaining()>=gearWeights[id]){if(!state.ownedTools.includes(id))state.ownedTools.push(id);bag.tools.splice(bag.tools.indexOf(id),1);}
+    if(state.ownedTools.includes(id)||bagRemaining()>=gearWeights[id]){if(!state.ownedTools.includes(id))state.ownedTools.push(id);state.progress.toolTier[id]=Math.max(state.progress.toolTier[id],bag.toolTier?.[id]===2?2:1);bag.tools.splice(bag.tools.indexOf(id),1);}
   }
   if(Object.values(bag.inventory).every(n=>n<=0)&&bag.tools.length===0){it.removed=true;bag.removed=true;bag.object.visible=false;}
   state.selected=state.ownedTools[0]||"hands";syncEquippedTool();renderQuickbar();renderBag();saveGame();
@@ -281,9 +302,9 @@ function recoverBag(it){
 }
 function die(){
   const tools=[...state.ownedTools];
-  if(Object.values(state.inventory).some(n=>n>0)||tools.length)addDeathBag({x:state.x,z:state.z,expires:Date.now()+3600000,inventory:{...state.inventory},tools});
+  if(Object.values(state.inventory).some(n=>n>0)||tools.length)addDeathBag({x:state.x,z:state.z,expires:Date.now()+3600000,inventory:{...state.inventory},tools,toolTier:{...state.progress.toolTier}});
   for(const id of Object.keys(state.inventory))state.inventory[id]=0;
-  state.ownedTools=[];state.selected="hands";state.mounted=false;
+  state.ownedTools=[];state.progress.toolTier={axe:1,pickaxe:1,sword:1};state.selected="hands";state.mounted=false;
   player.scale.setScalar(player.userData.baseScale||1);state.x=-5;state.z=6;
   state.hp=limits(state.progress).health;state.hunger=60;state.thirst=60;state.stamina=limits(state.progress).stamina;
   actionState.active=false;actionState.bare=false;actionState.lockMovement=false;motion.velocity.set(0,0);
@@ -323,7 +344,7 @@ const inputRight=new THREE.Vector3();
 const worldUp=new THREE.Vector3(0,1,0);
 
 function inputVector(){
-  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||isBagOpen())return {x:0,z:0,strength:0};
+  if(window.everwildPaused||(document.getElementById("journeyPanel")?.hidden===false||document.getElementById("atlasPanel")?.hidden===false)||isBagOpen())return {x:0,z:0,strength:0};
   let sx=0,sy=0;
   if(keys.KeyA||keys.KeyQ||keys.ArrowLeft)sx-=1;
   if(keys.KeyD||keys.ArrowRight)sx+=1;
@@ -354,8 +375,9 @@ function inputVector(){
   return {x:wx,z:wz,strength:Math.min(1,length)};
 }
 
+function surfaceHeight(x,z){return Math.max(-.83,terrainHeight(x,z));}
 function canMove(x,z){
-  if(Math.abs(x)>56||Math.abs(z)>56)return false;
+  if(Math.abs(x)>WORLD_LIMIT||Math.abs(z)>WORLD_LIMIT)return false;
   for(const c of world.colliders){
     if(!c.active||!c.object.visible)continue;
     if(state.mounted&&c.object===world.horse)continue;
@@ -448,12 +470,12 @@ function resolveActionImpact(it){
     it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
     showToast("Coup de hache "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("wood",6+practiceLevel(state.progress,"wood"),"🪵","Bois");}
+    if(it.hits>=it.maxHits){removeResource(it);give("wood",6+(state.progress.toolTier.axe-1)*3+practiceLevel(state.progress,"wood"),"🪵","Bois");}
   } else if(it.type==="rock"){
     it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
     showToast("Pioche "+it.hits+"/"+it.maxHits);
-    if(it.hits>=it.maxHits){removeResource(it);give("stone",5+practiceLevel(state.progress,"stone"),"🪨","Pierre");}
+    if(it.hits>=it.maxHits){removeResource(it);give("stone",5+(state.progress.toolTier.pickaxe-1)*3+practiceLevel(state.progress,"stone"),"🪨","Pierre");}
   } else if(it.type==="ore"){
     it.hits++;learn(it.type==="tree"?"wood":"stone");
     triggerImpactPulse(it);
@@ -494,14 +516,15 @@ function resolveActionImpact(it){
       give("grain",6,"🌾","Récolte");give("seeds",2,"🌱","Graines");
       showToast("Récolte terminée.");
     } else showToast("Les cultures poussent encore.");
-  } else if(it.type==="skeleton"){
-    it.object.userData.hp-=36*limits(state.progress).damage;
+  } else if(it.type==="skeleton"||it.type==="fantasy"){
+    it.object.userData.hp-=36*(state.progress.toolTier.sword||1)*limits(state.progress).damage;
     triggerImpactPulse(it);
-    showToast("Squelette : "+Math.max(0,it.object.userData.hp)+" PV");
+    showToast((it.object.userData.name||"Squelette")+" : "+Math.round(Math.max(0,it.object.userData.hp))+" PV");
     if(it.object.userData.hp<=0){
       it.object.visible=false;it.removed=true;
       give("gold",2,"🟡","Or ancien");
-      showToast("Squelette vaincu.");
+      if(it.type==='fantasy'){give('meat',state.progress.research.includes('hunting')?5:2,'🥩','Viande');learn('gather');if(it.object.userData.kind==='dragon')give('egg',1,'🥚','Œuf de dragon');}
+      showToast((it.object.userData.name||'Squelette')+' vaincu.');
     }
   }
   updateUI();
@@ -520,7 +543,7 @@ function updateActionAnimation(dt){
 }
 
 function doAction(){
-  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||state.hp<=0||actionState.active)return;
+  if(window.everwildPaused||(document.getElementById("journeyPanel")?.hidden===false||document.getElementById("atlasPanel")?.hidden===false)||state.hp<=0||actionState.active)return;
   if(state.buildMode){if(buildValid)beginAction("build",null);else showToast("Placement impossible ou ressources insuffisantes.");return;}
 
   if(state.mounted){
@@ -534,9 +557,12 @@ function doAction(){
     actionState.food=state.selected;beginAction("eat",null);return;
   }
   const it=nearestInteraction();
-  if(!it&&Math.abs(state.x-getRiverX(state.z))<5.5){beginAction("drink",null);return;}
+  if(!it&&Math.abs(state.z)<58&&Math.abs(state.x-getRiverX(state.z))<5.5){beginAction("drink",null);return;}
+  if(!it&&regionAt(state.x,state.z).id==='coast'&&state.progress.research.includes('fishing')){if((state.fishingAt||0)>elapsed){showToast('Les poissons se dispersent.');return;}state.fishingAt=elapsed+15;give('meat',2,'🐟','Poisson frais');learn('gather');return;}
   if(!it){showToast("Rien à portée.");return;}
 
+  if(it.type==="workshop"){activeWorkshop=it.object;openWorkshop();return;}
+  if(it.type==="fantasy"){if(state.selected!=="sword"){showToast("Équipe une épée pour affronter cette créature.");return;}beginAction("attack",it);return;}
   if(it.type==="deathbag"){beginAction("interact",it);return;}
   if(it.type==="tree"){
     if(!state.ownedTools.includes("axe")){if((it.bareCooldown||0)>Date.now()){showToast("Pas de branche disponible pour le moment.");return;}actionState.bare=true;beginAction("gather",it);return;}
@@ -632,7 +658,7 @@ function updateBuildPreview(force=false){
   const core=state.buildings.find(piece=>piece.type==="base_core");
   const baseValid=b.id==="base_core"?!core:Boolean(core&&Math.hypot(x-core.x,z-core.z)<=18);
   const techValid=!b.tech||state.progress.research.includes(b.tech);
-  buildValid=baseValid&&techValid&&hasCost(b.cost)&&clear&&Math.abs(x)<54&&Math.abs(z)<54&&Math.abs(x-getRiverX(z))>5.2;
+  buildValid=baseValid&&techValid&&hasCost(b.cost)&&clear&&landDistance(x,z)>5&&Math.abs(x)<WORLD_LIMIT&&Math.abs(z)<WORLD_LIMIT&&!(Math.abs(z)<58&&Math.abs(x-getRiverX(z))<5.2);
   buildPreview.traverse(o=>{if(o.isMesh&&o.material){o.material.color.set(buildValid?0x86c978:0xc86460);}});
 }
 function placeBuild(){
@@ -684,7 +710,7 @@ function updatePrompt(){
   }
   if(state.mounted){ui.prompt.textContent="E — Descendre de la monture";return;}
   nearest=nearestInteraction();
-  if(!nearest){ui.prompt.textContent=Math.abs(state.x-getRiverX(state.z))<5.5?"E / Action — Boire à la rivière":"Explore, récolte, construis, survis";return;}
+  if(!nearest){ui.prompt.textContent=Math.abs(state.z)<58&&Math.abs(state.x-getRiverX(state.z))<5.5?"E / Action — Boire à la rivière":"Explore, récolte, construis, survis";return;}
   if(nearest.type==="horse"&&nearest.object.userData.tamed)ui.prompt.textContent="E — Monter à cheval";
   else if(nearest.type==="farm"&&nearest.object.userData.ready)ui.prompt.textContent="E — Récolter les cultures";
   else ui.prompt.textContent="E — "+nearest.label;
@@ -712,11 +738,20 @@ function updateUI(){
   ui.day.textContent="Jour "+state.day;ui.clock.textContent=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");ui.season.textContent=seasonNames[state.season];
 }
 
+let petDragon=null;
+let lastRegion='';
+function updateRegion(){const r=regionAt(state.x,state.z);if(lastRegion!==r.id){lastRegion=r.id;document.getElementById('regionName').textContent=r.name;document.getElementById('regionDetail').textContent=r.subtitle+' · niv. '+r.min+'–'+r.max;}document.getElementById('regionDanger').textContent=r.id==='ocean'?'Nage en surface':r.min>state.progress.level+10?'Zone dangereuse':'Exploration';}
+function stationKey(o){return o.userData.type+':'+Math.round(o.position.x)+':'+Math.round(o.position.z);}
+function openWorkshop(){const u=activeWorkshop.userData;document.getElementById('stationBanner').hidden=false;document.getElementById('stationLabel').textContent=({forge:'Forge',alchemy:'Alchimie',carpenter:'Menuiserie'}[u.type])+' · palier '+u.tier+'/3';document.getElementById('stationUpgrade').textContent=u.tier===1?'Améliorer · niv. 3 · 12 bois / 10 pierre':u.tier===2?'Améliorer · niv. 8 · 6 lingots / 6 planches':'Palier maximal';document.getElementById('stationUpgrade').disabled=u.tier>=3;document.getElementById('journeyPanel').hidden=false;emitProgress();}
+function closeAtlas(){document.getElementById('atlasPanel').hidden=true;window.everwildPaused=false;}
+document.getElementById('stationUpgrade').addEventListener('click',()=>window.dispatchEvent(new CustomEvent('everwild-command',{detail:{type:'station-upgrade'}})));
 function drawMinimap(){
   const c=ui.minimap,ctx=c.getContext("2d"),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
   ctx.save();ctx.beginPath();ctx.arc(w/2,h/2,w/2-2,0,Math.PI*2);ctx.clip();
   ctx.fillStyle=state.season===3?"#77857c":state.season===2?"#776c43":"#536f46";ctx.fillRect(0,0,w,h);
-  const scale=1.05,ox=w/2-state.x*scale,oz=h/2-state.z*scale;
+  const scale=.32,ox=w/2-state.x*scale,oz=h/2-state.z*scale;
+  for(let pz=0;pz<h;pz+=5)for(let px=0;px<w;px+=5){const x=state.x+(px-w/2)/scale,z=state.z+(pz-h/2)/scale;ctx.fillStyle=landDistance(x,z)<0?'#367b91':'#'+regionAt(x,z).color.toString(16).padStart(6,'0');ctx.fillRect(px,pz,5,5);}
+  for(const a of world.fantasy){if(!a.visible)continue;ctx.fillStyle='#d78970';ctx.fillRect(ox+a.position.x*scale-1,oz+a.position.z*scale-1,3,3);}
   ctx.strokeStyle="rgba(54,135,155,.88)";ctx.lineWidth=9;ctx.beginPath();
   for(let z=-60;z<=60;z+=2){const x=getRiverX(z);const px=ox+x*scale,py=oz+z*scale;if(z===-60)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.stroke();
   ctx.fillStyle="#b3a584";ctx.fillRect(ox-36*scale,oz-27*scale,7,7);
@@ -734,7 +769,7 @@ function saveGame(){
     localStorage.setItem(SAVE_KEY,JSON.stringify({
       x:state.x,z:state.z,hp:state.hp,hunger:state.hunger,thirst:state.thirst,inventory:state.inventory,selected:state.selected,
       day:state.day,dayProgress:state.dayProgress,horseTamed:world.horse.userData.tamed,chestOpened:world.chest.userData.opened,
-      buildings:state.buildings,objectives:state.objectives,progress:state.progress,ownedTools:state.ownedTools,deathBags:state.deathBags.filter(b=>!b.removed).map(b=>({x:b.x,z:b.z,expires:b.expires,inventory:b.inventory,tools:b.tools})),version:1
+      buildings:state.buildings,objectives:state.objectives,progress:state.progress,ownedTools:state.ownedTools,deathBags:state.deathBags.filter(b=>!b.removed).map(b=>({x:b.x,z:b.z,expires:b.expires,inventory:b.inventory,tools:b.tools,toolTier:b.toolTier})),stationTiers:state.stationTiers,pet:state.pet,version:2
     }));
   }catch(_){}
 }
@@ -742,15 +777,17 @@ function loadGame(){
   try{
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)return;
     const s=JSON.parse(raw);
-    if(Number.isFinite(s.x)&&Number.isFinite(s.z)){state.x=s.x;state.z=s.z;}
+    if(Number.isFinite(s.x)&&Number.isFinite(s.z)&&Math.abs(s.x)<WORLD_LIMIT&&Math.abs(s.z)<WORLD_LIMIT){state.x=s.x;state.z=s.z;}
     for(const k of ["hp","hunger","thirst","dayProgress"])if(Number.isFinite(s[k]))state[k]=Math.max(0,s[k]);
     if(Number.isFinite(s.day))state.day=Math.max(1,Math.floor(s.day));
     if(s.inventory&&typeof s.inventory==="object")for(const k of Object.keys(state.inventory))if(Number.isFinite(s.inventory[k]))state.inventory[k]=Math.max(0,Math.floor(s.inventory[k]));
 
+    state.pet=Boolean(s.pet);
+    for(const station of world.workshops){const key=stationKey(station);const tier=s.stationTiers?.[key];if([1,2,3].includes(tier)){station.userData.tier=tier;state.stationTiers[key]=tier;station.scale.y=1+(tier-1)*.08;}}
     state.progress=validateProgress(s.progress);state.bagCapacity=limits(state.progress).weight;
     if(Array.isArray(s.ownedTools))state.ownedTools=s.ownedTools.filter(id=>gearWeights[id]);
-    if(Array.isArray(s.deathBags))for(const bag of s.deathBags)if(Number.isFinite(bag.x)&&Number.isFinite(bag.z)&&Number.isFinite(bag.expires)&&bag.expires>Date.now()&&Math.abs(bag.x)<58&&Math.abs(bag.z)<58){
-      const clean={x:bag.x,z:bag.z,expires:bag.expires,inventory:{},tools:Array.isArray(bag.tools)?bag.tools.filter(id=>gearWeights[id]):[]};
+    if(Array.isArray(s.deathBags))for(const bag of s.deathBags)if(Number.isFinite(bag.x)&&Number.isFinite(bag.z)&&Number.isFinite(bag.expires)&&bag.expires>Date.now()&&Math.abs(bag.x)<WORLD_LIMIT&&Math.abs(bag.z)<WORLD_LIMIT){
+      const clean={x:bag.x,z:bag.z,expires:bag.expires,inventory:{},toolTier:bag.toolTier,tools:Array.isArray(bag.tools)?bag.tools.filter(id=>gearWeights[id]):[]};
       for(const key of Object.keys(state.inventory))clean.inventory[key]=Number.isFinite(bag.inventory?.[key])?Math.max(0,Math.floor(bag.inventory[key])):0;
       addDeathBag(clean);
     }
@@ -774,8 +811,8 @@ function updateMovement(dt,time){
   const sprint=((keys.ShiftLeft||keys.ShiftRight)||touchSprint)&&state.stamina>2&&!state.mounted;
 
   let maxSpeed=state.mounted?8.3:sprint?6.25:4.15;
-  const riverDist=Math.abs(state.x-getRiverX(state.z));
-  if(riverDist<4.4&&Math.abs(state.z)>2.0&&!state.mounted)maxSpeed*=.48;
+  const riverDist=Math.abs(state.z)<58?Math.abs(state.x-getRiverX(state.z)):100;
+  if((riverDist<4.4&&Math.abs(state.z)>2.0||landDistance(state.x,state.z)<0)&&!state.mounted)maxSpeed*=.48;
 
   const targetVX=hasInput?v.x*maxSpeed*v.strength:0;
   const targetVZ=hasInput?v.z*maxSpeed*v.strength:0;
@@ -816,7 +853,7 @@ function updateMovement(dt,time){
   if(sprint&&hasInput)state.stamina=clamp(state.stamina-dt*19*clamp(v.strength,.55,1),0,limits(state.progress).stamina);
   else state.stamina=clamp(state.stamina+dt*15,0,limits(state.progress).stamina);
 
-  const ground=terrainHeight(state.x,state.z);
+  const ground=surfaceHeight(state.x,state.z);
   if(state.mounted){
     const gait=Math.sin(time*(6.6+speed01*3.5))*0.035*speed01;
     world.horse.position.set(state.x,ground+Math.abs(gait)*.45,state.z);
@@ -831,7 +868,7 @@ function updateMovement(dt,time){
 
 function updateSurvival(dt){
   state.hunger=clamp(state.hunger-dt*(100/3600),0,limits(state.progress).hunger);state.thirst=clamp(state.thirst-dt*(100/3600),0,limits(state.progress).thirst);
-  if(state.hunger<=0||state.thirst<=0)state.hp=clamp(state.hp-dt*1.7,0,100);
+  if(state.hunger<=0||state.thirst<=0)state.hp=clamp(state.hp-dt*1.7,0,limits(state.progress).health);
   state.dayProgress+=dt/300;
   if(state.dayProgress>=1){state.dayProgress-=1;state.day++;}
   const season=Math.floor((state.day-1)/3)%4;
@@ -842,8 +879,8 @@ function updateEnemyDamage(){
   for(const sk of world.enemies){
     if(!sk.visible||sk.userData.hp<=0)continue;
     const d=Math.hypot(state.x-sk.position.x,state.z-sk.position.z);
-    if(d<1.65&&sk.userData.cooldown<=0){
-      sk.userData.cooldown=1.15;player.userData.hurt=1;state.hp=clamp(state.hp-12,0,100);showToast("Le squelette te frappe !");
+    if(d<(sk.userData.kind==="dragon"?4:1.65)&&sk.userData.cooldown<=0){
+      sk.userData.cooldown=1.15;player.userData.hurt=1;state.hp=clamp(state.hp-(sk.userData.damage||12),0,limits(state.progress).health);showToast((sk.userData.name||"Le squelette")+" t’attaque !");
       if(state.hp<=0)die();
     }
   }
@@ -855,13 +892,15 @@ function updateDayLight(){
   sun.color.set(daylight>.55?0xffdda0:0xc1b4b0);
   sun.position.set(state.x+Math.cos(a)*28,10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,0,state.z);scene.add(sun.target);
   const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
-  scene.fog.color.copy(scene.background).lerp(new THREE.Color(seasonSky[state.season]),.38);
+  const biome=regionAt(state.x,state.z);const cold=['snow','island4'].includes(biome.id);
+  scene.fog.color.copy(scene.background).lerp(new THREE.Color(cold?0xb7cfda:biome.id==='desert'?0xc7b18c:biome.id==='volcanic'||biome.id==='island5'?0x8d7970:0x9daf9a),.35);
+  world.snow.visible=cold||(state.season===3&&!['desert','tropical','island2','volcanic','island5','ocean'].includes(biome.id));world.snow.position.set(state.x,surfaceHeight(state.x,state.z),state.z);world.snowGround.visible=false;
 }
 
 function updateCamera(dt){
   const lookAheadX=motion.velocity.x*.42;
   const lookAheadZ=motion.velocity.y*.42;
-  const targetY=terrainHeight(state.x,state.z)+(state.mounted?1.15:.82);
+  const targetY=surfaceHeight(state.x,state.z)+(state.mounted?1.15:.82);
   const focusTarget=new THREE.Vector3(state.x+lookAheadX,targetY,state.z+lookAheadZ);
 
   motion.cameraFocus.lerp(focusTarget,1-Math.exp(-dt*5.2));
@@ -892,13 +931,16 @@ function frame(now){
   const dt=Math.min((now-last)/1000,.05);last=now;
   if(window.everwildPaused){motion.velocity.set(0,0);resetJoy();requestAnimationFrame(frame);return;}
   elapsed+=dt;
+  if(state.pet&&!petDragon){petDragon=createDragon(0x709684);petDragon.scale.setScalar(.42);petDragon.position.set(-5,terrainHeight(-5,10),10);scene.add(petDragon);}
+  if(petDragon){petDragon.userData.wings.forEach((w,i)=>w.rotation.z=(i===0?-1:1)*(.25+Math.sin(elapsed*2)*.18));petDragon.userData.tail.rotation.y=Math.sin(elapsed)*.25;}
+  if(activeWorkshop&&Math.hypot(state.x-activeWorkshop.position.x,state.z-activeWorkshop.position.z)>4){activeWorkshop=null;document.getElementById('stationBanner').hidden=true;emitProgress();}
   updateMovement(dt,elapsed);updateActionAnimation(dt);updateSurvival(dt);updateBuildPreview();const playerWorldPos=new THREE.Vector3(state.x,0,state.z);
   updateWorld(world,dt,elapsed,playerWorldPos);
   if(premiumZoneUpdater)premiumZoneUpdater(premiumZone,elapsed,playerWorldPos);
   if(state.hp<=0)die();
   updateEnemyDamage();
-  updateCharacter(player,dt,{time:elapsed,speed:player.userData.moveSpeed||0,sprinting:player.userData.sprinting,mounted:state.mounted,action:actionState,ground:terrainHeight(state.x,state.z),height:terrainHeight,x:state.x,z:state.z,yaw:player.rotation.y});
-  updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();
+  updateCharacter(player,dt,{time:elapsed,speed:player.userData.moveSpeed||0,sprinting:player.userData.sprinting,mounted:state.mounted,action:actionState,ground:surfaceHeight(state.x,state.z),height:surfaceHeight,x:state.x,z:state.z,yaw:player.rotation.y});
+  updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();updateRegion();
   if(now-lastMinimap>100){drawMinimap();lastMinimap=now;}
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
@@ -906,7 +948,7 @@ function frame(now){
 }
 
 addEventListener("keydown",e=>{
-  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false)return;
+  if(window.everwildPaused||(document.getElementById("journeyPanel")?.hidden===false||document.getElementById("atlasPanel")?.hidden===false))return;
   keys[e.code]=true;
   if(e.code==="KeyE"||e.code==="Space"){e.preventDefault();doAction();}
   else if(e.code==="KeyB"){e.preventDefault();toggleBuild();}
@@ -938,7 +980,7 @@ const JOY_MAX=38;
 const JOY_DEADZONE=5;
 
 function beginFloatingJoy(e){
-  if(window.everwildPaused||document.getElementById("journeyPanel")?.hidden===false||e.pointerType==="mouse"||joy.id!==null)return;
+  if(window.everwildPaused||(document.getElementById("journeyPanel")?.hidden===false||document.getElementById("atlasPanel")?.hidden===false)||e.pointerType==="mouse"||joy.id!==null)return;
   e.preventDefault();
 
   joy.id=e.pointerId;
@@ -996,8 +1038,8 @@ for(const name of ["pointerup","pointercancel","lostpointercapture"]){
 loadGame();
 forceCleanSpawnUI();refreshLimits();emitProgress();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
-player.position.set(state.x,terrainHeight(state.x,state.z),state.z);
-motion.cameraFocus.set(state.x,terrainHeight(state.x,state.z)+.82,state.z);
+player.position.set(state.x,surfaceHeight(state.x,state.z),state.z);
+motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);
 motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
 syncEquippedTool();renderQuickbar();renderBag();updateBuildPanel();updateUI();
 loadingProgress(62,"Initialisation du joueur et de la carte");

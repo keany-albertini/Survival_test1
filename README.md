@@ -1,63 +1,34 @@
-# Everwild — version web 0.1
+# Everwild — web 0.2 · Terres & créatures
 
-Adaptation web du projet Everwild dans le dépôt `Survival_test1`. Le jeu 3D utilise Three.js et se lance sur GitHub Pages, sur téléphone et ordinateur.
+Adaptation jouable d’Everwild dans `Survival_test1`, en Three.js. Solo et sauvegarde locale. [Jouer](https://keany-albertini.github.io/Survival_test1/?v=ew2).
 
-## Jouer
+## Cette mise à jour
 
-https://keany-albertini.github.io/Survival_test1/?v=ew1
+- Carte compacte de 520 × 520 unités : continent et cinq îles séparées par l’océan. Quatorze destinations, neuf ambiances : forêt tempérée/plaines, steppes, désert, jungle, marais, montagne, glacier, volcanique et côtes. Il s’agit d’une carte d’exploration du prototype, pas d’un import de la géographie V7 ni de la carte Unreal de 10 km.
+- Relief, couleurs de terrain par biome, palmiers, cactus, herbes de steppe, ressources, neige localisée, mer et repères médiévaux.
+- Dragons articulés (quatre pattes, ailes, cou, mâchoire, queue), gardiens sylvestres et loups des anciens. Niveaux générés par région, PV/dégâts dépendants du niveau, déplacement territorial, combat et butin. Les apparitions sont déterministes dans cette carte de test.
+- Six stations accessibles : forges, établis de menuiserie, tables d’alchimie. Action ouvre l’atelier. Amélioration II : niveau joueur 3, recherche Ateliers, 12 bois + 10 pierre. III : niveau 8, 6 lingots + 6 planches. Le palier II débloque l’équipement renforcé ; III double la production de composants. Les paliers sont sauvegardés.
+- Raffinage du minerai en lingots, travail du bois en planches, hache/pioche/épée renforcées, potion de soin consommée à la fabrication. Les recettes de station exigent d’être à proximité du bon atelier.
+- Huit branches de recherche représentées : outils, structures, agriculture, alchimie, ateliers, chasse, pêche, domptage. Chasse améliore le butin ; pêche permet d’obtenir du poisson (ressource de viande crue dans ce prototype) au rivage ; domptage permet de faire éclore un œuf obtenu sur un dragon, au camp, avec six baies. Le jeune dragon reste au camp ; vol monté, élevage et reproduction ne sont pas encore simulés.
+- Carte ⌖ avec destinations, biomes et plages de niveaux. Les voyages sont instantanés pour tester les régions ; ce n’est pas le système final de portails/transferts.
+- Nouveau fond illustré de menu, boutons tactiles d’au moins 44 px, formats portrait/paysage, petits écrans, zones sûres, panneaux pleine hauteur avec défilement et pied de création fixe. Mode graphique léger par défaut sur téléphone. L’illustration du menu n’est pas une capture du rendu 3D.
 
-Le menu propose de créer un personnage, reprendre l’aventure, consulter l’univers et modifier les paramètres. Le personnage est sauvegardé sur cet appareil et son peuple est définitif.
+## Fondations conservées
 
-## Première zone jouable
-
-Les Marches verdoyantes reprennent le camp, la rivière, les ruines, la faune, les arbres et les ressources de la base 3D existante. Le monde complet d’Unreal n’a pas été importé : cette version est une adaptation progressive.
-
-### Fonctionnalités présentes
-
-- Huit peuples : Humains, Elfes, Orcs, Nains, Draconiens, Peuple de la Neige, Peuple des Arbres, Peuple du Désert. Aucun Lycan. Les Draconiens correspondent au Peuple du Feu.
-- Variations visuelles du personnage et choix de silhouette. Toutes les races ont les mêmes statistiques initiales.
-- Personnage articulé et animations de marche, course, récolte, extraction, combat, construction, repas et boisson.
-- Inventaire limité par le poids, barre de six emplacements et fabrication des outils.
-- Apprentissage par la pratique : abattage, minage, ramassage, artisanat. Les niveaux d’abattage, minage et ramassage augmentent les rendements.
-- Progression générale, points distribuables et recherche associant points et ressources.
-- Recherche des outils, structures, agriculture et alchimie ; élixir permettant de redistribuer les points.
-- Santé, endurance, poids, dégâts, faim et soif influencent la simulation. Résistance et Oxygène sont préparés ; le climat dangereux et la plongée restent à développer.
-- Un cœur de base par personnage dans cette zone, avec un rayon de construction de 18 mètres pour le prototype. Palissades, murs et tours de pierre selon la recherche.
-- Mort avec perte de l’inventaire et des outils, sac récupérable pendant une heure, progression conservée. Récupération partielle possible si l’inventaire est plein.
-- Ramassage de branches et petites pierres à mains nues pour reconstruire ses outils après une mort.
-- Cuisine, cultures, cheval apprivoisable, monture, ruines et combat contre le squelette.
-- Cycle jour/nuit, saisons visuelles, prairies animées, lucioles, feu, eau en mouvement et végétation améliorée.
-- Sauvegardes locales distinctes d’un ancien personnage Survival ; aucune ancienne sauvegarde n’est effacée.
+Huit races validées (Humains, Elfes, Orcs, Nains, Draconiens, Neige, Arbres, Désert), bases statistiques égales, race définitive, personnage articulé et animations d’actions, apprentissage par la pratique, attributs sans cap, inventaire par poids, six raccourcis, recherche par points/ressources, respec par alchimie, cœur de base, palissades/murs/tours, mort avec sac récupérable une heure, progression conservée. Les outils renforcés tombent dans le sac avec leur palier. Anciennes sauvegardes locales Everwild conservées.
 
 ## Commandes
 
-- Téléphone : joystick flottant à gauche ; pousser davantage pour courir ; Action pour agir ; marteau pour construire ; ⇄ pour changer de pièce ; ✧ pour progression, recherche et artisanat.
-- Ordinateur : ZQSD / WASD / flèches ; Maj pour courir ; E pour agir ; B pour construire ; R pour changer de pièce ; I pour le sac ; P pour la progression ; Échap pour le menu.
-- Touches 1 à 6 : hache, pioche, épée, construction, baies, viande cuite. Les outils doivent être possédés pour être équipés.
+Téléphone : doigt à gauche pour marcher/courir, Action pour récolter/combattre/ouvrir une station, marteau pour construire, ⇄ pour changer de pièce, ✧ pour la progression, ⌖ pour la carte, ☰ pour le menu.
 
-## Périmètre
+Ordinateur : ZQSD/WASD/flèches, Maj pour courir, E pour agir, B construire, R changer de pièce, I sac, P progression, Échap menu ; 1–6 barre rapide.
 
-Cette version est solo, avec sauvegarde sur le navigateur utilisé. Aucun serveur multijoueur, compte ni synchronisation entre appareils n’est encore disponible.
+## Limites
 
-La carte V7 finale reste la référence à adapter : 10 × 10 km, environ 70 % terre et 30 % eau, un continent et cinq îles ; Vantuman au centre, glaciaire au nord, forêt tropicale à l’ouest, forêt tempérée, grandes plaines, montagnes, désert et océan. La géographie exacte n’est pas remplacée par une nouvelle carte inventée.
-
-Restent notamment à développer : monde complet, serveurs PvE/PvP persistants, corps hors ligne, lits, clans, raids, transferts, huit branches de recherche complètes, créatures fantasy et reproduction. Les variantes raciales actuelles sont une première représentation visuelle, pas les modèles définitifs d’Unreal.
+Le rendu 3D requiert WebGL. Résistance climatique et plongée ne sont pas encore simulées. Il reste à adapter les systèmes complets d’Everwild : carte V7 exacte, serveurs PvE/PvP et persistance réseau, corps hors ligne, lits, clans, raids, stations constructibles, toutes les recettes et ressources par tier, taming complet, montures volantes, reproduction, événements/boss et transferts. Les créatures/races sont des premiers modèles procéduraux, pas les assets définitifs d’Unreal.
 
 ## Structure active
 
-- `index.html`, `everwild.css` : menu, création, panneaux et interface.
-- `js/everwild/app.js` : profil, réglages et interface de progression.
-- `js/everwild/rules.js` : races, attributs, apprentissage, recherche et recettes.
-- `js/everwild/appearance.js` : variantes visuelles des races.
-- `js/v20/main.js` : simulation 3D, actions, construction, sauvegarde, mort et sacs.
-- `js/v20/world.js`, `js/v20/models.js` : monde et modèles.
-- `js/v26/` et `assets/v26/` : modèles GLTF, matériaux et végétation.
-- `js/v27/ambience.js`, `js/v28/animation.js` : ambiance et animations.
+`index.html`, `everwild.css` : interface. `js/everwild/app.js` : menus/atlas. `geography.js` : régions/relief. `fantasy.js` : créatures/stations/décors. `rules.js` : progression/recherche/recettes. `js/v20/main.js` : simulation et sauvegarde. `world.js` : terrain et faune. `models.js`, `js/v28/animation.js` : personnages. `js/v26/` : décors GLTF/PBR facultatifs.
 
-Les anciens modules 2D sont conservés mais ne sont pas chargés par le point d’entrée Everwild.
-
-## Validation
-
-Les tests locaux utilisent le vrai moteur Three.js pour construire les modèles et simuler les actions, avec un renderer substitué pour fonctionner sans GPU. Ils contrôlent les impacts uniques, recettes, progression, sauvegardes, sacs de mort et restrictions de construction.
-
-Le menu peut être testé dans un navigateur sans WebGL. La vérification visuelle finale du monde 3D nécessite WebGL.
+`tests/mobile-preview.html` affiche le véritable jeu dans quatre formats de téléphone pour vérifier les menus. Le fond `assets/everwild/menu-dragon.jpg` est une illustration originale générée pour ce projet.
