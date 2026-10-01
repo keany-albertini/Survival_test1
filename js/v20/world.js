@@ -6,7 +6,7 @@ import {
 } from "./models.js?v=ew2";
 
 import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew2';
-import {enrichWorld} from '../everwild/fantasy.js?v=ew2';
+import {enrichWorld} from '../everwild/fantasy.js?v=ew2c';
 const WORLD_SIZE=520;
 const HALF=58;
 const SEASON_COLORS=[

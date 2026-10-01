@@ -31,7 +31,7 @@ async function play(){
   if(started)return;
   starting=true;$("loading").classList.remove("hidden");$("loadingLabel").textContent="Ouverture des terres d’Everwild…";$("loadingErrorBack").hidden=true;
   try{
-    await import("../v20/main.js?v=ew2");started=true;
+    await import("../v20/main.js?v=ew2c");started=true;
     $("loading").classList.add("hidden");
     $("survivorName").textContent=profile.name;$("survivorRace").textContent=RACES.find(r=>r.id===profile.race).name;
   }catch(error){

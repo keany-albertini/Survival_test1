@@ -1,13 +1,13 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 import { createPlayer, makeGhost } from "./models.js?v=ew2";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew2";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew2c";
 
 import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew2";
 import { applyAppearance } from "../everwild/appearance.js?v=ew2";
 import { updateCharacter } from "../v28/animation.js?v=ew2";
 import { createAmbience } from "../v27/ambience.js?v=ew2";
 
-import {createDragon} from '../everwild/fantasy.js?v=ew2';
+import {createDragon} from '../everwild/fantasy.js?v=ew2c';
 import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew2';
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});

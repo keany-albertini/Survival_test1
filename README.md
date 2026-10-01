@@ -1,6 +1,6 @@
 # Everwild — web 0.2 · Terres & créatures
 
-Adaptation jouable d’Everwild dans `Survival_test1`, en Three.js. Solo et sauvegarde locale. [Jouer](https://keany-albertini.github.io/Survival_test1/?v=ew2).
+Adaptation jouable d’Everwild dans `Survival_test1`, en Three.js. Solo et sauvegarde locale. [Jouer](https://keany-albertini.github.io/Survival_test1/?v=ew2c).
 
 ## Cette mise à jour
 

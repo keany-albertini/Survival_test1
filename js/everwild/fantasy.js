@@ -6,13 +6,22 @@ function mat(color,metal=0){const key=color+':'+metal;if(!materials.has(key))mat
 function mesh(g,geo,color,x,y,z,s=[1,1,1],metal=0){const m=new THREE.Mesh(geo,mat(color,metal));m.position.set(x,y,z);m.scale.set(...s);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
 const sphere=new THREE.SphereGeometry(1,12,8),box=new THREE.BoxGeometry(1,1,1);
 function link(g,a,b,r,color){const d=new THREE.Vector3().subVectors(b,a);const m=mesh(g,new THREE.CylinderGeometry(r*.8,r,d.length(),7),color,...a.clone().add(b).multiplyScalar(.5).toArray());m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m;}
+function taperedCurve(points,radius,endRadius){
+ const curve=new THREE.CatmullRomCurve3(points),frames=curve.computeFrenetFrames(20,false),verts=[],indices=[];
+ for(let j=0;j<=20;j++){const t=j/20,p=curve.getPointAt(t),r=radius*(1-t)+endRadius*t;for(let k=0;k<=8;k++){const a=k/8*Math.PI*2,n=frames.normals[j].clone().multiplyScalar(Math.cos(a)*r).addScaledVector(frames.binormals[j],Math.sin(a)*r);verts.push(p.x+n.x,p.y+n.y,p.z+n.z);if(j<20&&k<8){const q=j*9+k;indices.push(q,q+9,q+1,q+1,q+9,q+10);}}}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
+}
+let scaleTexture=null;
+function dragonSkin(color){if(!scaleTexture){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#ecebe5';ctx.fillRect(0,0,256,256);for(let y=-12;y<270;y+=16)for(let x=-12;x<270;x+=20){const offset=(Math.floor(y/16)%2)*10;ctx.strokeStyle='#a8a99e';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x+offset,y);ctx.quadraticCurveTo(x+offset+10,y+22,x+offset+20,y);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.beginPath();ctx.moveTo(x+offset+3,y+2);ctx.lineTo(x+offset+10,y+10);ctx.stroke();}scaleTexture=new THREE.CanvasTexture(c);scaleTexture.wrapS=scaleTexture.wrapT=THREE.RepeatWrapping;scaleTexture.repeat.set(3,3);scaleTexture.colorSpace=THREE.SRGBColorSpace;}
+ return new THREE.MeshStandardMaterial({color,map:scaleTexture,bumpMap:scaleTexture,bumpScale:.045,roughness:.77});}
 export function createDragon(color=0x5d7563){
  const g=new THREE.Group();g.name='Dragon';const rigs=[];
  mesh(g,sphere,color,0,1.8,0,[.8,.85,1.55]);mesh(g,sphere,0xab9671,0,1.5,-.7,[.59,.66,.7]);
  const neck=new THREE.Group();neck.position.set(0,2.1,-1);g.add(neck);
- link(neck,new THREE.Vector3(0,0,0),new THREE.Vector3(0,.75,-1),.36,color);
+ mesh(neck,taperedCurve([new THREE.Vector3(),new THREE.Vector3(0,.3,-.3),new THREE.Vector3(0,.68,-.6),new THREE.Vector3(0,.75,-1)],.38,.25),color,0,0,0);
  mesh(neck,sphere,color,0,.85,-1.15,[.42,.38,.68]);mesh(neck,sphere,color,0,.7,-1.68,[.29,.21,.46]);
- const jaw=mesh(neck,box,0xa59573,0,.54,-1.53,[.45,.12,.74]);
+ const jaw=mesh(neck,sphere,0xa59573,0,.54,-1.53,[.28,.10,.43]);
+ for(const side of [-1,1]){mesh(neck,sphere,0x29372b,side*.18,.84,-1.89,[.035,.022,.03]);for(let j=0;j<4;j++){const tooth=mesh(neck,new THREE.ConeGeometry(.034,.11,6),0xd6cfad,side*.25,.60,-1.34-j*.13);tooth.rotation.z=Math.PI;}mesh(neck,sphere,color,side*.28,1.06,-1.32,[.18,.09,.3]);}
  for(const side of [-1,1]){
   mesh(neck,sphere,0xe6b859,side*.34,.97,-1.42,[.065,.08,.09]);mesh(neck,sphere,0x17261c,side*.385,.98,-1.43,[.016,.06,.043]);
   const horn=mesh(neck,new THREE.ConeGeometry(.12,.64,8),0xc6b794,side*.3,1.33,-.85);horn.rotation.x=.5;horn.rotation.z=-side*.3;
@@ -20,7 +29,7 @@ export function createDragon(color=0x5d7563){
  }
  const tail=new THREE.Group();tail.position.set(0,1.55,1.25);g.add(tail);
  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,0),new THREE.Vector3(.3,-.1,.8),new THREE.Vector3(.5,-.35,1.7),new THREE.Vector3(.3,-.15,2.7)]);
- mesh(tail,new THREE.TubeGeometry(curve,14,.18,7,false),color,0,0,0);mesh(tail,new THREE.ConeGeometry(.2,.62,7),0x69765a,.3,-.14,2.8).rotation.x=Math.PI/2;
+ mesh(tail,taperedCurve(curve.points,.30,.045),color,0,0,0);mesh(tail,new THREE.ConeGeometry(.2,.62,7),0x69765a,.3,-.14,2.8).rotation.x=Math.PI/2;
  for(let i=0;i<9;i++){const spike=mesh(g,new THREE.ConeGeometry(.11,.35+(i%3)*.05,6),0xb4ae89,0,2.45-Math.abs(i-4)*.08,-1+i*.32);spike.rotation.x=.18;}
  const wings=[];
  for(const side of [-1,1]){const wing=new THREE.Group();wing.position.set(side*.55,2.2,-.35);g.add(wing);
@@ -30,6 +39,7 @@ export function createDragon(color=0x5d7563){
   for(const [a,b] of [[0,1],[1,2],[1,3],[1,4]])link(wing,new THREE.Vector3(...p[a]),new THREE.Vector3(...p[b]),.055,color);
   wing.rotation.z=side*.2;wings.push(wing);
  }
+ const skin=dragonSkin(color);g.traverse(o=>{if(o.isMesh&&o.material===mat(color))o.material=skin;});
  g.userData={kind:'dragon',legs:rigs,wings,neck,jaw,tail};return g;
 }
 export function createFantasyCreature(kind,color){
