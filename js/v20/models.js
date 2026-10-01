@@ -1,5 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
 
+import {naturalTree,naturalRock,naturalMaterial,detailAnimal} from '../everwild/nature.js?v=ew5';
 function mat(color, roughness=.86, metalness=.02) {
   return new THREE.MeshStandardMaterial({ color, roughness, metalness });
 }
@@ -283,6 +284,7 @@ export function createPlayer() {
   const bootMat=organicMaterial("leather",0x51412f), trouserMat=organicMaterial("cloth",0x515247), tunicMat=organicMaterial("cloth",0x64745a);
   const leatherMat=organicMaterial("leather",0x806044), skinMat=mat(0xc99770,.72,0), steel=mat(0xbfc5c3,.28,.65);
 
+  skinMat.userData.role='skin';
   const shadow=mesh(new THREE.CircleGeometry(.48,24),new THREE.MeshBasicMaterial({color:0x071008,transparent:true,opacity:.24}),false,false);
   shadow.rotation.x=-Math.PI/2;
   shadow.position.y=.015;
@@ -361,14 +363,14 @@ export function createPlayer() {
   const head=mesh(new THREE.SphereGeometry(.205,20,14),skinMat);
   head.position.y=.15;head.scale.set(.82,1.12,.91);headPivot.add(head);
   const hair=mesh(new THREE.SphereGeometry(.211,18,10,0,Math.PI*2,0,Math.PI*.54),mat(0x352b24));
-  hair.position.set(0,.17,-.01);hair.scale.set(.86,1.12,.95);headPivot.add(hair);
+  hair.name="DefaultHair";hair.material.userData.role="hair";hair.position.set(0,.17,-.01);hair.scale.set(.86,1.12,.95);headPivot.add(hair);
   const nose=mesh(new THREE.SphereGeometry(.04,10,8),skinMat);nose.scale.set(.65,1,1.15);nose.position.set(0,.14,.178);headPivot.add(nose);
   for(const side of [-1,1]){
-    const eye=mesh(new THREE.SphereGeometry(.014,8,6),mat(0x302c24));eye.position.set(side*.064,.19,.174);headPivot.add(eye);
+    const eye=mesh(new THREE.SphereGeometry(.014,8,6),mat(0x302c24));eye.name="Eye";eye.material.userData.role="eye";eye.position.set(side*.064,.19,.174);headPivot.add(eye);
     const ear=mesh(new THREE.SphereGeometry(.04,10,8),skinMat);ear.scale.set(.45,1,.65);ear.position.set(side*.169,.15,0);headPivot.add(ear);
   }
   const beard=mesh(new THREE.SphereGeometry(.14,14,8,0,Math.PI*2,Math.PI*.3,Math.PI*.6),mat(0x49392b));
-  beard.scale.set(.87,.7,.6);beard.position.set(0,.047,.065);headPivot.add(beard);
+  beard.name="DefaultBeard";beard.material.userData.role="beard";beard.scale.set(.87,.7,.6);beard.position.set(0,.047,.065);headPivot.add(beard);
   // Leather shoulder straps connect the pack to the chest.
   for(const side of [-1,1]){
     const strap=mesh(new THREE.BoxGeometry(.05,.52,.032),leatherMat);strap.position.set(side*.17,.32,.17);strap.rotation.z=side*.07;torsoPivot.add(strap);
@@ -439,6 +441,7 @@ export function createPlayer() {
   sword.visible=false;
   toolRoot.add(sword);
 
+  g.userData.skinMaterial=skinMat;g.userData.defaultHair=hair;g.userData.defaultBeard=beard;
   g.userData.shadow=shadow;
   g.userData.hips=hips;
   g.userData.torso=torsoPivot;
@@ -454,151 +457,9 @@ export function createPlayer() {
   return g;
 }
 
-export function createTree(variant=0, season=0) {
-  const g=new THREE.Group();
-  g.userData.kind="tree";
-  g.userData.windPhase=Math.random()*10;
+export function createTree(variant=0,season=0){return naturalTree(variant,season,false);}
 
-  const barkColors=[0x6a4930,0x735037,0x5e422d,0x68472f];
-  const bark=organicMaterial("bark",barkColors[variant%4],.96,0);
-  const darkBark=organicMaterial("bark",0x4a3120,.98,0);
-
-  const lean=(variant-1.5)*.065;
-  const p0=new THREE.Vector3(0,.04,0);
-  const p1=new THREE.Vector3(lean*.25,1.00,lean*.08);
-  const p2=new THREE.Vector3(lean*.60,2.08,-lean*.15);
-  const p3=new THREE.Vector3(lean,2.96,lean*.10);
-
-  const trunkPieces=[
-    branchBetween(p0,p1,.36,.30,bark,12),
-    branchBetween(p1,p2,.30,.22,bark,12),
-    branchBetween(p2,p3,.22,.12,bark,11)
-  ];
-  trunkPieces.forEach(x=>g.add(x));
-
-  // Racines visibles au sol.
-  for(let i=0;i<7;i++){
-    const a=i/7*Math.PI*2+variant*.19;
-    const endRoot=new THREE.Vector3(Math.cos(a)*(.55+(i%2)*.15),.10,Math.sin(a)*(.55+(i%3)*.08));
-    g.add(branchBetween(new THREE.Vector3(0,.12,0),endRoot,.12,.026,darkBark,7));
-  }
-
-  // Grosses branches + branches secondaires.
-  const branches=new THREE.Group();
-  const branchEnds=[
-    [-.92,2.52,.18],[.88,2.63,-.18],[-.52,2.88,-.62],[.56,3.02,.54],
-    [-.42,3.30,.22],[.40,3.36,-.26]
-  ];
-  branchEnds.forEach((v,i)=>{
-    const startP=i<2?p2:new THREE.Vector3(lean*.82,2.48+(i%2)*.18,0);
-    const endP=new THREE.Vector3(v[0]+lean*.55,v[1],v[2]);
-    branches.add(branchBetween(startP,endP,.115-(i*.008),.026,bark,8));
-
-    const sideDir=new THREE.Vector3(
-      endP.x+(i%2?-.26:.27),
-      endP.y+.24,
-      endP.z+(i%3===0?.24:-.20)
-    );
-    branches.add(branchBetween(
-      new THREE.Vector3().lerpVectors(startP,endP,.72),
-      sideDir,
-      .045,.012,bark,7
-    ));
-  });
-  g.add(branches);
-
-  const palettes=[
-    [0x244b2c,0x3b703a,0x63934b,0x8daf64],
-    [0x20462a,0x35653a,0x5d8a48,0x789f56],
-    [0x6b3b25,0xa34e2e,0xcf7634,0xe3a04a],
-    [0x465349,0x5f6b60,0x7f8a7d,0x9aa397]
-  ];
-  const pal=palettes[season]||palettes[0];
-
-  const crown=new THREE.Group();
-  const massData=variant===2
-    ? [[-.52,2.74,.02,.65,.50,.58],[.48,2.86,.06,.67,.53,.60],[.04,3.26,-.04,.74,.64,.68],[-.12,3.66,.02,.55,.46,.51]]
-    : [[-.72,2.66,.02,.73,.54,.65],[.70,2.72,.02,.75,.56,.67],[-.18,3.08,.10,.83,.65,.72],[.42,3.24,-.12,.68,.52,.61],[0,3.58,.02,.59,.45,.53]];
-
-  massData.forEach((b,i)=>{
-    const leafMass=mesh(organicGeometry(variant*17+i*11+3,2,.065),leafMaterial(pal[i%pal.length]));
-    leafMass.scale.set(b[3],b[4],b[5]);
-    leafMass.position.set(b[0]+lean*.7,b[1],b[2]);
-    crown.add(leafMass);
-  });
-
-  // Vraies feuilles visibles en deux couches qui peuvent bouger séparément.
-  const leafLayers=[
-    createLeafLayer(1000+variant*31,pal[2],34,[1.02,.78,.90],[0,3.05,0],.23),
-    createLeafLayer(2000+variant*47,pal[3],28,[.82,.66,.72],[-.08,3.45,.04],.21),
-    createLeafLayer(3000+variant*59,pal[1],22,[.95,.52,.80],[.12,2.72,-.03],.20)
-  ];
-  leafLayers.forEach(l=>crown.add(l));
-
-  g.add(crown);
-  g.userData.crown=crown;
-  g.userData.leafLayers=leafLayers;
-  g.userData.branches=branches;
-  g.userData.foliageMeshes=crown.children;
-  g.userData.trunkMaterial=bark;
-  return g;
-}
-
-export function createPine(variant=0, season=0) {
-  const g=new THREE.Group();
-  g.userData.kind="tree";
-  g.userData.windPhase=Math.random()*10;
-
-  const bark=organicMaterial("bark",0x5c402d,.96,0);
-  const trunk=branchBetween(new THREE.Vector3(0,.03,0),new THREE.Vector3((variant-1.5)*.035,3.65,0),.24,.09,bark,10);
-  g.add(trunk);
-
-  const colors=season===2
-    ? [0x263f31,0x3a573e,0x506b49]
-    : season===3
-    ? [0x253f37,0x365449,0x4f6e5c]
-    : [0x17392b,0x255239,0x3f744d];
-
-  const crown=new THREE.Group();
-  for(let tier=0;tier<7;tier++){
-    const y=1.05+tier*.42;
-    const radius=1.12-tier*.105;
-    const count=5+(tier%2);
-    for(let i=0;i<count;i++){
-      const a=i/count*Math.PI*2+tier*.47+variant*.19;
-      const len=radius*(.72+(i%2)*.12);
-      const start=new THREE.Vector3(0,y,0);
-      const end=new THREE.Vector3(Math.cos(a)*len,y-.12-tier*.008,Math.sin(a)*len);
-      const branch=branchBetween(start,end,.055,.018,bark,6);
-      crown.add(branch);
-
-      const needle=mesh(organicGeometry(tier*31+i*13+variant,1,.07),leafMaterial(colors[(tier+i)%3]));
-      needle.scale.set(.34+radius*.22,.18+.03*(i%2),.48+radius*.20);
-      needle.position.copy(end).lerp(start,.25);
-      needle.rotation.y=a;
-      crown.add(needle);
-    }
-  }
-
-  const top=mesh(organicGeometry(variant*53+7,1,.06),leafMaterial(colors[1]));
-  top.scale.set(.40,.78,.40);
-  top.position.y=3.58;
-  crown.add(top);
-
-  if(season===3){
-    for(let i=0;i<5;i++){
-      const snow=mesh(new THREE.SphereGeometry(.42-i*.035,12,8),mat(0xdde5e1,.98,0));
-      snow.scale.set(1.25,.12,1.0);
-      snow.position.y=1.45+i*.47;
-      crown.add(snow);
-    }
-  }
-
-  g.add(crown);
-  g.userData.crown=crown;
-  g.userData.foliageMeshes=crown.children;
-  return g;
-}
+export function createPine(variant=0,season=0){return naturalTree(variant,season,true);}
 
 export function createBush(variant=0, season=0, berries=false) {
   const g=new THREE.Group();
@@ -661,100 +522,7 @@ export function createBush(variant=0, season=0, berries=false) {
   return g;
 }
 
-export function createRockCluster(kind="rock",variant=0,season=0) {
-  const g=new THREE.Group();
-  g.userData.kind=kind;
-
-  const rockColors=season===3
-    ? [0x747d7a,0x8d9692,0x606966,0x818984]
-    : [0x5d655f,0x747c75,0x90978f,0x68726a,0x808780];
-  const mossMat=leafMaterial(season===2?0x65703b:0x506c3f);
-
-  const positions=[
-    [-.46,.28,-.04,.62,.50,.56],
-    [.14,.43,-.10,.78,.69,.68],
-    [.62,.25,.16,.47,.41,.50],
-    [-.04,.17,.49,.42,.34,.45],
-    [-.54,.13,.42,.28,.22,.30],
-    [.49,.12,-.35,.31,.24,.28]
-  ];
-
-  positions.forEach((p,i)=>{
-    const geo=organicGeometry(variant*41+i*17+11,2,.16);
-    const r=mesh(geo,organicMaterial("stone",rockColors[(i+variant)%rockColors.length],.97,.01));
-    r.scale.set(p[3],p[4],p[5]);
-    r.position.set(p[0],p[1],p[2]);
-    r.rotation.set(i*.18+.05,variant*.36+i*.61,i*.07);
-    g.add(r);
-
-    if(kind==="rock"&&season!==3&&i<3){
-      const moss=mesh(new THREE.SphereGeometry(.20+i*.015,12,8),mossMat);
-      moss.scale.set(1.35,.10,.86);
-      moss.position.set(p[0]-.05,p[1]+p[4]*.88,p[2]+.03);
-      moss.rotation.y=i*.78;
-      g.add(moss);
-    }
-  });
-
-  // Éclats au pied pour casser la forme "patate".
-  for(let i=0;i<7;i++){
-    const a=i/7*Math.PI*2+variant*.23;
-    const chip=mesh(
-      organicGeometry(900+variant*23+i*7,1,.18),
-      organicMaterial("stone",rockColors[(i+2)%rockColors.length],.98,.005)
-    );
-    const s=.09+(i%3)*.025;
-    chip.scale.set(s*1.4,s*.65,s);
-    chip.position.set(Math.cos(a)*(.65+(i%2)*.12),.055,Math.sin(a)*(.58+(i%3)*.06));
-    chip.rotation.set(.2,i*.7,.1);
-    g.add(chip);
-  }
-
-  // Fissures sombres visibles depuis la caméra isométrique.
-  const crackMat=mat(0x353b37,.98,0);
-  for(let i=0;i<3;i++){
-    const crack=mesh(new THREE.CylinderGeometry(.012,.018,.42,5),crackMat);
-    crack.position.set(-.18+i*.24,.50+i*.035,.48);
-    crack.rotation.x=1.30;
-    crack.rotation.z=.68-i*.33;
-    g.add(crack);
-  }
-
-  if(season===3){
-    const snow=mesh(new THREE.SphereGeometry(.54,14,9),mat(0xdde5e1,.98,0));
-    snow.scale.set(1.55,.15,1.05);snow.position.set(.02,.96,-.03);g.add(snow);
-  }
-
-  if(kind!=="rock"){
-    const oreColor=kind==="copper"?0xc27345:kind==="gold"?0xd6b64b:kind==="tin"?0xc9d1cf:0x6f8fa9;
-    const oreMat=new THREE.MeshStandardMaterial({
-      color:oreColor,roughness:.33,metalness:.52,
-      emissive:new THREE.Color(oreColor).multiplyScalar(.05)
-    });
-
-    const veins=[
-      [-.31,.54,.43,.13,.30],[.08,.73,.46,.16,-.22],[.43,.42,.38,.115,.55],[-.08,.36,.57,.10,-.40],
-      [.27,.55,-.34,.095,.18]
-    ];
-    veins.forEach((v,i)=>{
-      const crystal=mesh(organicGeometry(variant*71+i*13+4,1,.10),oreMat);
-      crystal.scale.set(v[3],v[3]*1.55,v[3]*.66);
-      crystal.position.set(v[0],v[1],v[2]);
-      crystal.rotation.set(v[4],i*.8,.15);
-      g.add(crystal);
-    });
-
-    for(let i=0;i<4;i++){
-      const vein=mesh(new THREE.CylinderGeometry(.016,.027,.55,6),oreMat);
-      vein.position.set(-.32+i*.21,.45+i*.07,.49);
-      vein.rotation.z=.78-i*.28;
-      vein.rotation.x=1.24;
-      g.add(vein);
-    }
-  }
-
-  return g;
-}
+export function createRockCluster(kind="rock",variant=0,season=0){return naturalRock(kind,variant,season);}
 
 export function createCampfire() {
   const g=new THREE.Group(); g.userData.kind="campfire";
@@ -799,7 +567,7 @@ export function createSkeleton() {
 
 export function createHorse() {
   const g=new THREE.Group(); g.userData.kind="horse"; g.userData.tamed=false;
-  const coat=mat(0x755035), dark=mat(0x3b2b22), light=mat(0x9b7049);
+  const coat=naturalMaterial("fur",0x826a52), dark=naturalMaterial("fur",0x433e36), light=naturalMaterial("fur",0x9b7049);
   const body=mesh(new THREE.CapsuleGeometry(.47,1.0,5,10),coat);body.rotation.z=Math.PI/2;body.position.y=1.08;g.add(body);
   const neck=mesh(new THREE.CylinderGeometry(.22,.31,.82,9),coat);neck.position.set(.61,1.50,0);neck.rotation.z=-.45;g.add(neck);
   const head=sphere(.28,0x755035,[1.25,.85,.75],2);head.position.set(.92,1.82,0);g.add(head);
@@ -987,6 +755,7 @@ export function createDeer(male=false,variant=0) {
   g.userData.legRigs=legRigs;
   g.userData.legs=legRigs.map(r=>r.hip);
   g.userData.tail=tailRoot;
+  detailAnimal(g);
   return g;
 }
 
@@ -1085,6 +854,7 @@ export function createRabbit(variant=0) {
   g.userData.hind=hind;
   g.userData.fore=fore;
   g.userData.body=body;
+  detailAnimal(g);
   return g;
 }
 

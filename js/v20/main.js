@@ -1,15 +1,16 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=ew4";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew4";
+import { createPlayer, makeGhost } from "./models.js?v=ew5";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew5";
 
-import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew4";
-import { applyAppearance } from "../everwild/appearance.js?v=ew4";
-import { updateCharacter } from "../v28/animation.js?v=ew4";
-import { createAmbience } from "../v27/ambience.js?v=ew4";
+import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew5";
+import { applyAppearance } from "../everwild/appearance.js?v=ew5";
+import { updateCharacter } from "../v28/animation.js?v=ew5";
+import { createAmbience } from "../v27/ambience.js?v=ew5";
 
-import {createDragon} from '../everwild/fantasy.js?v=ew4';
-import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew4';
-import {isClear,canStep,nearestClear} from '../everwild/navigation.js?v=ew4';
+import {createUnderstory} from '../everwild/nature.js?v=ew5';
+import {createDragon} from '../everwild/fantasy.js?v=ew5';
+import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew5';
+import {isClear,canStep,nearestClear} from '../everwild/navigation.js?v=ew5';
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
 let graphicsReady=false;
@@ -24,7 +25,7 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.0;
+renderer.toneMappingExposure=1.13;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8b994);
@@ -42,11 +43,12 @@ sun.shadow.bias=-.00035;sun.shadow.normalBias=.025;
 scene.add(sun);
 const fill=new THREE.DirectionalLight(0x9fb6cf,.34);fill.position.set(-20,14,-18);scene.add(fill);
 
-let viewSize=12.5;
-const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,.1,160);
-camera.position.set(14,17,14);
+let viewSize=12;
+const camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,.1,180);
+camera.position.set(9,7,9);
 
 const world=createWorld(scene);
+const naturalUnderstory=createUnderstory(scene,terrainHeight);
 const ambience=createAmbience(scene,world,terrainHeight,getRiverX);
 let premiumZone=null;
 let premiumZoneUpdater=null;
@@ -60,7 +62,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=ew4");
+    const premiumModule=await import("../v26/premiumZone.js?v=ew5");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -151,7 +153,7 @@ function resize(){
   const w=innerWidth,h=innerHeight;
   renderer.setSize(w,h,false);
   const aspect=w/h;
-  camera.left=-viewSize*aspect;camera.right=viewSize*aspect;camera.top=viewSize;camera.bottom=-viewSize;camera.updateProjectionMatrix();
+  camera.aspect=aspect;camera.updateProjectionMatrix();
 }
 addEventListener("resize",resize);resize();
 
@@ -244,6 +246,7 @@ function refreshLimits(){
 }
 window.addEventListener("everwild-command",event=>{
   const {type,id}=event.detail||{};
+  if(type==="save"){saveGame();return;}
   if(type==="stat"){
     if(["resistance","oxygen"].includes(id))return;
     if(!allocate(state.progress,id))return;
@@ -276,7 +279,7 @@ window.addEventListener("everwild-command",event=>{
     payCost(req);activeWorkshop.userData.tier++;activeWorkshop.scale.y=1+(activeWorkshop.userData.tier-1)*.08;state.stationTiers[stationKey(activeWorkshop)]=activeWorkshop.userData.tier;openWorkshop();learn('craft');
   }else if(type==='travel'){
     const target=spawnAt(id);if(!target||actionState.active)return;
-    state.x=target.x;state.z=target.z;motion.velocity.set(0,0);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);relocateSafely();if(state.mounted){state.mounted=false;player.scale.setScalar(player.userData.baseScale||1);}resetJoy();activeWorkshop=null;closeAtlas();showToast(REGIONS.find(r=>r.id===id).name);updateUI();
+    state.x=target.x;state.z=target.z;motion.velocity.set(0,0);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);relocateSafely();if(state.mounted){state.mounted=false;player.scale.setScalar(player.userData.baseScale||1);}resetJoy();updateCamera(0,true);activeWorkshop=null;closeAtlas();showToast(REGIONS.find(r=>r.id===id).name);updateUI();
   }else if(type==='unstuck'){
     if(relocateSafely(state.x,state.z,true))showToast('Ton personnage est dégagé.');
   }else if(type==='incubate'){
@@ -897,16 +900,17 @@ function updateEnemyDamage(){
 
 function updateDayLight(){
   const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.66+.46,.18,1);
-  hemi.intensity=.38+daylight*.40;sun.intensity=.35+daylight*1.65;
+  hemi.intensity=.82+daylight*.35;sun.intensity=.55+daylight*1.6;fill.intensity=.38+(1-daylight)*.28;
   sun.color.set(daylight>.55?0xffebd0:0xbec7d4);
   sun.position.set(state.x+Math.cos(a)*28,surfaceHeight(state.x,state.z)+10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,surfaceHeight(state.x,state.z),state.z);scene.add(sun.target);
-  const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
+  const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x66778a);scene.background.copy(night).lerp(base,.20+daylight*.80);
   const biome=regionAt(state.x,state.z);const cold=['snow','island4'].includes(biome.id);
   scene.fog.color.copy(scene.background).lerp(new THREE.Color(cold?0xb7cfda:biome.id==='desert'?0xc7b18c:biome.id==='volcanic'||biome.id==='island5'?0x8d7970:0x9daf9a),.35);
+  const fogNear=biome.id==='swamp'||biome.id==='mushroom'?20:biome.id==='tropical'?28:36;scene.fog.near=fogNear;scene.fog.far=biome.id==='swamp'||biome.id==='mushroom'?68:cold?88:biome.id==='desert'||biome.id==='steppe'?140:110;
   world.snow.visible=cold||(state.season===3&&!['desert','tropical','island2','volcanic','island5','ocean'].includes(biome.id));world.snow.position.set(state.x,surfaceHeight(state.x,state.z),state.z);world.snowGround.visible=false;
 }
 
-function updateCamera(dt){
+function updateCamera(dt,snap=false){
   const lookAheadX=motion.velocity.x*.42;
   const lookAheadZ=motion.velocity.y*.42;
   const targetY=surfaceHeight(state.x,state.z)+(state.mounted?1.15:.82);
@@ -915,12 +919,16 @@ function updateCamera(dt){
   motion.cameraFocus.lerp(focusTarget,1-Math.exp(-dt*5.2));
 
   const desired=new THREE.Vector3(
-    motion.cameraFocus.x+12.7,
-    motion.cameraFocus.y+(state.mounted?12.4:11.6),
-    motion.cameraFocus.z+12.7
+    motion.cameraFocus.x+viewSize*.64,
+    Math.max(motion.cameraFocus.y+viewSize*.34,terrainHeight(motion.cameraFocus.x+viewSize*.64,motion.cameraFocus.z+viewSize*.64)+3),
+    motion.cameraFocus.z+viewSize*.64
   );
-  camera.position.lerp(desired,1-Math.exp(-dt*3.8));
+  if(snap)camera.position.copy(desired);else camera.position.lerp(desired,1-Math.exp(-dt*3.8));
   camera.lookAt(motion.cameraFocus);
+  // Hide obstructing foliage only; resource roots and collision remain active.
+  for(const it of world.interactables){const obj=it.object;if(!obj?.children?.length)continue;const nearby=Math.hypot(obj.position.x-state.x,obj.position.z-state.z)<65;for(const child of obj.children)child.visible=nearby;}
+  const ray=new THREE.Line3(camera.position,motion.cameraFocus),point=new THREE.Vector3(),closest=new THREE.Vector3();
+  for(const tree of [...world.treeGroups,...(premiumZone?.trees||[])]){const crown=tree.getObjectByName('NaturalCanopy');if(!crown)continue;const h=(tree.userData.height||7)*tree.scale.y;point.set(tree.position.x,tree.position.y+h*.72,tree.position.z);ray.closestPointToPoint(point,true,closest);const near=Math.hypot(camera.position.x-tree.position.x,camera.position.z-tree.position.z)<5.5;const blocks=closest.distanceTo(point)<2.8&&closest.distanceTo(camera.position)<camera.position.distanceTo(motion.cameraFocus)-1;crown.visible=Math.hypot(tree.position.x-state.x,tree.position.z-state.z)<65&&!(near||blocks);}
   sun.shadow.camera.updateProjectionMatrix();
 }
 
@@ -937,7 +945,7 @@ function forceCleanSpawnUI(){
 
 let lastMinimap=0;
 function frame(now){
-  const dt=Math.min((now-last)/1000,.05);last=now;
+  const dt=clamp((now-last)/1000,0,.05);last=now;
   if(window.everwildPaused){motion.velocity.set(0,0);resetJoy();requestAnimationFrame(frame);return;}
   elapsed+=dt;
   if(state.pet&&!petDragon){petDragon=createDragon(0x709684);petDragon.scale.setScalar(.42);petDragon.position.set(-5,terrainHeight(-5,10),10);scene.add(petDragon);}
@@ -949,7 +957,7 @@ function frame(now){
   if(state.hp<=0)die();
   updateEnemyDamage();
   updateCharacter(player,dt,{time:elapsed,speed:player.userData.moveSpeed||0,sprinting:player.userData.sprinting,mounted:state.mounted,action:actionState,ground:surfaceHeight(state.x,state.z),height:surfaceHeight,x:state.x,z:state.z,yaw:player.rotation.y});
-  updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();updateRegion();
+  naturalUnderstory.update(elapsed,playerWorldPos);updateDayLight();ambience.update(elapsed,state.dayProgress,state.season);updateCamera(dt);updatePrompt();updateUI();updateRegion();
   if(now-lastMinimap>100){drawMinimap();lastMinimap=now;}
   renderer.render(scene,camera);
   if(now-state.lastSave>10000){state.lastSave=now;saveGame();}
@@ -969,7 +977,7 @@ addEventListener("keydown",e=>{
 addEventListener("keyup",e=>keys[e.code]=false);
 addEventListener("blur",()=>{for(const k of Object.keys(keys))keys[k]=false;resetJoy();});
 addEventListener("beforeunload",saveGame);
-function changeZoom(delta){viewSize=clamp(viewSize+delta,10,26);resize();}
+function changeZoom(delta){viewSize=clamp(viewSize+delta,7,24);resize();}
 canvas.addEventListener("wheel",e=>changeZoom(Math.sign(e.deltaY)*1.2),{passive:true});
 document.getElementById("zoomIn").addEventListener("click",()=>changeZoom(-2));
 document.getElementById("zoomOut").addEventListener("click",()=>changeZoom(2));
@@ -1050,7 +1058,7 @@ forceCleanSpawnUI();refreshLimits();emitProgress();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
 player.position.set(state.x,surfaceHeight(state.x,state.z),state.z);
 motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);
-motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;
+motion.yaw=player.rotation.y;motion.targetYaw=motion.yaw;updateCamera(0,true);
 syncEquippedTool();renderQuickbar();renderBag();updateBuildPanel();updateUI();
 loadingProgress(62,"Initialisation du joueur et de la carte");
 showToast("Bienvenue dans Everwild.");

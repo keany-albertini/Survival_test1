@@ -1,6 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=ew4";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=ew5";
 
+import {naturalTree,naturalCottage} from '../everwild/nature.js?v=ew5';
 const ASSETS={
   oak:"assets/v26/trees/oak_03.gltf",
   oakAlt:"assets/v26/trees/oak_04.gltf",
@@ -337,7 +338,7 @@ function installWorldTreeReplacements(world,zone,oakBase,oakAltBase,pineBase){
 
   for(let i=0;i<legacyTrees.length;i++){
     const legacy=legacyTrees[i];
-    if(!legacy)continue;
+    if(!legacy||legacy.userData.natural)continue;
 
     const picked=chooseTreeBase(i,oakBase,oakAltBase,pineBase);
     const premium=clonePremium(picked.base);
@@ -537,7 +538,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   // V26.5 : plus de plaques de sol artificielles. Le terrain global porte désormais la matière PBR.
   createPathPatches(zone.group,terrainHeight);
 
-  const shelter=clonePremium(shelterBase);
+  const shelter=naturalCottage();
   shelter.position.set(-13.3,terrainHeight(-13.3,13.0),13.0);
   shelter.rotation.y=.28;
   shelter.scale.setScalar(.98);
@@ -573,7 +574,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   for(let i=0;i<treeSpots.length;i++){
     const [kind,x,z,s,r]=treeSpots[i];
     const base=kind==="oak"?oakBase:kind==="oakAlt"?oakAltBase:pineBase;
-    const tree=clonePremium(base);
+    const tree=naturalTree(i%6,0,kind==="pine");
     tree.position.set(x,terrainHeight(x,z),z);
     tree.scale.setScalar(s);
     tree.rotation.y=r;

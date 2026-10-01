@@ -1,17 +1,18 @@
-import {REGIONS,landDistance,regionAt,outerHeight,RIVERS} from './geography.js?v=ew4';
-import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew4";
+import {REGIONS,landDistance,regionAt,outerHeight,RIVERS} from './geography.js?v=ew5';
+import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew5";
+import {loadCharacters,persistCharacters,SKINS,appearanceDefaults,validateAppearance} from './characters.js?v=ew5';
 const $=id=>document.getElementById(id);
-let profile=null,started=false,starting=false,selection="human",latest=null;
+const loaded=loadCharacters(localStorage);let roster=loaded.roster;
+let profile=loaded.active,started=false,starting=false,selection="human",latest=null;
 let settings={quality:(matchMedia("(pointer:coarse)").matches||innerWidth<=600)?"light":"balanced"};
 try{
-  const saved=JSON.parse(localStorage.getItem("everwild-profile"));
-  if(saved&&RACES.some(r=>r.id===saved.race)&&typeof saved.name==="string"&&typeof saved.id==="string")profile=saved;
   const stored=JSON.parse(localStorage.getItem("everwild-settings"));if(["light","balanced","high"].includes(stored?.quality))settings.quality=stored.quality;
 }catch{}
 window.everwildProfile=profile;window.everwildSettings=settings;window.everwildPaused=true;
 const command=(type,id)=>window.dispatchEvent(new CustomEvent("everwild-command",{detail:{type,id}}));
-function showPanel(id){$("ewMenu").scrollTop=0;for(const panel of document.querySelectorAll(".ew-page"))panel.hidden=panel.id!==id;}
-function menu(){window.everwildPaused=true;$("ewMenu").hidden=false;$("atlasPanel").hidden=true;$("journeyPanel").hidden=true;$("loading").classList.add("hidden");showPanel("ewHome");$("ewPlay").textContent=started?"Reprendre l’aventure":profile?"Continuer l’aventure":"Commencer l’aventure";}
+let previewModule=null,previewPending=null,previewVersion=0;
+function showPanel(id){if(id!=="ewCharacter")previewModule?.stopPreview();$("ewMenu").scrollTop=0;for(const panel of document.querySelectorAll(".ew-page"))panel.hidden=panel.id!==id;}
+function menu(){window.everwildPaused=true;$("ewMenu").hidden=false;$("atlasPanel").hidden=true;$("journeyPanel").hidden=true;$("loading").classList.add("hidden");showPanel("ewHome");$("ewPlay").textContent=started?"Reprendre mon monde":profile?"Rejoindre mon monde":"Créer mon premier personnage";}
 function raceSelection(){
   $("raceGrid").replaceChildren();
   for(const race of RACES){
@@ -20,18 +21,18 @@ function raceSelection(){
     const icon=document.createElement("span");icon.className="race-symbol";icon.textContent=race.symbol;
     const label=document.createElement("strong");label.textContent=race.name;
     const note=document.createElement("small");note.textContent=race.description;
-    button.append(icon,label,note);button.addEventListener("click",()=>{selection=race.id;raceSelection();});$("raceGrid").append(button);
+    button.append(icon,label,note);button.addEventListener("click",()=>{selection=race.id;fillSkinOptions();raceSelection();updatePreview();});$("raceGrid").append(button);
   }
   $("chosenRace").textContent=RACES.find(r=>r.id===selection).name;
 }
 async function play(){
   if(starting)return;
-  if(!profile){showPanel("ewCharacter");raceSelection();return;}
-  $("ewMenu").hidden=true;window.everwildPaused=false;
+  if(!profile){openCreation();return;}
+  previewModule?.stopPreview();$("ewMenu").hidden=true;window.everwildPaused=false;
   if(started)return;
   starting=true;$("loading").classList.remove("hidden");$("loadingLabel").textContent="Ouverture des terres d’Everwild…";$("loadingErrorBack").hidden=true;
   try{
-    await import("../v20/main.js?v=ew4");started=true;
+    await import("../v20/main.js?v=ew5");started=true;
     $("loading").classList.add("hidden");
     $("survivorName").textContent=profile.name;$("survivorRace").textContent=RACES.find(r=>r.id===profile.race).name;
   }catch(error){
@@ -40,16 +41,27 @@ async function play(){
     $("loadingErrorBack").hidden=false;console.error("Everwild startup",error);
   }finally{starting=false;}
 }
-$("ewPlay").addEventListener("click",play);
+$("ewPlay").addEventListener("click",()=>started?play():profile?openRoster():openCreation());
 $("characterName").addEventListener("input",()=>$("characterName").setCustomValidity(""));
-$("characterForm").addEventListener("submit",event=>{
-  event.preventDefault();if(profile)return;
-  const name=$("characterName").value.trim();if(!name){$("characterName").setCustomValidity("Choisis un nom pour ton personnage.");$("characterName").reportValidity();return;}
-  profile={id:crypto.randomUUID(),name:name.slice(0,24),race:selection,body:$("characterBody").value};
-  window.everwildProfile=profile;
-  try{localStorage.setItem("everwild-profile",JSON.stringify(profile));}catch{}
-  play();
-});
+function cosmetics(){return validateAppearance({skin:$('characterSkin').value,hair:$('characterHair').value,hairColor:$('characterHairColor').value,eyes:$('characterEyes').value,beard:$('characterBeard').value,marks:$('characterMarks').value,stature:$('characterStature').value},selection);}
+function fillSkinOptions(){const skins=SKINS[selection],defaults=appearanceDefaults(selection);$('characterSkin').replaceChildren();skins.forEach((color,i)=>{const o=document.createElement('option');o.value=color;o.textContent=['Claire','Douce','Naturelle','Bronzée','Sombre','Profonde'][i];$('characterSkin').append(o);});$('characterSkin').value=defaults.skin;$('characterHairColor').value=defaults.hairColor;$('characterEyes').value=defaults.eyes;$('characterBeard').value=defaults.beard;}
+function portrait(profile){const a=validateAppearance(profile.appearance,profile.race),race=RACES.find(r=>r.id===profile.race)||RACES[0],wide=profile.race==='orc'||profile.race==='dwarf'?48:39;
+ const ears=profile.race==='elf'?'<path d="M62 80L41 59L58 95M138 80L159 59L142 95" fill="'+a.skin+'"/>':profile.race==='draconian'?'<path d="M72 58L61 19L83 50M128 58L139 19L117 50" fill="#ad9b77"/>':'';
+ const hair=a.hair==='shaved'?'':a.hair==='mohawk'?'<path d="M88 64L94 21L108 29L116 67" fill="'+a.hairColor+'"/>':'<path d="M59 79Q52 38 100 38Q147 37 141 81L124 59Q93 77 68 58Z" fill="'+a.hairColor+'"/>'+(a.hair==='long'||a.hair==='braids'?'<path d="M61 66L54 125L69 121L73 77M137 67L148 125L133 124L130 75" fill="'+a.hairColor+'"/>':'');
+ const beard=a.beard==='none'?'':'<path d="M72 109Q99 137 130 108L119 '+(a.beard==='stubble'?128:148)+'L98 '+(a.beard==='stubble'?133:161)+'L79 139Z" fill="'+a.hairColor+'"/>';
+ return '<svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg"><ellipse cx="100" cy="215" rx="70" ry="8" fill="#071a1499"/><path d="M25 220L34 156L80 135H121L166 155L176 220Z" fill="'+race.color+'"/><path d="M76 145L96 176L80 214L59 158M123 146L105 176L121 214L145 158" fill="#493d31"/>'+ears+'<rect x="85" y="111" width="31" height="38" rx="9" fill="'+a.skin+'"/><ellipse cx="100" cy="88" rx="'+wide+'" ry="48" fill="'+a.skin+'"/>'+hair+'<ellipse cx="83" cy="87" rx="7" ry="4" fill="#e8e3d7"/><ellipse cx="118" cy="87" rx="7" ry="4" fill="#e8e3d7"/><circle cx="84" cy="87" r="3.4" fill="'+a.eyes+'"/><circle cx="117" cy="87" r="3.4" fill="'+a.eyes+'"/><path d="M100 91L96 104L105 104M89 116Q101 119 113 115" fill="none" stroke="#725641" stroke-width="1.5"/>'+beard+'</svg>';
+}
+async function updatePreview(){const draft={race:selection,body:$('characterBody').value,appearance:cosmetics()},ticket=++previewVersion;$('previewRaceName').textContent=RACES.find(r=>r.id===selection).name;$('portraitFallback').innerHTML=portrait(draft);
+ try{previewPending??=import('./character-preview.js?v=ew5');previewModule=await previewPending;if(ticket!==previewVersion||$('ewCharacter').hidden)return;previewModule.previewCharacter($('characterPreview'),draft);$('portraitFallback').hidden=true;$('characterPreview').hidden=false;}catch{$('characterPreview').hidden=true;$('portraitFallback').hidden=false;}
+}
+function openCreation(){showPanel('ewCharacter');$('characterFeedback').textContent='';$('characterName').value='';selection='human';$('characterHair').value='short';$('characterMarks').value='none';$('characterStature').value='1';fillSkinOptions();raceSelection();updatePreview();}
+function openRoster(){showPanel('ewRoster');$('characterRoster').replaceChildren();$('rosterFeedback').textContent=roster.length?'':'Aucun personnage créé. Crée ton premier aventurier.';
+ for(const p of roster){const card=document.createElement('article');card.className='ew-character-card';const picture=document.createElement('div');picture.className='ew-roster-portrait';picture.innerHTML=portrait(p);const info=document.createElement('div');const name=document.createElement('h3');name.textContent=p.name;const details=document.createElement('p');let level=1;try{level=JSON.parse(localStorage.getItem('everwild-save-'+p.id)||'null')?.progress?.level||1;}catch{}details.textContent=RACES.find(r=>r.id===p.race).name+' · Niveau '+level+(profile?.id===p.id?' · Sélectionné':'');const button=document.createElement('button');button.className='ew-secondary';button.textContent='Rejoindre le monde';button.addEventListener('click',()=>activate(p));info.append(name,details,button);card.append(picture,info);$('characterRoster').append(card);}
+}
+function activate(next){const oldId=profile?.id;if(started)command('save');try{persistCharacters(localStorage,roster,next);}catch{$('rosterFeedback').textContent='La sauvegarde est indisponible : libère de l’espace dans ce navigateur.';return;}profile=next;window.everwildProfile=profile;if(started&&oldId!==next.id){try{sessionStorage.setItem('everwild-auto-join','1');}catch{}location.reload();return;}play();}
+$('characterForm').addEventListener('submit',event=>{event.preventDefault();const name=$('characterName').value.trim();if(!name){$('characterName').setCustomValidity('Choisis un nom pour ton personnage.');$('characterName').reportValidity();return;}const next={id:crypto.randomUUID(),name:name.slice(0,24),race:selection,body:$('characterBody').value,appearance:cosmetics(),createdAt:Date.now()};const nextRoster=[...roster,next];try{persistCharacters(localStorage,nextRoster,next);}catch{$('characterFeedback').textContent='Impossible de sauvegarder ton personnage. Vérifie l’espace disponible dans ce navigateur.';return;}roster=nextRoster;activate(next);});
+for(const id of ['characterBody','characterHair','characterHairColor','characterSkin','characterEyes','characterBeard','characterMarks','characterStature'])$(id).addEventListener('input',updatePreview);
+$('ewCharacters').addEventListener('click',openRoster);$('ewNewCharacter').addEventListener('click',openCreation);$('rosterCreate').addEventListener('click',openCreation);
 $("ewSettings").addEventListener("click",()=>showPanel("ewSettingsPage"));
 $("ewWorld").addEventListener("click",()=>showPanel("ewWorldPage"));
 $("ewServers").addEventListener("click",()=>showPanel("ewServersPage"));
@@ -142,3 +154,5 @@ $('atlasClose').addEventListener('click',()=>{$('atlasPanel').hidden=true;window
 $('incubateBtn').addEventListener('click',()=>{command('incubate');$('atlasPanel').hidden=true;window.everwildPaused=false;});
 
 $('unstuckBtn').addEventListener('click',()=>{if(!started){$('settingsFeedback').textContent='Lance l’aventure pour utiliser cette aide.';return;}command('unstuck');$('settingsFeedback').textContent='Personnage replacé en terrain libre. Tu peux reprendre l’aventure.';});
+
+try{if(sessionStorage.getItem('everwild-auto-join')==='1'){sessionStorage.removeItem('everwild-auto-join');play();}}catch{}

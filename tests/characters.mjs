@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {loadCharacters,persistCharacters,validateCharacter,validateAppearance,SKINS,HAIRSTYLES} from '../js/everwild/characters.js';
+const data=new Map(),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
+const legacy={id:'existing-keany',name:'Rag',race:'human',body:'male'};storage.setItem('everwild-profile',JSON.stringify(legacy));storage.setItem('everwild-save-existing-keany',JSON.stringify({inventory:{wood:31},progress:{level:7}}));
+let loaded=loadCharacters(storage);assert.equal(loaded.roster.length,1);assert.equal(loaded.active.id,legacy.id);assert.equal(loaded.active.appearance.hair,'short');
+const next=validateCharacter({id:'elf-2',name:'Aëra',race:'elf',body:'female',appearance:{hair:'braids',skin:SKINS.elf[4],eyes:'#5aa6cb',hairColor:'#a3763d',beard:'none',marks:'scar',stature:1.06}});persistCharacters(storage,[...loaded.roster,next],next);storage.setItem('everwild-save-elf-2',JSON.stringify({inventory:{wood:8},progress:{level:1}}));loaded=loadCharacters(storage);
+assert.equal(loaded.roster.length,2);assert.equal(loaded.active.id,next.id);assert.equal(loaded.active.appearance.eyes,'#5aa6cb');assert.equal(loaded.active.appearance.hair,'braids');assert.equal(JSON.parse(storage.getItem('everwild-save-existing-keany')).inventory.wood,31);
+persistCharacters(storage,loaded.roster,loaded.roster[0]);assert.equal(loadCharacters(storage).active.id,legacy.id);assert.equal(JSON.parse(storage.getItem('everwild-save-elf-2')).inventory.wood,8);
+assert.equal(validateCharacter({id:'x',name:'bad',race:'lycan'}),null);assert.equal(validateAppearance({skin:'<script>',hair:'bad',eyes:'#f00'},'orc').skin,SKINS.orc[2]);assert.equal(validateAppearance(null,'human').hair,'short');assert.equal(Object.keys(SKINS).length,8);assert.equal(HAIRSTYLES.length,6);
+console.log('PASS: legacy character migration, multiple characters, independent saves, cosmetic persistence, eight races and invalid data validation.');

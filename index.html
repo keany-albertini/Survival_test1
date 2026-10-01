@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#1a251b">
   <title>Everwild — Terres sauvages</title>
-  <link rel="stylesheet" href="v20.css?v=ew4"
-  ><link rel="stylesheet" href="everwild.css?v=ew4">
+  <link rel="stylesheet" href="v20.css?v=ew5"
+  ><link rel="stylesheet" href="everwild.css?v=ew5">
 </head>
 <body>
   <div id="game">
@@ -136,23 +136,28 @@
       <div class="ew-intro"><span class="ew-eyebrow">UN MONDE À HABITER</span><h1>La nature ne<br>fait aucune<br><em>promesse.</em></h1><p>Choisis ton peuple. Apprends du monde.<br>Bâtis un refuge dans les terres d’Everwild.</p></div>
       <nav class="ew-main-nav" aria-label="Actions principales">
         <button id="ewPlay" class="ew-primary">Commencer l’aventure <span>↗</span></button>
-        <button id="ewWorld">Terres & créatures <span>01</span></button>
-        <button id="ewServers">Serveurs <span>02</span></button>
-        <button id="ewSettings">Paramètres <span>03</span></button>
+        <button id="ewCharacters">Mes personnages <span>↗</span></button>
+        <button id="ewNewCharacter">Créer un personnage <span>＋</span></button>
+        <button id="ewWorld">Terres & créatures <span>Atlas</span></button>
+        <button id="ewServers">Serveurs <span>Solo</span></button>
+        <button id="ewSettings">Paramètres <span>⚙</span></button>
       </nav>
     </div>
+    <section id="ewRoster" class="ew-page ew-info" hidden>
+      <button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">TES AVENTURIERS</span><h2>Rejoindre mon monde.</h2><p class="ew-copy">Everwild · Monde solo V7. Choisis le personnage avec lequel reprendre ton aventure. Chaque personnage conserve sa progression et son inventaire sur ce navigateur.</p><div id="characterRoster" class="ew-roster"></div><p id="rosterFeedback" role="status" class="ew-feedback"></p><button id="rosterCreate" class="ew-primary">Créer un autre personnage <span>＋</span></button>
+    </section>
     <section id="ewCharacter" class="ew-page ew-character" hidden>
       <button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">TON HISTOIRE COMMENCE ICI</span><h2>Choisis ton peuple.</h2>
       <p class="ew-copy">Huit origines. Les mêmes statistiques de départ. Un choix définitif pour ton personnage.</p>
       <form id="characterForm"><div class="ew-form-row"><label>Nom du personnage<input id="characterName" required maxlength="24" placeholder="Ton nom dans Everwild" autocomplete="off"></label><label>Silhouette<select id="characterBody"><option value="male">Homme</option><option value="female">Femme</option></select></label></div>
-        <div id="raceGrid" class="ew-race-grid" aria-label="Peuples jouables"></div>
-        <div class="ew-create-footer"><p>Ton peuple : <strong id="chosenRace">Humains</strong></p><button type="submit" class="ew-primary">Entrer dans Everwild <span>↗</span></button></div>
+        <div class="ew-customizer"><div class="ew-avatar-stage"><canvas id="characterPreview" aria-label="Aperçu 3D du personnage" width="280" height="330"></canvas><div id="portraitFallback" class="ew-portrait-fallback"></div><p id="previewRaceName">Humains</p><span>Aperçu de ton personnage</span></div><div class="ew-custom-fields"><label>Coupe de cheveux<select id="characterHair"><option value="short">Courte</option><option value="long">Longue</option><option value="braids">Tresses</option><option value="ponytail">Queue de cheval</option><option value="shaved">Crâne rasé</option><option value="mohawk">Crête</option></select></label><label>Couleur des cheveux<input id="characterHairColor" type="color" value="#47392b"></label><label>Couleur de peau<select id="characterSkin"></select></label><label>Couleur des yeux<input id="characterEyes" type="color" value="#7c9b83"></label><label>Barbe<select id="characterBeard"><option value="none">Sans barbe</option><option value="stubble">Barbe courte</option><option value="full">Barbe longue</option><option value="braided">Barbe tressée</option></select></label><label>Détails du visage<select id="characterMarks"><option value="none">Aucun</option><option value="freckles">Taches de rousseur</option><option value="scar">Cicatrice</option></select></label><label>Stature<select id="characterStature"><option value="0.94">Petite</option><option value="1" selected>Moyenne</option><option value="1.06">Grande</option></select></label></div></div><div id="raceGrid" class="ew-race-grid" aria-label="Peuples jouables"></div><p id="characterFeedback" role="status" class="ew-feedback"></p>
+        <div class="ew-create-footer"><p>Ton peuple : <strong id="chosenRace">Humains</strong></p><button type="submit" class="ew-primary">Créer et rejoindre le monde <span>↗</span></button></div>
       </form>
     </section>
     <section id="ewSettingsPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">À TA MESURE</span><h2>Paramètres.</h2><label class="ew-setting-label">Qualité graphique<select id="qualitySelect"><option value="light">Légère · téléphone</option><option value="balanced">Équilibrée</option><option value="high">Élevée</option></select></label><button id="unstuckBtn" class="ew-secondary">Dégager mon personnage</button><button id="fullscreenBtn" class="ew-secondary">Basculer en plein écran</button><p id="settingsFeedback" class="ew-copy"></p><div class="ew-info-card"><strong>Commandes</strong><p>Sur téléphone : déplace ton doigt sur la gauche pour marcher. Pousse davantage pour courir. Action permet d’interagir.</p><p>Sur ordinateur : ZQSD / WASD, Maj pour courir, E pour agir, B pour construire, R pour changer de pièce, I pour le sac et P pour la progression.</p></div></section>
     <section id="ewWorldPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">LE MONDE D’EVERWILD</span><h2>Seize terres.<br>Mille histoires.</h2><p class="ew-copy">Un continent, cinq îles et onze ambiances naturelles. Explore les steppes, les forêts, le désert, les marais, les montagnes, le glacier, les terres volcaniques, les canyons, les champignons géants et les rivages.</p><div id="worldRegionGrid" class="ew-atlas-grid"></div><div class="ew-world-grid"><article class="ew-info-card"><strong>Dragons & gardiens</strong><p>Créatures animées, niveaux par région, combats et butin. Les dragons protègent leurs territoires. Leurs œufs permettent de faire éclore un jeune compagnon au camp.</p></article><article class="ew-info-card"><strong>Trois métiers · trois paliers</strong><p>Forge, menuiserie et alchimie. Raffine le minerai, travaille les planches, renforce les outils et prépare des soins. Les stations s’améliorent avec les niveaux et la recherche.</p></article><article class="ew-info-card"><strong>Apprendre du monde</strong><p>Huit branches de recherche, compétences par la pratique et attributs distribuables. Tes ateliers, ta progression et tes constructions sont sauvegardés sur cet appareil.</p></article></div><p class="ew-copy ew-fine">Contours issus du masque V7 validé, continent et cinq îles, nord à droite. Relief et biomes adaptés à une échelle compacte pour téléphone ; ce terrain web ne mesure pas encore 10 × 10 km.</p></section>
     <section id="ewServersPage" class="ew-page ew-info" hidden><button class="ew-back" data-home>← Retour</button><span class="ew-eyebrow">CHOISIS TON AVENTURE</span><h2>Les terres d’accueil.</h2><div class="ew-info-card"><span class="ew-status">DISPONIBLE</span><h3>Exploration solo</h3><p>Découvre la première zone et garde ta progression sur cet appareil.</p><button class="ew-secondary" data-home>Retour à l’aventure</button></div><div class="ew-info-card"><span class="ew-status ew-muted">À VENIR</span><h3>Serveurs PvE et PvP</h3><p>Les serveurs persistants, clans et transferts entre mondes ne sont pas encore disponibles dans cette version web.</p></div></section>
-    <footer class="ew-menu-footer"><span>EXPLORER · APPRENDRE · BÂTIR</span><span>VERSION WEB 0.2</span></footer>
+    <footer class="ew-menu-footer"><span>EXPLORER · APPRENDRE · BÂTIR</span><span>VERSION WEB 0.5</span></footer>
   </section>
   <div class="ew-game-tools"><button id="journeyBtn" aria-label="Progression et artisanat">✧</button><button id="atlasBtn" aria-label="Carte et voyages">⌖</button><button id="menuBtn" aria-label="Menu principal">☰</button></div>
   <aside id="journeyPanel" class="ew-journey" hidden aria-label="Progression et artisanat"><header><div><span class="ew-eyebrow">TON PARCOURS</span><h2>Devenir.</h2></div><button id="journeyClose" aria-label="Fermer la progression">×</button></header><div class="ew-xp"><strong id="levelLabel">Niveau 1</strong><span id="xpLabel">0 / 50 XP</span><i><b id="xpBar"></b></i></div><h3>Attributs <small id="pointsLabel">0 point à distribuer</small></h3><div id="statGrid"></div><h3>La pratique forge le savoir</h3><div id="practiceGrid"></div><h3>Recherche <small id="researchPoints">1 point de recherche</small></h3><div id="researchGrid"></div><div id="stationBanner" class="ew-station" hidden><strong id="stationLabel">Atelier</strong><p>II : équipement renforcé · III : production doublée</p><button id="stationUpgrade">Améliorer</button></div><h3>Artisanat</h3><p class="ew-copy ew-fine">Les composants et outils renforcés se fabriquent près de leur atelier.</p><div id="craftGrid"></div></aside>
@@ -166,6 +171,6 @@
       }
     }
   </script>
-  <script type="module" src="js/everwild/app.js?v=ew4"></script>
+  <script type="module" src="js/everwild/app.js?v=ew5"></script>
 </body>
 </html>

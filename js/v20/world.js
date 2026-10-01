@@ -3,10 +3,11 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=ew4";
+} from "./models.js?v=ew5";
 
-import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew4';
-import {enrichWorld} from '../everwild/fantasy.js?v=ew4';
+import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew5';
+import {terrainPBR} from '../everwild/pbr.js?v=ew5';
+import {enrichWorld} from '../everwild/fantasy.js?v=ew5';
 const WORLD_SIZE=520;
 const HALF=58;
 const SEASON_COLORS=[
@@ -78,9 +79,9 @@ function createGroundTextures(){
       const dirtMask=Math.max(0,Math.min(1,.42+broad*.12+medium*.14+grain*.22));
       const mossMask=Math.max(0,Math.min(1,.30-broad*.10+Math.sin((x+y)*.021)*.16+grain*.13));
 
-      const grass=[163,173,151];
-      const dirt=[158,145,122];
-      const moss=[131,146,124];
+      const grass=[214,212,197];
+      const dirt=[199,188,162];
+      const moss=[180,193,165];
 
       let rr=grass[0]*(1-dirtMask*.36)+dirt[0]*(dirtMask*.36);
       let gg=grass[1]*(1-dirtMask*.36)+dirt[1]*(dirtMask*.36);
@@ -315,7 +316,7 @@ function createGrassMaterial(){
 }
 
 function createTerrain(){
-  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,320,320);
+  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,192,192);
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];
@@ -326,11 +327,11 @@ function createTerrain(){
     const n=.5+.25*Math.sin(x*.12+Math.cos(z*.07))+.25*Math.cos(z*.14+x*.05);
     const river=Math.abs(x-riverX(z));
     const biome=regionAt(x,z);
-    const col=new THREE.Color(biome.color).multiplyScalar(.92+n*.16);
+    const col=new THREE.Color(["snow","island4"].includes(biome.id)?0xe7ebec:["volcanic","island5"].includes(biome.id)?0xabb0ac:biome.id==="desert"?0xf4debd:0xf1eddf).multiplyScalar(.98+n*.04);
     if(river<8&&Math.abs(z)<58)col.lerp(soil,.45);
     if(landDistance(x,z)<9&&landDistance(x,z)>0)col.lerp(new THREE.Color(0xd6c59e),.65);
     if(y>16)col.lerp(new THREE.Color(0xd4d9d7),.75);
-    if(y>1.8)col.lerp(new THREE.Color(0x78806d),.35);
+    if(y>1.8&&biome.id!=="snow")col.lerp(new THREE.Color(0x8f9585),.12);
     colors.push(col.r,col.g,col.b);
   }
   geo.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
@@ -347,6 +348,7 @@ function createTerrain(){
     metalness:0
   });
 
+  terrainPBR(m,geo,regionAt);
   const terrain=new THREE.Mesh(geo,m);
   terrain.receiveShadow=true;
   terrain.userData.surfaceTextures=textures;

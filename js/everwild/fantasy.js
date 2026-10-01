@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import {REGIONS,ISLANDS,landDistance,regionAt,RIVERS} from './geography.js?v=ew4';
+import {REGIONS,ISLANDS,landDistance,regionAt,RIVERS} from './geography.js?v=ew5';
+import {naturalMaterial,naturalMushroom,naturalPalm,detailAnimal,noise} from './nature.js?v=ew5';
 const rng=n=>{const a=Math.sin(n*78.23+1.83)*43871.28;return a-Math.floor(a)};
 const materials=new Map();
-function mat(color,metal=0){const key=color+':'+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.58:.86,metalness:metal}));return materials.get(key);}
+function mat(color,metal=0){const key=color+':'+metal;if(!materials.has(key))materials.set(key,metal?new THREE.MeshStandardMaterial({color,roughness:.58,metalness:metal}):naturalMaterial('stone',color));return materials.get(key);}
 function mesh(g,geo,color,x,y,z,s=[1,1,1],metal=0){const m=new THREE.Mesh(geo,mat(color,metal));m.position.set(x,y,z);m.scale.set(...s);m.castShadow=true;m.receiveShadow=true;g.add(m);return m;}
 const sphere=new THREE.SphereGeometry(1,12,8),box=new THREE.BoxGeometry(1,1,1);
 function link(g,a,b,r,color){const d=new THREE.Vector3().subVectors(b,a);const m=mesh(g,new THREE.CylinderGeometry(r*.8,r,d.length(),7),color,...a.clone().add(b).multiplyScalar(.5).toArray());m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m;}
@@ -31,11 +32,12 @@ export function createDragon(color=0x5d7563){
  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(0,0,0),new THREE.Vector3(.3,-.1,.8),new THREE.Vector3(.5,-.35,1.7),new THREE.Vector3(.3,-.15,2.7)]);
  mesh(tail,taperedCurve(curve.points,.30,.045),color,0,0,0);mesh(tail,new THREE.ConeGeometry(.2,.62,7),0x69765a,.3,-.14,2.8).rotation.x=Math.PI/2;
  for(let i=0;i<9;i++){const spike=mesh(g,new THREE.ConeGeometry(.11,.35+(i%3)*.05,6),0xb4ae89,0,2.45-Math.abs(i-4)*.08,-1+i*.32);spike.rotation.x=.18;}
+ const surfaceWing={map:naturalMaterial('cap',0xffffff).map,bump:naturalMaterial('cap',0xffffff).bumpMap};
  const wings=[];
  for(const side of [-1,1]){const wing=new THREE.Group();wing.position.set(side*.55,2.2,-.35);g.add(wing);
   const p=[[0,0,0],[side*1.25,.85,.15],[side*3.2,.65,1.35],[side*1.8,-.1,1.6],[side*.6,-.2,1.2]];
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(p.flat(),3));geo.setIndex([0,1,4,1,2,3,1,3,4]);geo.computeVertexNormals();
-  const membrane=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x9f8862,side:THREE.DoubleSide,roughness:.85}));membrane.castShadow=true;wing.add(membrane);
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(p.flat(),3));geo.setAttribute('uv',new THREE.Float32BufferAttribute([0,0,.35,.4,1,1,.7,1,.2,.8],2));geo.setIndex([0,1,4,1,2,3,1,3,4]);geo.computeVertexNormals();
+  const membrane=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0x9d927d,map:surfaceWing.map,bumpMap:surfaceWing.bump,bumpScale:.026,side:THREE.DoubleSide,roughness:.8}));membrane.castShadow=true;wing.add(membrane);
   for(const [a,b] of [[0,1],[1,2],[1,3],[1,4]])link(wing,new THREE.Vector3(...p[a]),new THREE.Vector3(...p[b]),.055,color);
   wing.rotation.z=side*.2;wings.push(wing);
  }
@@ -50,9 +52,13 @@ export function createFantasyCreature(kind,color){
   for(const s of [-1,1]){link(g,new THREE.Vector3(s*.4,1.9,0),new THREE.Vector3(s*1.1,.8,.15),.18,0x6b543c);link(g,new THREE.Vector3(s*.3,1,0),new THREE.Vector3(s*.5,.1,.2),.23,0x6b543c);mesh(g,sphere,0xd6dc8c,s*.18,2.8,-.44,[.065,.05,.05]);}
   for(let i=0;i<5;i++)mesh(g,sphere,0x58794b,(rng(i)-.5)*1.3,3.1+rng(i+8)*.4,(rng(i+2)-.5)*.7,[.57,.43,.5]);
  }else{
-  mesh(g,sphere,color,0,.9,0,[.5,.48,.9]);mesh(g,sphere,color,0,1.26,-.87,[.3,.33,.45]);mesh(g,sphere,0xd9c499,0,1.2,-1.25,[.20,.16,.3]);
-  for(const s of [-1,1]){mesh(g,new THREE.ConeGeometry(.17,.4,7),color,s*.2,1.68,-.85);for(const z of [-.55,.55])link(g,new THREE.Vector3(s*.35,.8,z),new THREE.Vector3(s*.42,.12,z-.08),.11,color);mesh(g,sphere,0xf3d087,s*.26,1.34,-1.07,[.038,.045,.048]);}
-  const tail=mesh(g,new THREE.ConeGeometry(.2,.9,8),color,0,1.1,.98);tail.rotation.x=.8;g.userData.tail=tail;
+  const coat=naturalMaterial('fur',color,.87),cream=naturalMaterial('fur',0xc7c0a9),bodyGeo=new THREE.SphereGeometry(1,20,14);
+  const part=(parent,x,y,z,scale,material=coat)=>{const m=new THREE.Mesh(bodyGeo,material);m.position.set(x,y,z);m.scale.set(...scale);m.castShadow=m.receiveShadow=true;parent.add(m);return m;};
+  part(g,0,.91,.05,[.29,.37,.79]);part(g,0,1.04,-.42,[.34,.45,.36]);part(g,0,.97,.56,[.32,.39,.31]);part(g,0,.71,-.1,[.24,.15,.52],cream);
+  const neck=new THREE.Group();neck.position.set(0,1.19,-.54);g.add(neck);part(neck,0,.12,-.15,[.26,.31,.31]);part(neck,0,.26,-.43,[.235,.24,.28]);part(neck,0,.15,-.67,[.13,.12,.32],cream);part(neck,0,.17,-.95,[.10,.08,.06],naturalMaterial('fur',0x302e29));
+  for(const side of [-1,1]){const ear=mesh(neck,new THREE.ConeGeometry(.12,.30,10),color,side*.17,.57,-.34);ear.rotation.z=-side*.16;mesh(neck,sphere,0xd2a36b,side*.207,.32,-.52,[.034,.026,.035]);mesh(neck,sphere,0x151a16,side*.218,.32,-.535,[.012,.018,.016]);}
+  const legs=[];for(const side of [-1,1])for(const z of [-.44,.56]){const leg=new THREE.Group();leg.position.set(side*.21,.91,z);g.add(leg);part(leg,0,-.12,.04,[.105,.25,.14]);part(leg,0,-.4,z>0?.13:-.04,[.065,.22,.065]);part(leg,0,-.65,z>0?.11:-.03,[.055,.16,.05],cream);part(leg,0,-.78,-.10,[.085,.067,.14]);legs.push(leg);}
+  const tail=mesh(g,taperedCurve([new THREE.Vector3(0,0,0),new THREE.Vector3(0,-.12,.4),new THREE.Vector3(.1,-.42,.8)],.13,.045),color,0,1.13,.71);tail.material=coat;g.userData.tail=tail;g.userData.legs=legs;g.userData.neck=neck;
  }
  g.userData.kind=kind;return g;
 }
@@ -83,22 +89,22 @@ export function createWorkshop(type,tier=1){
 
  g.userData={kind:'workshop',type,tier};return g;
 }
-function palm(){const g=new THREE.Group();link(g,new THREE.Vector3(),new THREE.Vector3(.35,4.8,0),.18,0x82674b);for(let j=0;j<7;j++){const a=j/7*Math.PI*2;const leaf=mesh(g,sphere,0x527e4c,.35+Math.cos(a)*1,4.65,Math.sin(a),[1.4,.1,.25]);leaf.rotation.y=-a;leaf.rotation.z=.2*Math.cos(a);}return g;}
+function palm(){return naturalPalm(3);}
 function cactus(){const g=new THREE.Group();mesh(g,new THREE.CylinderGeometry(.25,.30,2.3,8),0x789177,0,1.15,0);for(const s of [-1,1]){link(g,new THREE.Vector3(0,1,0),new THREE.Vector3(s*.55,1.05,0),.14,0x789177);mesh(g,new THREE.CylinderGeometry(.14,.16,.85,7),0x789177,s*.55,1.43,0);}return g;}
 export function enrichWorld(scene,world,height,factories){
  const group=new THREE.Group();group.name='Everwild-Biomes';scene.add(group);world.fantasy=[];world.workshops=[];
  const ocean=new THREE.Mesh(new THREE.PlaneGeometry(540,540,32,32),new THREE.MeshPhysicalMaterial({color:0x428b9b,roughness:.25,metalness:.12,transparent:true,opacity:.91,clearcoat:.7}));ocean.rotation.x=-Math.PI/2;ocean.position.y=-1.4;group.add(ocean);world.ocean=ocean;
- for(let i=0;i<430;i++){
+ for(let i=0;i<1700;i++){
   const x=rng(i*3+70)*460-230,z=rng(i*3+71)*460-230;if(Math.hypot(x,z)<59||landDistance(x,z)<3)continue;
   const r=regionAt(x,z);let obj;
   if(['tropical','island2'].includes(r.id))obj=palm();
-  else if(r.id==='mushroom'){obj=new THREE.Group();mesh(obj,new THREE.CylinderGeometry(.18,.28,2.7,7),0xc5b9aa,0,1.3,0);const cap=mesh(obj,sphere,i%2?0x8a669a:0x667d9d,0,2.7,0,[1.2,.45,1.2]);for(let k=0;k<5;k++)mesh(obj,sphere,0xd9c7ae,Math.cos(k*1.25)*.7,2.93,Math.sin(k*1.25)*.7,[.12,.045,.12]);}
+  else if(r.id==='mushroom')obj=i%3===0?naturalMushroom(i):factories.tree(i%6,0);
   else if(r.id==='canyon'){obj=factories.rock('rock',i%3,0);obj.scale.y=2.3;obj.traverse(o=>{if(o.isMesh&&o.material){o.material=o.material.clone();o.material.color.set(0x9b7050);}});}
   else if(r.id==='desert')obj=i%3===0?cactus():factories.rock('rock',i%3,0);
   else if(['volcanic','island5','mountain','island1'].includes(r.id)){obj=factories.rock(i%4===0?'iron':'rock',i%3,0);if(r.id==='volcanic'||r.id==='island5')obj.traverse(o=>{if(o.isMesh&&o.material){o.material=o.material.clone();o.material.color.set(0x514a48);}});}
   else if(r.id==='steppe'||r.id==='coast'){if(i%3)continue;obj=factories.bush(i%3,0,true);}
-  else obj=(r.id==='snow'||r.id==='island4')?factories.pine(i%3,3):factories.tree(i%3,0);
-  const s=.8+rng(i+700)*.7;obj.scale.multiplyScalar(s);obj.position.set(x,height(x,z),z);group.add(obj);
+  else obj=(r.id==='snow'||r.id==='island4'||r.id==='island1')?factories.pine(i%6,r.id==='snow'?3:0):factories.tree(i%6,0);
+  const s=.75+rng(i+700)*.6;obj.scale.multiplyScalar(s);obj.position.set(x,height(x,z),z);group.add(obj);if(obj.userData.natural){world.treeGroups.push(obj);world.animated.push(obj);}
   const type=r.id==='desert'&&i%3===0?'tree':['desert','canyon','volcanic','island5','mountain','island1'].includes(r.id)?(i%4===0&&r.id!=='desert'?'ore':'rock'):(r.id==='steppe'||r.id==='coast'?'berries':'tree');
   world.interactables.push({type,object:obj,position:()=>obj.position,radius:1.8,hits:0,maxHits:4,label:type==='tree'?'Couper l’arbre':type==='berries'?'Cueillir les baies':type==='ore'?'Extraire le minerai':'Casser le rocher'});
   if(type!=='berries')world.colliders.push({object:obj,radius:.55*s,active:true});
@@ -127,7 +133,7 @@ export function enrichWorld(scene,world,height,factories){
  for(const r of REGIONS){if(!r.id.startsWith('island')&&r.id!=='coast')continue;const post=new THREE.Group();link(post,new THREE.Vector3(),new THREE.Vector3(0,3,0),.12,0x76583b);const banner=mesh(post,box,0x8faaa0,.5,2.4,0,[.9,.6,.05]);post.position.set(r.x-5,height(r.x-5,r.z),r.z);group.add(post);}
  return {update(dt,time,player){ocean.position.y=-1.4+Math.sin(time*.6)*.015;
   for(const a of world.fantasy){if(!a.visible)continue;const u=a.userData,dist=Math.hypot(a.position.x-player.x,a.position.z-player.z);if(dist>13){const targetX=u.home.x+Math.sin(time*.16+u.level)*3,targetZ=u.home.z+Math.cos(time*.16+u.level)*3;const dx=targetX-a.position.x,dz=targetZ-a.position.z,d=Math.hypot(dx,dz)||1;a.position.x+=dx/d*dt*.55;a.position.z+=dz/d*dt*.55;a.rotation.y=Math.atan2(-dx,-dz);a.position.y=height(a.position.x,a.position.z);}else a.rotation.y+=Math.atan2(Math.sin(Math.atan2(a.position.x-player.x,a.position.z-player.z)-a.rotation.y),Math.cos(Math.atan2(a.position.x-player.x,a.position.z-player.z)-a.rotation.y))*.06;
-   if(u.kind==='dragon'){u.wings.forEach((w,i)=>w.rotation.z=(i===0?-1:1)*(.22+Math.sin(time*1.4)*.11));u.tail.rotation.y=Math.sin(time*.9)*.15;u.neck.rotation.x=Math.sin(time*.7)*.035;u.jaw.rotation.x=dist<8?Math.max(0,Math.sin(time*2))*.18:0;u.legs.forEach((l,i)=>l.rotation.x=Math.sin(time*2+i*Math.PI/2)*.07);}else if(u.tail)u.tail.rotation.z=Math.sin(time*2)*.1;
+   if(u.kind==='dragon'){u.wings.forEach((w,i)=>w.rotation.z=(i===0?-1:1)*(.22+Math.sin(time*1.4)*.11));u.tail.rotation.y=Math.sin(time*.9)*.15;u.neck.rotation.x=Math.sin(time*.7)*.035;u.jaw.rotation.x=dist<8?Math.max(0,Math.sin(time*2))*.18:0;u.legs.forEach((l,i)=>l.rotation.x=Math.sin(time*2+i*Math.PI/2)*.07);}else if(u.tail){u.tail.rotation.z=Math.sin(time*1.2)*.1;if(u.legs)u.legs.forEach((l,i)=>l.rotation.x=dist>13?Math.sin(time*3.4+(i===0||i===3?0:Math.PI))*.23:Math.sin(time*.8+i)*.018);}
   }
  }};
 }

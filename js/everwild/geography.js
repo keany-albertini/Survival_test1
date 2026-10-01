@@ -1,5 +1,5 @@
 // Playable V7 silhouette derived from the validated land mask, at compact web scale.
-import {LAND_SIZE,LAND_SDF} from './v7-land.js?v=ew4';
+import {LAND_SIZE,LAND_SDF} from './v7-land.js?v=ew5';
 export const WORLD_LIMIT=248;
 export const ISLANDS=[{x:210,z:192,r:25},{x:-177,z:161,r:41},{x:-187,z:-192,r:30},{x:207,z:-177,r:28},{x:-205,z:-43,r:25}];
 export const REGIONS=[

@@ -1,3 +1,15 @@
+# Everwild web 0.5 · Nature et personnages
+
+Jouer : https://keany-albertini.github.io/Survival_test1/?v=ew5
+
+- Menu : rejoindre le monde, choisir un personnage existant ou en créer un autre. L’ancien personnage est récupéré automatiquement. Chaque ID conserve une sauvegarde distincte ; changer de personnage sauvegarde le précédent puis relance proprement le moteur.
+- Huit races avec silhouettes et attributs visuels propres : carrure, oreilles, cornes, tusques, barbe, détails végétaux, étoffes. Six coiffures, six teintes de peau par race, couleur libre des cheveux et des yeux, quatre barbes, cicatrice/taches de rousseur et trois statures. Aperçu 3D éclairé ; portrait de secours si WebGL est indisponible.
+- Sols photographiques PBR par biome : feuilles et mousse, gravier/sable, roche et neige ; transitions interpolées, normales et rugosité. Écorces et rochers photographiques. Textures 1k hébergées dans le dépôt, licence CC0 Poly Haven (voir `assets/everwild/pbr/sources.json`).
+- Arbres à feuillage ajouré, racines et branches irrégulières ; palmiers avec palmes ; champignons avec pied, chapeau et lamelles ; sous-bois renouvelé autour du joueur selon le biome. Maison médiévale de pierre, charpente, ardoises et fenêtres chaudes au camp.
+- Loups aux proportions affinées et pattes animées ; fourrure texturée et surfaces adoucies pour la faune ; membranes texturées sur les dragons. Caméra perspective rapprochée, gestion des feuillages devant la caméra, nuits lisibles et brume selon le biome.
+
+Validation : `node tests/characters.mjs`, `node tests/geography.mjs`, `node tests/navigation.mjs`. Vérification navigateur à 390×844 avec WebGL logiciel : création personnalisée, aperçu 3D, lancement, création d’un deuxième personnage, retour au premier et deux sauvegardes distinctes. Le rendu est un progrès vers la référence, pas une reproduction du rendu Unreal ; performances réelles à confirmer sur téléphone. Solo local uniquement. Aucun serveur ou compte synchronisé.
+
 # Carte V7 · adaptation web 0.4
 
 Contours issus du masque `Everwild_V7_controle_masque_terre.png` validé le 22 septembre. Le continent et les cinq îles remplacent les disques du prototype. Les six grandes composantes sont conservées, les fragments de lettres du poster exclus. Rotation horaire : nord à droite. Vantuman diagonal, couronne glaciaire, jungle, plaines, désert et volcan repositionnés. Destinations et ateliers suivent cette géographie. L’atlas et le menu Monde affichent cette même carte, avec repères numérotés ; canyons, champignons géants et trois affluents sont ajoutés.
