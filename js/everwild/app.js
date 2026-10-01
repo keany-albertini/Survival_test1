@@ -1,5 +1,5 @@
-import {REGIONS} from './geography.js?v=ew3';
-import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew3";
+import {REGIONS,landDistance,regionAt,outerHeight,RIVERS} from './geography.js?v=ew4';
+import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew4";
 const $=id=>document.getElementById(id);
 let profile=null,started=false,starting=false,selection="human",latest=null;
 let settings={quality:(matchMedia("(pointer:coarse)").matches||innerWidth<=600)?"light":"balanced"};
@@ -31,7 +31,7 @@ async function play(){
   if(started)return;
   starting=true;$("loading").classList.remove("hidden");$("loadingLabel").textContent="Ouverture des terres d’Everwild…";$("loadingErrorBack").hidden=true;
   try{
-    await import("../v20/main.js?v=ew3");started=true;
+    await import("../v20/main.js?v=ew4");started=true;
     $("loading").classList.add("hidden");
     $("survivorName").textContent=profile.name;$("survivorRace").textContent=RACES.find(r=>r.id===profile.race).name;
   }catch(error){
@@ -125,7 +125,17 @@ document.addEventListener("keydown",event=>{
 menu();
 
 const biomeSymbols={meadow:'❧',steppe:'〰',desert:'☀',tropical:'♧',swamp:'♒',mountain:'△',snow:'❄',volcanic:'♜',coast:'≈',island1:'♜',island2:'♧',island3:'❧',island4:'❄',island5:'♜'};
-function fillAtlas(container,travel){for(const r of REGIONS){const card=document.createElement(travel?'button':'article');card.className='ew-destination';card.style.setProperty('--biome','#'+r.color.toString(16).padStart(6,'0'));const icon=document.createElement('i');icon.textContent=biomeSymbols[r.id];const title=document.createElement('strong');title.textContent=r.name;const desc=document.createElement('small');desc.textContent=r.subtitle;const level=document.createElement('span');level.textContent='Niv. '+r.min+'–'+r.max+(travel?' · Explorer ↗':'');card.append(icon,title,desc,level);if(travel)card.addEventListener('click',()=>command('travel',r.id));container.append(card);}}
+function mapOverview(container){
+ const map=document.createElement('canvas');map.width=512;map.height=512;map.className='ew-v7-map';map.setAttribute('role','img');map.setAttribute('aria-label','Carte V7 : continent, cinq îles, chaîne du Vantuman et biomes. Nord à droite.');const ctx=map.getContext('2d');
+ const pixel=v=>(v+248)/496*512;
+ for(let py=0;py<512;py+=2)for(let px=0;px<512;px+=2){const x=px/512*496-248,z=py/512*496-248,d=landDistance(x,z);
+  if(d<0)ctx.fillStyle=d>-8?'#397f91':'#174756';else{const r=regionAt(x,z),h=outerHeight(x,z),light=Math.max(.65,Math.min(1.3,1+(outerHeight(x-1,z-1)-outerHeight(x+1,z+1))*.12));let c=r.color;if(h>22)c=0xb7c4c0;ctx.fillStyle='rgb('+[c>>16,(c>>8)&255,c&255].map(v=>Math.min(255,Math.round(v*light))).join(',')+')';}ctx.fillRect(px,py,2,2);
+ }
+ ctx.strokeStyle='#8ecbd0';ctx.lineWidth=1.6;for(const river of RIVERS){ctx.beginPath();river.forEach(([x,z],i)=>i?ctx.lineTo(pixel(x),pixel(z)):ctx.moveTo(pixel(x),pixel(z)));ctx.stroke();}
+ for(let i=0;i<REGIONS.length;i++){const r=REGIONS[i],x=pixel(r.x),y=pixel(r.z);ctx.fillStyle='#12251e';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#d0b879';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#fff0cd';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText(String(i+1),x,y+3);}
+ ctx.fillStyle='#fff0cd';ctx.font='bold 14px serif';ctx.textAlign='right';ctx.fillText('N →',498,22);ctx.textAlign='left';ctx.fillText('EVERWILD · V7',14,496);container.append(map);
+}
+function fillAtlas(container,travel){mapOverview(container);for(const r of REGIONS){const card=document.createElement(travel?'button':'article');card.className='ew-destination';card.style.setProperty('--biome','#'+r.color.toString(16).padStart(6,'0'));const icon=document.createElement('i');icon.textContent=biomeSymbols[r.id]||(r.id==='mushroom'?'🍄':'⛰');const title=document.createElement('strong');title.textContent=(REGIONS.indexOf(r)+1)+'. '+r.name;const desc=document.createElement('small');desc.textContent=r.subtitle;const level=document.createElement('span');level.textContent='Niv. '+r.min+'–'+r.max+(travel?' · Explorer ↗':'');card.append(icon,title,desc,level);if(travel)card.addEventListener('click',()=>command('travel',r.id));container.append(card);}}
 fillAtlas($('worldRegionGrid'),false);fillAtlas($('atlasGrid'),true);
 $('atlasBtn').addEventListener('click',()=>{if(!started)return;$('journeyPanel').hidden=true;$('atlasPanel').hidden=false;window.everwildPaused=true;});
 $('atlasClose').addEventListener('click',()=>{$('atlasPanel').hidden=true;window.everwildPaused=false;});

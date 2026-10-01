@@ -100,3 +100,8 @@ button.ew-destination{cursor:pointer}.ew-destination:hover{border-color:#d8cba9}
 .ew-info>#unstuckBtn,.ew-info>#fullscreenBtn{margin:8px 8px 8px 0;min-height:48px}
 @media(max-width:600px){.top-left{left:8px;top:8px;padding:8px 10px;max-width:calc(100vw - 140px)}.world-title>span{font-size:16px!important}.survivor-card{top:75px!important;left:8px;font-size:10px}.ew-game-tools{top:109px}.stats{left:8px!important;padding:7px 8px}.stat{grid-template-columns:18px 79px 27px!important;gap:4px!important}.camera-controls{top:187px!important}.ew-info>#unstuckBtn,.ew-info>#fullscreenBtn{width:100%;margin:6px 0}}
 .top-left{padding:0;background:none;backdrop-filter:none}.world-title{padding:8px 10px;border-radius:10px;background:linear-gradient(110deg,#10251bed,#10251b95);backdrop-filter:blur(3px)}
+
+/* V7 is oriented with north to the right of the map. */
+.north{top:50% !important;left:auto !important;right:7px;transform:translateY(-50%) !important;}
+
+.ew-v7-map{grid-column:1/-1;width:100%;height:auto;aspect-ratio:1;border:1px solid #71837366;border-radius:14px;margin:0 0 10px;background:#174756;}

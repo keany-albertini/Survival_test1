@@ -3,10 +3,10 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=ew3";
+} from "./models.js?v=ew4";
 
-import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew3';
-import {enrichWorld} from '../everwild/fantasy.js?v=ew3';
+import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew4';
+import {enrichWorld} from '../everwild/fantasy.js?v=ew4';
 const WORLD_SIZE=520;
 const HALF=58;
 const SEASON_COLORS=[
@@ -315,7 +315,7 @@ function createGrassMaterial(){
 }
 
 function createTerrain(){
-  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,260,260);
+  const geo=new THREE.PlaneGeometry(WORLD_SIZE,WORLD_SIZE,320,320);
   geo.rotateX(-Math.PI/2);
   const pos=geo.attributes.position;
   const colors=[];

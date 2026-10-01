@@ -1,3 +1,13 @@
+# Carte V7 · adaptation web 0.4
+
+Contours issus du masque `Everwild_V7_controle_masque_terre.png` validé le 22 septembre. Le continent et les cinq îles remplacent les disques du prototype. Les six grandes composantes sont conservées, les fragments de lettres du poster exclus. Rotation horaire : nord à droite. Vantuman diagonal, couronne glaciaire, jungle, plaines, désert et volcan repositionnés. Destinations et ateliers suivent cette géographie. L’atlas et le menu Monde affichent cette même carte, avec repères numérotés ; canyons, champignons géants et trois affluents sont ajoutés.
+
+Tests : `node tests/geography.mjs` et `node tests/navigation.mjs`.
+
+La silhouette provient de la référence ; les hauteurs sont une reconstitution procédurale, pas la heightmap Unreal. Échelle compacte de 496 unités pour téléphone, pas encore les 10 × 10 km du projet PC.
+
+Jouer : https://keany-albertini.github.io/Survival_test1/?v=ew4
+
 # Correctif web 0.3 · Spawn et profondeur visuelle
 
 - Le rocher premium n’est plus placé sur le spawn. Le chargement des décors, la reprise des sauvegardes et le respawn recherchent un espace libre sans toucher à l’inventaire ni à la progression.

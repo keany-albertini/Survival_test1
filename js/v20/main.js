@@ -1,15 +1,15 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=ew3";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew3";
+import { createPlayer, makeGhost } from "./models.js?v=ew4";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew4";
 
-import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew3";
-import { applyAppearance } from "../everwild/appearance.js?v=ew3";
-import { updateCharacter } from "../v28/animation.js?v=ew3";
-import { createAmbience } from "../v27/ambience.js?v=ew3";
+import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew4";
+import { applyAppearance } from "../everwild/appearance.js?v=ew4";
+import { updateCharacter } from "../v28/animation.js?v=ew4";
+import { createAmbience } from "../v27/ambience.js?v=ew4";
 
-import {createDragon} from '../everwild/fantasy.js?v=ew3';
-import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew3';
-import {isClear,canStep,nearestClear} from '../everwild/navigation.js?v=ew3';
+import {createDragon} from '../everwild/fantasy.js?v=ew4';
+import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew4';
+import {isClear,canStep,nearestClear} from '../everwild/navigation.js?v=ew4';
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
 let graphicsReady=false;
@@ -60,7 +60,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=ew3");
+    const premiumModule=await import("../v26/premiumZone.js?v=ew4");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -391,7 +391,7 @@ function collisionObstacles(){
 }
 function canMove(x,z){return canStep(x,z,state.x,state.z,collisionObstacles(),WORLD_LIMIT);}
 function relocateSafely(x=state.x,z=state.z,force=false){
- const obstacles=collisionObstacles();if(!force&&isClear(state.x,state.z,obstacles,WORLD_LIMIT))return false;
+ const obstacles=collisionObstacles();if(!force&&isClear(state.x,state.z,obstacles,WORLD_LIMIT)&&landDistance(state.x,state.z)>2)return false;
  const options={limit:WORLD_LIMIT,land:(x,z)=>landDistance(x,z)>2};
  const target=nearestClear(x,z,obstacles,options)||nearestClear(-7,5,obstacles,{...options,maxRadius:40});
  if(!target)return false;
