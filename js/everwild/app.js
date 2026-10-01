@@ -1,5 +1,5 @@
-import {REGIONS} from './geography.js?v=ew2';
-import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew2";
+import {REGIONS} from './geography.js?v=ew3';
+import { RACES,STAT_FIELDS,PRACTICES,BRANCHES,RECIPES,xpRequired,practiceLevel } from "./rules.js?v=ew3";
 const $=id=>document.getElementById(id);
 let profile=null,started=false,starting=false,selection="human",latest=null;
 let settings={quality:(matchMedia("(pointer:coarse)").matches||innerWidth<=600)?"light":"balanced"};
@@ -31,7 +31,7 @@ async function play(){
   if(started)return;
   starting=true;$("loading").classList.remove("hidden");$("loadingLabel").textContent="Ouverture des terres d’Everwild…";$("loadingErrorBack").hidden=true;
   try{
-    await import("../v20/main.js?v=ew2c");started=true;
+    await import("../v20/main.js?v=ew3");started=true;
     $("loading").classList.add("hidden");
     $("survivorName").textContent=profile.name;$("survivorRace").textContent=RACES.find(r=>r.id===profile.race).name;
   }catch(error){
@@ -130,3 +130,5 @@ fillAtlas($('worldRegionGrid'),false);fillAtlas($('atlasGrid'),true);
 $('atlasBtn').addEventListener('click',()=>{if(!started)return;$('journeyPanel').hidden=true;$('atlasPanel').hidden=false;window.everwildPaused=true;});
 $('atlasClose').addEventListener('click',()=>{$('atlasPanel').hidden=true;window.everwildPaused=false;});
 $('incubateBtn').addEventListener('click',()=>{command('incubate');$('atlasPanel').hidden=true;window.everwildPaused=false;});
+
+$('unstuckBtn').addEventListener('click',()=>{if(!started){$('settingsFeedback').textContent='Lance l’aventure pour utiliser cette aide.';return;}command('unstuck');$('settingsFeedback').textContent='Personnage replacé en terrain libre. Tu peux reprendre l’aventure.';});

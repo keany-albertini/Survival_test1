@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {REGIONS,ISLANDS,landDistance,regionAt} from './geography.js';
+import {REGIONS,ISLANDS,landDistance,regionAt} from './geography.js?v=ew3';
 const rng=n=>{const a=Math.sin(n*78.23+1.83)*43871.28;return a-Math.floor(a)};
 const materials=new Map();
 function mat(color,metal=0){const key=color+':'+metal;if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:metal?.58:.86,metalness:metal}));return materials.get(key);}
@@ -66,8 +66,21 @@ export function createWorkshop(type,tier=1){
   mesh(g,box,wood,0,.95,0,[2.3,.15,1.05]);for(const x of [-.9,.9])for(const z of [-.35,.35])mesh(g,box,wood,x,.52,z,[.13,.9,.13]);
   if(type==='alchemy')for(let i=0;i<5;i++){const c=[0x74b9aa,0xb299cb,0xcab876][i%3];mesh(g,new THREE.CylinderGeometry(.10,.18,.32+i%2*.12,9),c,-.8+i*.39,1.18,0, [1,1,1],.15);mesh(g,new THREE.CylinderGeometry(.055,.065,.12,7),0xbaa079,-.8+i*.39,1.43,0);}else{mesh(g,box,0xcba16d,0,1.1,0,[1.7,.1,.3]);link(g,new THREE.Vector3(-.6,1.16,-.3),new THREE.Vector3(.1,1.16,.3),.035,0x879494);}
  }
- const roof=mesh(g,new THREE.ConeGeometry(2.1,.65,4),tier>1?0x57626b:0x655440,0,2.8,0,[1,1,.8]);roof.rotation.y=Math.PI/4;for(const x of [-1.3,1.3])mesh(g,box,wood,x,1.45,.9,[.13,2.7,.13]);
+ // Timber frame, pitched overlapping shingles and foundation edging.
+ const roofColor=tier>1?0x53616a:0x604d39;
+ for(const side of [-1,1]){const roof=mesh(g,box,roofColor,0,2.87,side*.73,[3.6,.11,1.85]);roof.rotation.x=side*.44;}
+ const tiles=new THREE.InstancedMesh(new THREE.BoxGeometry(.39,.055,.48),mat(0x9a8060),80);const dummy=new THREE.Object3D();let tn=0;
+ for(const side of [-1,1])for(let row=0;row<4;row++)for(let col=0;col<10;col++){
+  const z=side*(.17+row*.36);dummy.position.set(-1.73+col*.38,3.24-Math.abs(z)*.47,z);dummy.rotation.set(side*.44,0,0);dummy.updateMatrix();tiles.setMatrixAt(tn,dummy.matrix);tiles.setColorAt(tn,new THREE.Color(tier>1?0x7c8b92:col%3===0?0xb79b74:0x99815e));tn++;
+ }tiles.castShadow=true;tiles.receiveShadow=true;g.add(tiles);
+ mesh(g,box,0x604832,0,3.25,0,[3.75,.13,.13]);
+ for(const x of [-1.3,1.3])for(const z of [-.88,.88]){mesh(g,box,wood,x,1.3,z,[.17,2.4,.17]);mesh(g,new THREE.CylinderGeometry(.2,.23,.24,6),stone,x,.36,z);}
+ for(const z of [-.9,.9])mesh(g,box,0x5b4230,0,2.45,z,[2.9,.14,.14]);
+ for(const x of [-1.3,1.3]){link(g,new THREE.Vector3(x,2.0,.88),new THREE.Vector3(x*.6,2.45,.88),.06,0x5e4630);mesh(g,box,0x5b4230,x,2.45,0,[.15,.15,2]);}
+ for(let j=0;j<8;j++){mesh(g,box,j%2?0x737d76:0x939b8e,-1.35+j*.39,.21,-1.15,[.37,.17,.15]);mesh(g,box,j%2?0x737d76:0x939b8e,-1.35+j*.39,.21,1.15,[.37,.17,.15]);}
+ if(type==='forge'){for(let j=0;j<5;j++)for(const x of [.13,1.27])mesh(g,box,0xa39d8b,x,.32+j*.19,.3,[.13,.15,1.12]);for(let j=0;j<7;j++)mesh(g,new THREE.TorusGeometry(.335,.025,4,8),0x646f69,.7,1+j*.27,.3).rotation.x=Math.PI/2;}
  for(let i=0;i<tier;i++)mesh(g,new THREE.OctahedronGeometry(.1),0xd8b975,-.3+i*.3,2.45,-1);
+
  g.userData={kind:'workshop',type,tier};return g;
 }
 function palm(){const g=new THREE.Group();link(g,new THREE.Vector3(),new THREE.Vector3(.35,4.8,0),.18,0x82674b);for(let j=0;j<7;j++){const a=j/7*Math.PI*2;const leaf=mesh(g,sphere,0x527e4c,.35+Math.cos(a)*1,4.65,Math.sin(a),[1.4,.1,.25]);leaf.rotation.y=-a;leaf.rotation.z=.2*Math.cos(a);}return g;}

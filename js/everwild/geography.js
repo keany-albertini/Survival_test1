@@ -2,8 +2,8 @@
 export const WORLD_LIMIT=248;
 export const ISLANDS=[{x:178,z:0,r:27},{x:162,z:152,r:30},{x:-166,z:132,r:31},{x:-174,z:-130,r:29},{x:98,z:-185,r:27}];
 export const REGIONS=[
- {id:'meadow',name:'Val-des-Roches',subtitle:'Forêts tempérées & plaines',x:-4,z:4,color:0x91a879,min:1,max:10},
- {id:'steppe',name:'Steppes d’Aure',subtitle:'Hautes herbes & grands horizons',x:72,z:0,color:0xb9a56b,min:8,max:22},
+ {id:'meadow',name:'Val-des-Roches',subtitle:'Forêts tempérées & plaines',x:-4,z:4,color:0x789465,min:1,max:10},
+ {id:'steppe',name:'Steppes d’Aure',subtitle:'Hautes herbes & grands horizons',x:72,z:0,color:0xab9860,min:8,max:22},
  {id:'desert',name:'Dunes d’Ambre',subtitle:'Désert & oasis',x:80,z:70,color:0xddbf86,min:15,max:35},
  {id:'tropical',name:'Canopée d’Émeraude',subtitle:'Forêt tropicale',x:-80,z:55,color:0x527f58,min:12,max:30},
  {id:'swamp',name:'Marais des Murmures',subtitle:'Brume & arbres anciens',x:-80,z:-55,color:0x778877,min:20,max:42},

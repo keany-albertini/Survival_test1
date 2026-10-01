@@ -1,4 +1,13 @@
-# Everwild — web 0.2 · Terres & créatures
+# Correctif web 0.3 · Spawn et profondeur visuelle
+
+- Le rocher premium n’est plus placé sur le spawn. Le chargement des décors, la reprise des sauvegardes et le respawn recherchent un espace libre sans toucher à l’inventaire ni à la progression.
+- Si un obstacle apparaît sur le personnage, les mouvements qui l’en font sortir restent autorisés. Paramètres → Dégager mon personnage ajoute une aide manuelle.
+- Ombres conservées en mode téléphone (carte 768 px), lumière moins surexposée, sol plus nuancé et texturé, caméra plus proche et moins verticale, ateliers avec charpente/toitures détaillées, mini-carte plus fine et informations lisibles sur fond sombre.
+- Vérification de la régression : `node tests/navigation.mjs`.
+
+Jouer : https://keany-albertini.github.io/Survival_test1/?v=ew3
+
+## Everwild — web 0.2 · Terres & créatures
 
 Adaptation jouable d’Everwild dans `Survival_test1`, en Three.js. Solo et sauvegarde locale. [Jouer](https://keany-albertini.github.io/Survival_test1/?v=ew2c).
 

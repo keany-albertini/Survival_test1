@@ -3,10 +3,10 @@ import {
   createTree, createPine, createBush, createRockCluster, createCampfire,
   createChest, createSkeleton, createHorse, createFarmPlot, createDeer, createRabbit,
   createStoneWall, createStoneTower, createPalisade, updateFarmVisual
-} from "./models.js?v=ew2";
+} from "./models.js?v=ew3";
 
-import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew2';
-import {enrichWorld} from '../everwild/fantasy.js?v=ew2c';
+import {outerHeight,regionAt,landDistance} from '../everwild/geography.js?v=ew3';
+import {enrichWorld} from '../everwild/fantasy.js?v=ew3';
 const WORLD_SIZE=520;
 const HALF=58;
 const SEASON_COLORS=[
@@ -78,9 +78,9 @@ function createGroundTextures(){
       const dirtMask=Math.max(0,Math.min(1,.42+broad*.12+medium*.14+grain*.22));
       const mossMask=Math.max(0,Math.min(1,.30-broad*.10+Math.sin((x+y)*.021)*.16+grain*.13));
 
-      const grass=[207,211,196];
-      const dirt=[192,182,163];
-      const moss=[185,193,175];
+      const grass=[163,173,151];
+      const dirt=[158,145,122];
+      const moss=[131,146,124];
 
       let rr=grass[0]*(1-dirtMask*.36)+dirt[0]*(dirtMask*.36);
       let gg=grass[1]*(1-dirtMask*.36)+dirt[1]*(dirtMask*.36);
@@ -90,7 +90,7 @@ function createGroundTextures(){
       gg=gg*(1-mossMask*.26)+moss[1]*(mossMask*.26);
       bb=bb*(1-mossMask*.26)+moss[2]*(mossMask*.26);
 
-      const fine=grain*18+medium*5;
+      const fine=grain*25+medium*10;
       img.data[i]=Math.max(0,Math.min(255,rr+fine));
       img.data[i+1]=Math.max(0,Math.min(255,gg+fine*.72));
       img.data[i+2]=Math.max(0,Math.min(255,bb+fine*.48));
@@ -126,14 +126,14 @@ function createGroundTextures(){
       c.beginPath();c.moveTo(x,y);c.lineTo(x+4+rand()*10,y+rand()*4-2);c.stroke();
     }else{
       const rad=3+rand()*13;
-      c.fillStyle="rgba(47,79,42,"+(0.025+rand()*.055)+")";
+      c.fillStyle="rgba(47,79,42,"+(0.06+rand()*.10)+")";
       c.beginPath();c.arc(x,y,rad,0,Math.PI*2);c.fill();
     }
   }
 
   const map=new THREE.CanvasTexture(colorCanvas);
   map.wrapS=map.wrapT=THREE.RepeatWrapping;
-  map.repeat.set(24,24);
+  map.repeat.set(66,66);
   map.colorSpace=THREE.SRGBColorSpace;
   map.anisotropy=8;
 
@@ -341,7 +341,7 @@ function createTerrain(){
     vertexColors:true,
     map:textures.map,
     bumpMap:textures.bump,
-    bumpScale:.08,
+    bumpScale:.16,
     roughnessMap:textures.roughness,
     roughness:.90,
     metalness:0

@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { loadPremiumModel, clonePremium } from "./assets.js?v=ew2";
+import { loadPremiumModel, clonePremium } from "./assets.js?v=ew3";
 
 const ASSETS={
   oak:"assets/v26/trees/oak_03.gltf",
@@ -43,7 +43,9 @@ function addResource(world,object,type,radius,maxHits,extra={}){
     ...extra
   };
   world.interactables.push(it);
-  world.colliders.push({object,radius:type==="tree"?.72:.68,active:true});
+  let physicalRadius=.72;
+  if(type!=="tree"){object.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(object);physicalRadius=Math.max(.68,Math.min(2.3,Math.max(bounds.max.x-bounds.min.x,bounds.max.z-bounds.min.z)*.45));}
+  world.colliders.push({object,radius:physicalRadius,active:true});
   return it;
 }
 
@@ -581,7 +583,7 @@ export async function initPremiumZone(scene,world,renderer,terrainHeight,onProgr
   }
 
   const rockSpots=[
-    [-3.8,4.1,.98,.15],[-14.6,11.0,.76,.88],[-3.2,14.2,.65,-.42],[-10.2,3.0,.54,.28]
+    [.4,-4.2,.98,.15],[-14.6,11.0,.76,.88],[-3.2,14.2,.65,-.42],[-10.2,3.0,.54,.28]
   ];
   for(const [x,z,s,r] of rockSpots){
     const rock=clonePremium(rockBase);

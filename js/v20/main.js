@@ -1,27 +1,30 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
-import { createPlayer, makeGhost } from "./models.js?v=ew2";
-import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew2c";
+import { createPlayer, makeGhost } from "./models.js?v=ew3";
+import { createWorld, terrainHeight, getRiverX, setWorldSeason, updateWorld, createBuildObject } from "./world.js?v=ew3";
 
-import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew2";
-import { applyAppearance } from "../everwild/appearance.js?v=ew2";
-import { updateCharacter } from "../v28/animation.js?v=ew2";
-import { createAmbience } from "../v27/ambience.js?v=ew2";
+import { newProgress,train,limits,allocate,validateProgress,practiceLevel,BRANCHES,RECIPES } from "../everwild/rules.js?v=ew3";
+import { applyAppearance } from "../everwild/appearance.js?v=ew3";
+import { updateCharacter } from "../v28/animation.js?v=ew3";
+import { createAmbience } from "../v27/ambience.js?v=ew3";
 
-import {createDragon} from '../everwild/fantasy.js?v=ew2c';
-import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew2';
+import {createDragon} from '../everwild/fantasy.js?v=ew3';
+import {REGIONS,WORLD_LIMIT,landDistance,regionAt,spawnAt} from '../everwild/geography.js?v=ew3';
+import {isClear,canStep,nearestClear} from '../everwild/navigation.js?v=ew3';
 const canvas=document.getElementById("game3d");
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:"high-performance"});
+let graphicsReady=false;
 function graphicsQuality(settings={}){
   const quality=settings.quality||"balanced",ratio=quality==="light"?1:quality==="high"?1.7:1.3;
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,ratio));renderer.shadowMap.enabled=quality!=="light";
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,ratio));renderer.shadowMap.enabled=true;
+  if(graphicsReady){const size=quality==="light"?768:quality==="high"?2048:1280;sun.shadow.mapSize.set(size,size);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}}
 }
 graphicsQuality(window.everwildSettings);
 window.addEventListener("everwild-settings",event=>{graphicsQuality(event.detail);resize();});
-renderer.shadowMap.enabled=window.everwildSettings?.quality!=="light";
+renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.16;
+renderer.toneMappingExposure=1.0;
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xa8b994);
@@ -31,14 +34,15 @@ const hemi=new THREE.HemisphereLight(0xd9e4d1,0x42382d,1.05);
 scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xffddb0,2.42);
 sun.castShadow=true;
-sun.shadow.mapSize.set(1536,1536);
+sun.shadow.mapSize.set(window.everwildSettings?.quality==="light"?768:1280,window.everwildSettings?.quality==="light"?768:1280);
+graphicsReady=true;
 sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
 sun.shadow.camera.near=.5;sun.shadow.camera.far=90;
-sun.shadow.bias=-.00035;
+sun.shadow.bias=-.00035;sun.shadow.normalBias=.025;
 scene.add(sun);
 const fill=new THREE.DirectionalLight(0x9fb6cf,.34);fill.position.set(-20,14,-18);scene.add(fill);
 
-let viewSize=15;
+let viewSize=12.5;
 const camera=new THREE.OrthographicCamera(-viewSize,viewSize,viewSize,-viewSize,.1,160);
 camera.position.set(14,17,14);
 
@@ -56,7 +60,7 @@ function loadingProgress(percent,label){
 async function bootPremiumZone(){
   loadingProgress(68,"Monde jouable prêt");
   try{
-    const premiumModule=await import("../v26/premiumZone.js?v=ew2");
+    const premiumModule=await import("../v26/premiumZone.js?v=ew3");
     loadingProgress(76,"Chargement des modèles GLTF/PBR");
 
     const premiumPromise=premiumModule.initPremiumZone(
@@ -67,6 +71,7 @@ async function bootPremiumZone(){
     // Keep the late result: slow mobile connections still receive animated models.
     premiumZone=await premiumPromise;
     premiumZoneUpdater=premiumModule.updatePremiumZone;
+    if(relocateSafely()){saveGame();showToast("Ton personnage a été dégagé des nouveaux décors.");}
     loadingProgress(100,"Monde prêt");
   }catch(err){
     console.warn("V26 premium zone disabled; base game continues.",err);
@@ -271,7 +276,9 @@ window.addEventListener("everwild-command",event=>{
     payCost(req);activeWorkshop.userData.tier++;activeWorkshop.scale.y=1+(activeWorkshop.userData.tier-1)*.08;state.stationTiers[stationKey(activeWorkshop)]=activeWorkshop.userData.tier;openWorkshop();learn('craft');
   }else if(type==='travel'){
     const target=spawnAt(id);if(!target||actionState.active)return;
-    state.x=target.x;state.z=target.z;motion.velocity.set(0,0);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);if(state.mounted){state.mounted=false;player.scale.setScalar(player.userData.baseScale||1);}resetJoy();activeWorkshop=null;closeAtlas();showToast(REGIONS.find(r=>r.id===id).name);updateUI();
+    state.x=target.x;state.z=target.z;motion.velocity.set(0,0);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);relocateSafely();if(state.mounted){state.mounted=false;player.scale.setScalar(player.userData.baseScale||1);}resetJoy();activeWorkshop=null;closeAtlas();showToast(REGIONS.find(r=>r.id===id).name);updateUI();
+  }else if(type==='unstuck'){
+    if(relocateSafely(state.x,state.z,true))showToast('Ton personnage est dégagé.');
   }else if(type==='incubate'){
     if(state.pet||!state.progress.research.includes('taming')||!hasCost({egg:1,berries:6})||Math.hypot(state.x+8,state.z-8)>8){showToast('Au camp : Domptage, 1 œuf et 6 baies requis.');return;}
     payCost({egg:1,berries:6});state.pet=true;showToast('Un jeune dragon a rejoint ton camp.');
@@ -308,7 +315,7 @@ function die(){
   player.scale.setScalar(player.userData.baseScale||1);state.x=-5;state.z=6;
   state.hp=limits(state.progress).health;state.hunger=60;state.thirst=60;state.stamina=limits(state.progress).stamina;
   actionState.active=false;actionState.bare=false;actionState.lockMovement=false;motion.velocity.set(0,0);
-  forceCleanSpawnUI();syncEquippedTool();renderQuickbar();renderBag();emitProgress();saveGame();
+  relocateSafely();forceCleanSpawnUI();syncEquippedTool();renderQuickbar();renderBag();emitProgress();saveGame();
   showToast("Tu es tombé. Ton sac reste récupérable pendant une heure.");
 }
 function payCost(cost){for(const [k,v] of Object.entries(cost))state.inventory[k]-=v;renderQuickbar();renderBag();}
@@ -376,20 +383,22 @@ function inputVector(){
 }
 
 function surfaceHeight(x,z){return Math.max(-.83,terrainHeight(x,z));}
-function canMove(x,z){
-  if(Math.abs(x)>WORLD_LIMIT||Math.abs(z)>WORLD_LIMIT)return false;
-  for(const c of world.colliders){
-    if(!c.active||!c.object.visible)continue;
-    if(state.mounted&&c.object===world.horse)continue;
-    const dx=x-c.object.position.x,dz=z-c.object.position.z;
-    if(dx*dx+dz*dz<(c.radius+.34)*(c.radius+.34))return false;
-  }
-  for(const b of world.buildings){
-    if(!b.object.visible)continue;
-    const dx=x-b.object.position.x,dz=z-b.object.position.z;
-    if(dx*dx+dz*dz<(b.radius+.34)*(b.radius+.34))return false;
-  }
-  return true;
+function collisionObstacles(){
+ const result=[];
+ for(const c of world.colliders){if(!c.active||!c.object.visible||state.mounted&&c.object===world.horse)continue;result.push({x:c.object.position.x,z:c.object.position.z,radius:c.radius});}
+ for(const b of world.buildings){if(b.object.visible)result.push({x:b.object.position.x,z:b.object.position.z,radius:b.radius});}
+ return result;
+}
+function canMove(x,z){return canStep(x,z,state.x,state.z,collisionObstacles(),WORLD_LIMIT);}
+function relocateSafely(x=state.x,z=state.z,force=false){
+ const obstacles=collisionObstacles();if(!force&&isClear(state.x,state.z,obstacles,WORLD_LIMIT))return false;
+ const options={limit:WORLD_LIMIT,land:(x,z)=>landDistance(x,z)>2};
+ const target=nearestClear(x,z,obstacles,options)||nearestClear(-7,5,obstacles,{...options,maxRadius:40});
+ if(!target)return false;
+ state.x=target.x;state.z=target.z;motion.velocity.set(0,0);resetJoy();
+ player.position.set(state.x,surfaceHeight(state.x,state.z),state.z);motion.cameraFocus.set(state.x,surfaceHeight(state.x,state.z)+.82,state.z);
+ actionState.active=false;actionState.lockMovement=false;
+ return true;
 }
 
 function nearestInteraction(){
@@ -750,7 +759,7 @@ function drawMinimap(){
   ctx.save();ctx.beginPath();ctx.arc(w/2,h/2,w/2-2,0,Math.PI*2);ctx.clip();
   ctx.fillStyle=state.season===3?"#77857c":state.season===2?"#776c43":"#536f46";ctx.fillRect(0,0,w,h);
   const scale=.32,ox=w/2-state.x*scale,oz=h/2-state.z*scale;
-  for(let pz=0;pz<h;pz+=5)for(let px=0;px<w;px+=5){const x=state.x+(px-w/2)/scale,z=state.z+(pz-h/2)/scale;ctx.fillStyle=landDistance(x,z)<0?'#367b91':'#'+regionAt(x,z).color.toString(16).padStart(6,'0');ctx.fillRect(px,pz,5,5);}
+  for(let pz=0;pz<h;pz+=2)for(let px=0;px<w;px+=2){const x=state.x+(px-w/2)/scale,z=state.z+(pz-h/2)/scale;ctx.fillStyle=landDistance(x,z)<0?'#367b91':'#'+regionAt(x,z).color.toString(16).padStart(6,'0');ctx.fillRect(px,pz,2,2);}
   for(const a of world.fantasy){if(!a.visible)continue;ctx.fillStyle='#d78970';ctx.fillRect(ox+a.position.x*scale-1,oz+a.position.z*scale-1,3,3);}
   ctx.strokeStyle="rgba(54,135,155,.88)";ctx.lineWidth=9;ctx.beginPath();
   for(let z=-60;z<=60;z+=2){const x=getRiverX(z);const px=ox+x*scale,py=oz+z*scale;if(z===-60)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.stroke();
@@ -888,9 +897,9 @@ function updateEnemyDamage(){
 
 function updateDayLight(){
   const a=state.dayProgress*Math.PI*2-Math.PI/2, daylight=clamp(Math.sin(a)*.66+.46,.18,1);
-  hemi.intensity=.78+daylight*.68;sun.intensity=.48+daylight*1.95;
-  sun.color.set(daylight>.55?0xffdda0:0xc1b4b0);
-  sun.position.set(state.x+Math.cos(a)*28,10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,0,state.z);scene.add(sun.target);
+  hemi.intensity=.38+daylight*.40;sun.intensity=.35+daylight*1.65;
+  sun.color.set(daylight>.55?0xffebd0:0xbec7d4);
+  sun.position.set(state.x+Math.cos(a)*28,surfaceHeight(state.x,state.z)+10+daylight*31,state.z+Math.sin(a)*24);sun.target.position.set(state.x,surfaceHeight(state.x,state.z),state.z);scene.add(sun.target);
   const base=new THREE.Color(seasonSky[state.season]);const night=new THREE.Color(0x243448);scene.background.copy(night).lerp(base,.20+daylight*.80);
   const biome=regionAt(state.x,state.z);const cold=['snow','island4'].includes(biome.id);
   scene.fog.color.copy(scene.background).lerp(new THREE.Color(cold?0xb7cfda:biome.id==='desert'?0xc7b18c:biome.id==='volcanic'||biome.id==='island5'?0x8d7970:0x9daf9a),.35);
@@ -907,7 +916,7 @@ function updateCamera(dt){
 
   const desired=new THREE.Vector3(
     motion.cameraFocus.x+12.7,
-    motion.cameraFocus.y+(state.mounted?15.6:14.8),
+    motion.cameraFocus.y+(state.mounted?12.4:11.6),
     motion.cameraFocus.z+12.7
   );
   camera.position.lerp(desired,1-Math.exp(-dt*3.8));
@@ -1036,6 +1045,7 @@ for(const name of ["pointerup","pointercancel","lostpointercapture"]){
 }
 
 loadGame();
+relocateSafely();
 forceCleanSpawnUI();refreshLimits();emitProgress();
 state.season=Math.floor((state.day-1)/3)%4;setWorldSeason(world,state.season);scene.background.set(seasonSky[state.season]);
 player.position.set(state.x,surfaceHeight(state.x,state.z),state.z);
