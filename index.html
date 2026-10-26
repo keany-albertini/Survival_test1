@@ -74,18 +74,19 @@ const treeCrown=new THREE.IcosahedronGeometry(1,1),branchGeo=new THREE.CylinderG
 const firGeo=new THREE.ConeGeometry(1,2.8,8,3),firNeedles=new THREE.MeshStandardMaterial({color:0x294c37,roughness:1,flatShading:true});
 const shrubGeo=new THREE.IcosahedronGeometry(1,1);
 const shrubMat=new THREE.MeshStandardMaterial({color:0x405b30,roughness:1,flatShading:true});
-const shrubInstances=new THREE.InstancedMesh(shrubGeo,shrubMat,280);
-for(let i=0;i<280;i++){
- const x=(rand()-.5)*350,z=(rand()-.5)*350,scale=.3+rand()*.75;
- matrixDummy.position.set(x,h(x,z)+scale*.5,z);matrixDummy.rotation.set(rand()*.15,rand()*6,rand()*.15);
- matrixDummy.scale.set(scale,scale*.65,scale);matrixDummy.updateMatrix();shrubInstances.setMatrixAt(i,matrixDummy.matrix);
-}shrubInstances.instanceMatrix.needsUpdate=true;shrubInstances.frustumCulled=false;scene.add(shrubInstances);
 // Forest debris, mushrooms, fallen branches and ground-cover are seeded.
 const grassGeometry=new THREE.BufferGeometry();grassGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.11,0,0,.11,0,0,.035,.8,0, -.09,0,.03,.09,0,.03,-.025,.62,.03],3));grassGeometry.computeVertexNormals();
 
 const grassMaterial=new THREE.MeshStandardMaterial({color:0x526d37,side:THREE.DoubleSide,transparent:true,opacity:.92,roughness:1,depthWrite:false});
 const grassCount=6500,grass=new THREE.InstancedMesh(grassGeometry,grassMaterial,grassCount);
 const matrixDummy=new THREE.Object3D();
+const shrubInstances=new THREE.InstancedMesh(shrubGeo,shrubMat,280);
+for(let i=0;i<280;i++){
+ const x=(rand()-.5)*350,z=(rand()-.5)*350,scale=.3+rand()*.75;
+ matrixDummy.position.set(x,h(x,z)+scale*.5,z);matrixDummy.rotation.set(rand()*.15,rand()*6,rand()*.15);
+ matrixDummy.scale.set(scale,scale*.65,scale);matrixDummy.updateMatrix();shrubInstances.setMatrixAt(i,matrixDummy.matrix);
+}shrubInstances.instanceMatrix.needsUpdate=true;shrubInstances.frustumCulled=false;scene.add(shrubInstances);
+
 for(let i=0;i<grassCount;i++){
  const x=(rand()-.5)*355,z=(rand()-.5)*355,scale=.4+rand()*.8;
  matrixDummy.position.set(x,h(x,z)-.03,z);
