@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
-<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Forêt diversifiée V8</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Essai fougères réalistes V10</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
 const loader=document.querySelector('#loading'),loadFill=document.querySelector('#load-fill'),loadPercent=document.querySelector('#load-percent'),loadStage=document.querySelector('#load-stage');let loadingProgress=0;function progress(p,label){loadingProgress=Math.max(loadingProgress,Math.min(100,p));loadFill.style.width=loadingProgress+'%';loadPercent.textContent=Math.round(loadingProgress)+' %';if(label)loadStage.textContent=label}progress(8,'Préparation du moteur graphique…');
@@ -142,6 +142,23 @@ for(let i=0;i<85;i++){const x=(rand()-.5)*345,z=(rand()-.5)*345,angle=rand()*6.2
  matrixDummy.scale.set(.7+rand(),.7+rand()*1.4,.7+rand());
  matrixDummy.updateMatrix();deadwood.setMatrixAt(i,matrixDummy.matrix);
 }deadwood.instanceMatrix.needsUpdate=true;deadwood.frustumCulled=false;scene.add(deadwood);
+
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/loaders/GLTFLoader.js';
+const fernAsset='https://www.innerscene.com/api/library/fern-clumps-82a87bea/download';
+new GLTFLoader().load(fernAsset,({scene:plant})=>{
+  let total=0;
+  for(let i=0;i<12;i++){
+    const x=(rand()-.5)*65,z=(rand()-.5)*65;
+    if(blocked(x,z))continue;
+    const clone=plant.clone(true);
+    clone.scale.setScalar(.28+rand()*.3);
+    clone.position.set(x,h(x,z),z);
+    clone.rotation.y=rand()*Math.PI*2;
+    clone.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
+    scene.add(clone);total++;
+  }
+  console.info('Everwild V10: '+total+' fern models loaded');
+},undefined,e=>console.warn('GLB unavailable; procedural fallback preserved',e));
 progress(88,'Finalisation des commandes…');
 const settings=document.createElement('div');settings.style.cssText='position:absolute;right:12px;top:12px;background:#06131acc;padding:7px 9px;border-radius:9px;font:11px system-ui;color:white;z-index:2;max-width:158px';settings.innerHTML='<label>Caméra <input id="sensitivity" type="range" min="1" max="10" value="4" style="width:78px;vertical-align:middle"></label>';document.body.appendChild(settings);let sensitivity=.002;settings.querySelector('input').addEventListener('input',e=>{sensitivity=Number(e.target.value)*.0005});renderer.domElement.style.touchAction='none';document.body.style.overscrollBehavior='none';const keys=new Set();addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));let yaw=.5,pitch=-.09,px=0,pz=7,jx=0,jy=0;const joystick=document.querySelector('#stick'),thumb=document.querySelector('#thumb');let stickId=null,lookId=null,lastX=0,lastY=0;
 function stick(e){const b=joystick.getBoundingClientRect(),dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2),l=Math.max(1,Math.hypot(dx,dy)),amount=Math.min(l,38);jx=dx/l*amount/38;jy=dy/l*amount/38;thumb.style.transform=`translate(${jx*38}px,${jy*38}px)`}
