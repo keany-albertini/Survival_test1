@@ -59,6 +59,22 @@ function addBlocker(x,z,r){
 }
 function blocked(x,z){const nearby=collisionCells.get(Math.floor(x/cellSize)+','+Math.floor(z/cellSize))||[];for(const b of nearby){const dx=x-b.x,dz=z-b.z;if(dx*dx+dz*dz<(b.r+.35)*(b.r+.35))return true}return false}
 const green=new THREE.MeshStandardMaterial({color:0x526849,roughness:1}),earth=new THREE.MeshStandardMaterial({color:0x6d6655,roughness:1}),rock=new THREE.MeshStandardMaterial({map:organicTexture('stone'),roughness:.99,flatShading:true}),bark=new THREE.MeshStandardMaterial({map:organicTexture('bark'),roughness:1}),leaf=[0x294e37,0x365b40,0x497047].map(color=>new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));const moss=new THREE.MeshStandardMaterial({color:0x748251,roughness:1});
+
+// V13: textured stone materials. If an image is missing the generated stone remains visible.
+// The 4 images are supplied separately in rock-textures-v13.zip under assets/rocks/.
+const rockFiles=['granite.webp','limestone.webp','basalt.webp','mossy.webp'];
+const rockMaterials=rockFiles.map((filename)=>{
+ const material=new THREE.MeshStandardMaterial({map:organicTexture('stone'),roughness:.96,flatShading:true});
+ new THREE.TextureLoader().load('assets/rocks/'+filename,(texture)=>{
+   texture.colorSpace=THREE.SRGBColorSpace;
+   texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+   texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+   material.map=texture;
+   material.needsUpdate=true;
+ },undefined,()=>{ /* retain procedural stone if file not yet present */ });
+ return material;
+});
+
 progress(30,'Création du terrain et des matériaux…');
 const h=(x,z)=>Math.sin(x*.038)*Math.cos(z*.045)*5+Math.sin(x*.09+z*.063)*1.1+Math.cos(z*.012+x*.014)*3+Math.sin(x*.21+Math.cos(z*.12))*0.34;
 const grid=140, step=3;const verts=[],cols=[],uvs=[],indices=[];const c=new THREE.Color();for(let z=0;z<=grid;z++)for(let x=0;x<=grid;x++){let px=(x-grid/2)*step,pz=(z-grid/2)*step,y=h(px,pz);verts.push(px,y,pz);uvs.push(x/grid,z/grid);let v=Math.max(0,Math.min(1,(y+5)/21));c.setRGB(.16+v*.18,.24+v*.15,.13+v*.12);cols.push(c.r,c.g,c.b)}for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){let a=z*(grid+1)+x,b=a+1,d=a+grid+1;indices.push(a,d,b,b,d,d+1)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();const mat=new THREE.MeshStandardMaterial({map:groundTexture(),roughness:1,color:0xffffff});const terrain=new THREE.Mesh(geo,mat);terrain.receiveShadow=true;scene.add(terrain);
@@ -154,9 +170,9 @@ for(let i=0;i<125;i++){
 for(const [m,count] of [[trunks,nt],[branches,nb],[coniferLayers,nf],...crowns.map((m,i)=>[m,nc[i]])]){
  m.count=count;m.instanceMatrix.needsUpdate=true;m.frustumCulled=false;scene.add(m);
 }
-const rocks=[irregularRock(),irregularRock()];for(let i=0;i<270;i++){let x=(rand()-.5)*400,z=(rand()-.5)*400; if(Math.hypot(x,z)<9)continue;let s=.2+rand()*1.9;let o=mesh(rocks[i%2],rock,x,h(x,z)+s*.35,z);o.scale.set(s*1.4,s*.8,s);o.rotation.set(rand()*2,rand()*6,rand());addBlocker(x,z,s*1.1);}
+const rocks=[irregularRock(),irregularRock()];for(let i=0;i<270;i++){let x=(rand()-.5)*400,z=(rand()-.5)*400; if(Math.hypot(x,z)<9)continue;let s=.2+rand()*1.9;let o=mesh(rocks[i%2],rockMaterials[i%4],x,h(x,z)+s*.35,z);o.scale.set(s*1.4,s*.8,s);o.rotation.set(rand()*2,rand()*6,rand());addBlocker(x,z,s*1.1);}
 // Procedural scattered stones and woodland debris.
-const pebbleMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),rock,650);
+const pebbleMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),rockMaterials[0],650);
 for(let i=0;i<650;i++){
  const x=(rand()-.5)*350,z=(rand()-.5)*350,k=.035+rand()*.14;
  matrixDummy.position.set(x,h(x,z)+k*.28,z);
