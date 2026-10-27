@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
-<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Sol HD V14.3</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Sol net V14.4</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
@@ -112,42 +112,53 @@ for(let tz=0;tz<tilesPerSide;tz++)for(let tx=0;tx<tilesPerSide;tx++){
 geo.dispose(); // old single-terrain buffers are replaced by the tiled meshes
 let biomeLoaded=0,biomeFailed=false;
 function bakeBiomes(){
- const src=biomeImages.map(img=>{
-  const c=document.createElement('canvas');c.width=c.height=512;
-  const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,512,512);
-  return ctx.getImageData(0,0,512,512).data;
+ // 512px per tile prevents 49 x 1024px GPU allocations on Android.
+ // Biome identity is blended smoothly; fine detail has a fixed small world scale.
+ const SIZE=512,SRC=512,REPEATS=12;
+ const source=biomeImages.map(img=>{
+  const cv=document.createElement('canvas');cv.width=cv.height=SRC;
+  const cx=cv.getContext('2d',{willReadFrequently:true});
+  cx.drawImage(img,0,0,SRC,SRC);
+  return cx.getImageData(0,0,SRC,SRC).data;
  });
  let tileIndex=0;
  function nextTile(){
   if(tileIndex>=biomeTiles.length)return;
-  const tile=biomeTiles[tileIndex++],size=512;
-  const c=document.createElement('canvas');c.width=c.height=size;
-  const ctx=c.getContext('2d'),out=ctx.createImageData(size,size),d=out.data;
-  // Low resolution biome weights: a wide soft border instead of abrupt checkerboard.
-  const n=20,weights=[];
-  for(let gy=0;gy<=n;gy++){
-   for(let gx=0;gx<=n;gx++){
-    const wx=tile.ox+(gx/n-.5)*tileWorldSize,wz=tile.oz+(gy/n-.5)*tileWorldSize;
-    weights.push(biomeAt(wx,wz,h(wx,wz)));
-   }
+  const tile=biomeTiles[tileIndex++],cv=document.createElement('canvas');
+  cv.width=cv.height=SIZE;
+  const ctx=cv.getContext('2d'),out=ctx.createImageData(SIZE,SIZE),d=out.data;
+  const n=20,idsGrid=[];
+  for(let gy=0;gy<=n;gy++)for(let gx=0;gx<=n;gx++){
+   const x=tile.ox+(gx/n-.5)*tileWorldSize,z=tile.oz+(gy/n-.5)*tileWorldSize;
+   idsGrid.push(biomeAt(x,z,h(x,z)));
   }
-  for(let y=0;y<size;y++){
-   const gy=y/(size-1)*n,iy=Math.min(n-1,Math.floor(gy)),fy=gy-iy;
-   const sy=(Math.floor(y*6)%512)*512*4;
-   for(let x=0;x<size;x++){
-    const gx=x/(size-1)*n,ix=Math.min(n-1,Math.floor(gx)),fx=gx-ix;
-    const ids=[weights[iy*(n+1)+ix],weights[iy*(n+1)+ix+1],weights[(iy+1)*(n+1)+ix],weights[(iy+1)*(n+1)+ix+1]];
-    // smoothstep softens the transition between sampling points.
-    const u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
-    const w=[(1-u)*(1-v),u*(1-v),(1-u)*v,u*v],si=sy+(Math.floor(x*6)%512)*4,di=(y*size+x)*4;
-    for(let k=0;k<3;k++)d[di+k]=src[ids[0]][si+k]*w[0]+src[ids[1]][si+k]*w[1]+src[ids[2]][si+k]*w[2]+src[ids[3]][si+k]*w[3];
+  for(let y=0;y<SIZE;y++){
+   const gy=y/(SIZE-1)*n,iy=Math.min(n-1,Math.floor(gy)),v0=gy-iy,v=v0*v0*(3-2*v0);
+   const sy=(Math.floor(y*REPEATS)%SRC)*SRC*4;
+   for(let x=0;x<SIZE;x++){
+    const gx=x/(SIZE-1)*n,ix=Math.min(n-1,Math.floor(gx)),u0=gx-ix,u=u0*u0*(3-2*u0);
+    const ids=[idsGrid[iy*(n+1)+ix],idsGrid[iy*(n+1)+ix+1],idsGrid[(iy+1)*(n+1)+ix],idsGrid[(iy+1)*(n+1)+ix+1]];
+    const weights=[(1-u)*(1-v),u*(1-v),(1-u)*v,u*v];
+    const si=sy+(Math.floor(x*REPEATS)%SRC)*4,di=(y*SIZE+x)*4;
+    for(let channel=0;channel<3;channel++){
+     let value=0;
+     for(let q=0;q<4;q++)value+=source[ids[q]][si+channel]*weights[q];
+     d[di+channel]=value;
+    }
     d[di+3]=255;
    }
   }
   ctx.putImageData(out,0,0);
-  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
-  texture.generateMipmaps=true;texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  const texture=new THREE.CanvasTexture(cv);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.generateMipmaps=true;
+  texture.minFilter=THREE.LinearMipmapLinearFilter;
+  texture.magFilter=THREE.LinearFilter;
+  texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  const old=tile.material.map;
   tile.material.map=texture;tile.material.needsUpdate=true;
+  // Shared fallback texture must not be disposed here.
+  if(old&&old!==fallbackGround)old.dispose();
   setTimeout(nextTile,0);
  }
  nextTile();
