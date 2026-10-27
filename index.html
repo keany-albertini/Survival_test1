@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
-<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Rochers naturels V13.1</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Sept biomes V14</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
@@ -77,7 +77,53 @@ const rockMaterials=rockFiles.map((filename)=>{
 
 progress(30,'Création du terrain et des matériaux…');
 const h=(x,z)=>Math.sin(x*.038)*Math.cos(z*.045)*5+Math.sin(x*.09+z*.063)*1.1+Math.cos(z*.012+x*.014)*3+Math.sin(x*.21+Math.cos(z*.12))*0.34;
-const grid=140, step=3;const verts=[],cols=[],uvs=[],indices=[];const c=new THREE.Color();for(let z=0;z<=grid;z++)for(let x=0;x<=grid;x++){let px=(x-grid/2)*step,pz=(z-grid/2)*step,y=h(px,pz);verts.push(px,y,pz);uvs.push(x/grid,z/grid);let v=Math.max(0,Math.min(1,(y+5)/21));c.setRGB(.16+v*.18,.24+v*.15,.13+v*.12);cols.push(c.r,c.g,c.b)}for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){let a=z*(grid+1)+x,b=a+1,d=a+grid+1;indices.push(a,d,b,b,d,d+1)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();const mat=new THREE.MeshStandardMaterial({map:groundTexture(),roughness:1,color:0xffffff});const terrain=new THREE.Mesh(geo,mat);terrain.receiveShadow=true;scene.add(terrain);
+const grid=140, step=3;const verts=[],cols=[],uvs=[],indices=[];const c=new THREE.Color();for(let z=0;z<=grid;z++)for(let x=0;x<=grid;x++){let px=(x-grid/2)*step,pz=(z-grid/2)*step,y=h(px,pz);verts.push(px,y,pz);uvs.push(x/grid,z/grid);let v=Math.max(0,Math.min(1,(y+5)/21));c.setRGB(.16+v*.18,.24+v*.15,.13+v*.12);cols.push(c.r,c.g,c.b)}for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){let a=z*(grid+1)+x,b=a+1,d=a+grid+1;indices.push(a,d,b,b,d,d+1)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();// V14: coherent regional biomes. Seven shared texture materials and seven terrain draw calls.
+const biomeFiles=['foret_temperee.webp','plaine_herbeuse.webp','montagne_rocheuse.webp','desert.webp','neige_glace.webp','jungle_tropicale.webp','marais_boue.webp'];
+const fallbackGround=groundTexture(),biomeLoader=new THREE.TextureLoader();
+const biomeMaterials=biomeFiles.map((name)=>{
+ const material=new THREE.MeshStandardMaterial({map:fallbackGround,roughness:1,color:0xffffff});
+ biomeLoader.load('assets/'+name,texture=>{
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+  texture.repeat.set(25,25);
+  texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  material.map=texture;material.needsUpdate=true;
+ },undefined,()=>{/* procedural backup remains when offline */});
+ return material;
+});
+function biomeAt(x,z,y){
+ // Core forest (spawn); north snow, west jungle, east plains,
+ // south-east desert, south-west wetland. High steep ridges remain rocky.
+ const ridge=Math.abs(h(x+5,z)-h(x-5,z))+Math.abs(h(x,z+5)-h(x,z-5));
+ const variation=Math.sin(x*.035+z*.021)*9+Math.cos(z*.048-x*.017)*6;
+ if(Math.hypot(x,z)<42)return 0;
+ if(z< -92+variation)return 4;               // northern snow
+ if(y>7.2 && ridge>1.8)return 2;             // exposed mountain rock
+ if(x< -88+variation && z> -75)return 5;    // western jungle
+ if(x< -40+variation && z>75)return 6;      // southwest marsh
+ if(x>74+variation && z>45)return 3;        // southeast desert
+ if(y>8.5 || ridge>4.0)return 2;            // other mountain ridges
+ if(x>38+variation)return 1;                // eastern open plains
+ return 0;                                  // temperate woodland
+}
+const biomeIndices=Array.from({length:7},()=>[]);
+for(let i=0;i<indices.length;i+=3){
+ const ia=indices[i]*3,ib=indices[i+1]*3,ic=indices[i+2]*3;
+ const bx=(verts[ia]+verts[ib]+verts[ic])/3;
+ const by=(verts[ia+1]+verts[ib+1]+verts[ic+1])/3;
+ const bz=(verts[ia+2]+verts[ib+2]+verts[ic+2])/3;
+ biomeIndices[biomeAt(bx,bz,by)].push(indices[i],indices[i+1],indices[i+2]);
+}
+const biomeTerrain=[];
+biomeIndices.forEach((ids,k)=>{
+ if(!ids.length)return;
+ const part=new THREE.BufferGeometry();
+ for(const attr of ['position','normal','uv','color'])part.setAttribute(attr,geo.getAttribute(attr));
+ part.setIndex(ids);
+ const m=new THREE.Mesh(part,biomeMaterials[k]);m.receiveShadow=true;
+ scene.add(m);biomeTerrain.push(m);
+});
+
 let seed=18299;function rand(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
 function mesh(geom,material,x,y,z){const m=new THREE.Mesh(geom,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
 // Organic procedural geometry: tapered branch clusters and irregular boulders.
