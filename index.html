@@ -65,7 +65,7 @@ const green=new THREE.MeshStandardMaterial({color:0x526849,roughness:1}),earth=n
 const rockFiles=['granite.webp','limestone.webp','basalt.webp','mossy.webp'];
 const rockMaterials=rockFiles.map((filename)=>{
  const material=new THREE.MeshStandardMaterial({map:organicTexture('stone'),roughness:.96,flatShading:true});
- new THREE.TextureLoader().load('assets/rocks/'+filename,(texture)=>{
+ new THREE.TextureLoader().load('assets/'+filename,(texture)=>{
    texture.colorSpace=THREE.SRGBColorSpace;
    texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
    texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
