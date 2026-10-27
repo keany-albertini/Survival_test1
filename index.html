@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
-<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Biomes immersifs V15.2</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Biomes immersifs V15.3</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
@@ -195,10 +195,46 @@ const firGeo=new THREE.ConeGeometry(1,2.8,8,3),firNeedles=new THREE.MeshStandard
 const shrubGeo=new THREE.IcosahedronGeometry(1,1);
 const shrubMat=new THREE.MeshStandardMaterial({color:0x405b30,roughness:1,flatShading:true});
 // Forest debris, mushrooms, fallen branches and ground-cover are seeded.
-const grassGeometry=new THREE.BufferGeometry();grassGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.085,0,0,.07,0,0,.025,.34,.035, -.045,0,.025,.075,0,.025,-.02,.29,.07, 0,0,-.07,0,0,.08,.09,.27,0, -.07,0,-.03,.07,0,.035,-.02,.23,.025],3));grassGeometry.computeVertexNormals();
-
-const grassMaterial=new THREE.MeshStandardMaterial({color:0x526d37,side:THREE.DoubleSide,transparent:true,opacity:.92,roughness:1,depthWrite:false});
-const grassCount=4200,grass=new THREE.InstancedMesh(grassGeometry,grassMaterial,grassCount);
+// V15.3: alpha-cut foliage textures, crossed planes and three biome-aware palettes.
+// Generated once at start: no external texture requests, and no per-frame canvas work.
+function foliageTexture(kind){
+ const c=document.createElement('canvas');c.width=c.height=256;
+ const ctx=c.getContext('2d');let seed=1977+kind*1297;
+ function rnd(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
+ const colors=kind===0?['#2e592d','#4d8439','#82ac55','#a3bd66']:kind===1?
+ ['#274c2c','#3d713d','#678e4a','#8ba75f']:['#756d3e','#999052','#b0a26b','#c5b67c'];
+ // Curved individual blades make an organic silhouette against transparent pixels.
+ for(let n=0;n<190;n++){
+  const foot=75+rnd()*106, height=33+rnd()*145, drift=(rnd()-.5)*115;
+  const width=1.0+rnd()*3.8, color=colors[(rnd()*colors.length)|0];
+  ctx.beginPath();ctx.moveTo(foot,250);
+  ctx.quadraticCurveTo(foot+drift*.18,250-height*.64,foot+drift,250-height);
+  ctx.quadraticCurveTo(foot+drift*.55+width,250-height*.43,foot+width,250);
+  ctx.closePath();ctx.fillStyle=color;ctx.fill();
+ }
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+ t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;
+ t.generateMipmaps=true;t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
+}
+const grassGeometry=new THREE.BufferGeometry();
+const gpos=[],guv=[],gind=[];
+for(let plane=0;plane<2;plane++){
+ const a=plane*Math.PI*.5,dx=Math.cos(a)*.38,dz=Math.sin(a)*.38,i=gpos.length/3;
+ gpos.push(-dx,0,-dz, dx,0,dz, dx,.9,dz, -dx,.9,-dz);
+ guv.push(0,0,1,0,1,1,0,1);gind.push(i,i+1,i+2,i,i+2,i+3);
+}
+grassGeometry.setAttribute('position',new THREE.Float32BufferAttribute(gpos,3));
+grassGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(guv,2));
+grassGeometry.setIndex(gind);grassGeometry.computeVertexNormals();
+const grassPalettes=[0,1,2].map(k=>new THREE.MeshStandardMaterial({
+ map:foliageTexture(k),side:THREE.DoubleSide,transparent:true,alphaTest:.42,
+ depthWrite:true,roughness:1,metalness:0,color:0xffffff
+}));
+const grassCount=4200,grasses=grassPalettes.map(m=>{
+ const inst=new THREE.InstancedMesh(grassGeometry,m,grassCount);
+ inst.count=0;inst.frustumCulled=false;return inst;
+});
+const grassFilled=[0,0,0];
 const matrixDummy=new THREE.Object3D();
 const shrubInstances=new THREE.InstancedMesh(shrubGeo,shrubMat,280);
 for(let i=0;i<280;i++){
@@ -208,14 +244,20 @@ for(let i=0;i<280;i++){
 }shrubInstances.instanceMatrix.needsUpdate=true;shrubInstances.frustumCulled=false;scene.add(shrubInstances);
 
 for(let i=0;i<grassCount;i++){
- const x=(rand()-.5)*355,z=(rand()-.5)*355,scale=.4+rand()*.8;
+ const x=(rand()-.5)*355,z=(rand()-.5)*355,scale=.38+rand()*.67;
  const localBiome=biomeAt(x,z,h(x,z));
- if(localBiome===4||localBiome===3||localBiome===2){matrixDummy.scale.set(0,0,0);matrixDummy.updateMatrix();grass.setMatrixAt(i,matrixDummy.matrix);continue;}
- matrixDummy.position.set(x,h(x,z)-.03,z);
- matrixDummy.rotation.set(0,rand()*Math.PI*2,(rand()-.5)*.26);
- matrixDummy.scale.set(scale,scale,scale);matrixDummy.updateMatrix();grass.setMatrixAt(i,matrixDummy.matrix);
+ if(localBiome===4||localBiome===2)continue; // snow and exposed rock
+ const palette=localBiome===3?2:(localBiome===5||localBiome===6?1:0);
+ if(localBiome===3&&rand()<.79)continue; // sparse desert clumps
+ const target=grasses[palette],idx=grassFilled[palette]++;
+ matrixDummy.position.set(x,h(x,z)-.025,z);
+ matrixDummy.rotation.set(0,rand()*Math.PI*2,0);
+ matrixDummy.scale.set(scale,scale*(.7+rand()*.7),scale);
+ matrixDummy.updateMatrix();target.setMatrixAt(idx,matrixDummy.matrix);
 }
-grass.instanceMatrix.needsUpdate=true;grass.frustumCulled=false;scene.add(grass);
+for(let k=0;k<grasses.length;k++){
+ grasses[k].count=grassFilled[k];grasses[k].instanceMatrix.needsUpdate=true;scene.add(grasses[k]);
+}
 
 // V12: instanced, varied trees to reduce Android draw calls.
 const treeTrunk = new THREE.CylinderGeometry(.17,.54,1,7,3);
