@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
-<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Forêt optimisée V12</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Rochers naturels V13.1</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
@@ -83,11 +83,20 @@ function mesh(geom,material,x,y,z){const m=new THREE.Mesh(geom,material);m.posit
 // Organic procedural geometry: tapered branch clusters and irregular boulders.
 progress(52,'Génération de la végétation…');
 const trunkGeo=new THREE.CylinderGeometry(.2,.5,6,9);
-function irregularRock(){
- const g=new THREE.IcosahedronGeometry(1,1),p=g.attributes.position;
- for(let i=0;i<p.count;i++){let x=p.getX(i),y=p.getY(i),z=p.getZ(i);
- const distortion=1+0.14*Math.sin(x*8+z*4)*Math.cos(y*7-z*5)+0.07*Math.sin(y*13+x*3);
- p.setXYZ(i,x*distortion,y*distortion,z*distortion)}
+function irregularRock(variant=0){
+ // Rounded, asymmetric, low-poly boulders: deterministic per variant.
+ const g=new THREE.IcosahedronGeometry(1,2),p=g.attributes.position;
+ for(let i=0;i<p.count;i++){
+  const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+  const broad=Math.sin(x*3.7+variant*2.3)*Math.cos(z*3.1-variant)*.13;
+  const chips=Math.sin(x*9+z*5+variant*3)*Math.sin(y*7-z*3)*.075;
+  const shape=1+broad+chips;
+  const width=[1.28,1.65,1.1,1.5,1.22,1.76][variant%6];
+  const depth=[1.1,.88,1.55,1.05,1.42,.95][variant%6];
+  const height=[.68,.43,.76,.55,.65,.39][variant%6];
+  const taper=1-.16*Math.max(0,y);
+  p.setXYZ(i,x*shape*width*taper,y*shape*height,z*shape*depth*taper);
+ }
  g.computeVertexNormals();return g;
 }
 const treeCrown=new THREE.IcosahedronGeometry(1,1),branchGeo=new THREE.CylinderGeometry(.04,.12,1,5);
@@ -170,7 +179,7 @@ for(let i=0;i<125;i++){
 for(const [m,count] of [[trunks,nt],[branches,nb],[coniferLayers,nf],...crowns.map((m,i)=>[m,nc[i]])]){
  m.count=count;m.instanceMatrix.needsUpdate=true;m.frustumCulled=false;scene.add(m);
 }
-const rocks=[irregularRock(),irregularRock()];for(let i=0;i<270;i++){let x=(rand()-.5)*400,z=(rand()-.5)*400; if(Math.hypot(x,z)<9)continue;let s=.2+rand()*1.9;let o=mesh(rocks[i%2],rockMaterials[i%4],x,h(x,z)+s*.35,z);o.scale.set(s*1.4,s*.8,s);o.rotation.set(rand()*2,rand()*6,rand());addBlocker(x,z,s*1.1);}
+const rocks=Array.from({length:6},(_,i)=>irregularRock(i));for(let i=0;i<270;i++){let x=(rand()-.5)*400,z=(rand()-.5)*400; if(Math.hypot(x,z)<9)continue;let size=.22+rand()*1.65,variant=i%6;let o=mesh(rocks[variant],rockMaterials[i%4],x,h(x,z)+size*.12,z);o.scale.set(size*(.85+rand()*.55),size,size*(.8+rand()*.48));o.rotation.set((rand()-.5)*.17,rand()*Math.PI*2,(rand()-.5)*.17);addBlocker(x,z,size*1.35);}
 // Procedural scattered stones and woodland debris.
 const pebbleMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),rockMaterials[0],650);
 for(let i=0;i<650;i++){
