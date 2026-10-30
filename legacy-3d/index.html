@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Everwild | Aperçu 3D</title><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#14212b;color:#eee;font-family:system-ui,sans-serif}canvas{display:block}#hud{position:absolute;left:14px;top:14px;padding:13px 16px;background:#06131ac9;border:1px solid #ffffff32;border-radius:10px;max-width:min(420px,92vw);pointer-events:none}h1{font-size:22px;letter-spacing:5px;margin:0 0 7px}small{opacity:.83;line-height:1.5;display:block}#badge{color:#dfc49b;font-size:11px;letter-spacing:2px;text-transform:uppercase}#stick{position:absolute;left:26px;bottom:30px;width:108px;height:108px;border-radius:60px;border:2px solid #fff7;background:#ffffff18;touch-action:none;user-select:none}#thumb{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:#ffffff8a}#hint{position:absolute;right:20px;bottom:31px;background:#06131ab0;padding:12px;border-radius:8px;font-size:12px;max-width:170px;pointer-events:none}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#182a31;z-index:5}#loading.hide{opacity:0;pointer-events:none;visibility:hidden}#loading{transition:opacity .5s ease,visibility .5s ease;background:radial-gradient(ellipse at center,#314b4b 0%,#0d171c 85%)}.load-panel{width:min(440px,84vw);text-align:center;padding:24px;color:#f0eee6}.load-kicker{font-size:10px;letter-spacing:3px;color:#d6c3a0;margin-bottom:14px}.load-logo{font-size:clamp(28px,8vw,46px);font-weight:700;letter-spacing:9px;text-shadow:0 5px 24px #0008}.load-subtitle{font-size:13px;color:#cad2cb;margin:34px 0 14px}.load-track{height:8px;background:#101e22;border:1px solid #91b19a55;overflow:hidden;border-radius:20px}.load-track>div{height:100%;width:0%;background:linear-gradient(90deg,#607b5b,#c2d4a7);transition:width .18s ease}.load-percent{font-size:12px;margin-top:10px;color:#c9d4c2;font-variant-numeric:tabular-nums}@media(min-width:800px){#stick{display:none}}</style></head>
+<body><div id="loading"><div class="load-panel"><div class="load-kicker">UNE NOUVELLE AVENTURE COMMENCE</div><div class="load-logo">EVERWILD</div><div class="load-subtitle" id="load-stage">Initialisation du monde…</div><div class="load-track"><div id="load-fill"></div></div><div class="load-percent" id="load-percent">0 %</div></div></div><div id="hud"><div id="badge">Prototype visuel • non contractuel</div><h1>EVERWILD</h1><small>Forêt des Premiers Âges · Forêt optimisée V12</small><small>Vie 100 · Faim 100 · Soif 100</small></div><div id="stick"><div id="thumb"></div></div><div id="hint">Téléphone : joystick à gauche, glisser à droite pour regarder.<br>PC : ZQSD/WASD et souris.</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
+const loader=document.querySelector('#loading'),loadFill=document.querySelector('#load-fill'),loadPercent=document.querySelector('#load-percent'),loadStage=document.querySelector('#load-stage');let loadingProgress=0;function progress(p,label){loadingProgress=Math.max(loadingProgress,Math.min(100,p));loadFill.style.width=loadingProgress+'%';loadPercent.textContent=Math.round(loadingProgress)+' %';if(label)loadStage.textContent=label}progress(8,'Préparation du moteur graphique…');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9eb5bf);scene.fog=new THREE.FogExp2(0x9daaa2,.0065);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,500);const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xc8dcef,0x424734,1.45));const sun=new THREE.DirectionalLight(0xffdfad,2.7);sun.position.set(-80,110,-70);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-115;sun.shadow.camera.right=115;sun.shadow.camera.top=115;sun.shadow.camera.bottom=-115;scene.add(sun);
+// Deterministic, tileable multi-scale ground texture, generated locally (no downloads).
+function groundTexture(){
+ const size=512, canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+ const ctx=canvas.getContext('2d'), data=ctx.createImageData(size,size);
+ let seed=1827;const noise=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296};
+ const coarse=new Float32Array(64*64);for(let i=0;i<coarse.length;i++)coarse[i]=noise();
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+   const ix=(x>>3)&63,iy=(y>>3)&63,fx=(x&7)/8,fy=(y&7)/8;
+   const at=(a,b)=>coarse[((b&63)*64)+(a&63)];
+   const a=at(ix,iy)*(1-fx)+at(ix+1,iy)*fx,b=at(ix,iy+1)*(1-fx)+at(ix+1,iy+1)*fx;
+   const n=(a*(1-fy)+b*fy),grain=noise(),d=(y*size+x)*4;
+   const dirt=n<.37;const v=(n-.5)*38+(grain-.5)*40;
+   data.data[d]=Math.max(0,Math.min(255,(dirt?99:69)+v));
+   data.data[d+1]=Math.max(0,Math.min(255,(dirt?88:92)+v));
+   data.data[d+2]=Math.max(0,Math.min(255,(dirt?70:56)+v*.8));
+   data.data[d+3]=255;
+ }
+ ctx.putImageData(data,0,0);
+ for(let i=0;i<5500;i++){ctx.fillStyle=noise()>.5?'#566846':'#998d6a';ctx.globalAlpha=.25+noise()*.35;ctx.fillRect(noise()*size,noise()*size,1+noise()*2,1+noise()*4)}
+ ctx.globalAlpha=1;
+ const texture=new THREE.CanvasTexture(canvas);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(34,34);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return texture;
+}
+// Lightweight generated material details. Reused by all boulders and trunks.
+function organicTexture(type){
+ const cv=document.createElement('canvas');cv.width=cv.height=256;
+ const cx=cv.getContext('2d'),im=cx.createImageData(256,256);
+ let seed=type==='stone'?14723:8764;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
+ const base=type==='stone'?[118,125,120]:[94,69,47];
+ for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+   const grain=(random()-.5)*47,streak=type==='bark'?Math.sin(x*.44+Math.sin(y*.09)*2)*22:Math.sin(x*.1+y*.17)*9;
+   const v=grain+streak,idx=(y*256+x)*4;
+   im.data[idx]=Math.max(0,Math.min(255,base[0]+v));
+   im.data[idx+1]=Math.max(0,Math.min(255,base[1]+v*.85));
+   im.data[idx+2]=Math.max(0,Math.min(255,base[2]+v*.76));im.data[idx+3]=255;
+ }
+ cx.putImageData(im,0,0);
+ const tex=new THREE.CanvasTexture(cv);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
+ tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+ return tex;
+}
+const blockers=[];
+// Spatial hash for collision performance on mobile.
+const collisionCells=new Map(),cellSize=9;
+function addBlocker(x,z,r){
+ const b={x,z,r},minX=Math.floor((x-r-1)/cellSize),maxX=Math.floor((x+r+1)/cellSize),minZ=Math.floor((z-r-1)/cellSize),maxZ=Math.floor((z+r+1)/cellSize);
+ for(let gx=minX;gx<=maxX;gx++)for(let gz=minZ;gz<=maxZ;gz++){const k=gx+','+gz;if(!collisionCells.has(k))collisionCells.set(k,[]);collisionCells.get(k).push(b)}
+ blockers.push(b);
+}
+function blocked(x,z){const nearby=collisionCells.get(Math.floor(x/cellSize)+','+Math.floor(z/cellSize))||[];for(const b of nearby){const dx=x-b.x,dz=z-b.z;if(dx*dx+dz*dz<(b.r+.35)*(b.r+.35))return true}return false}
+const green=new THREE.MeshStandardMaterial({color:0x526849,roughness:1}),earth=new THREE.MeshStandardMaterial({color:0x6d6655,roughness:1}),rock=new THREE.MeshStandardMaterial({map:organicTexture('stone'),roughness:.99,flatShading:true}),bark=new THREE.MeshStandardMaterial({map:organicTexture('bark'),roughness:1}),leaf=[0x294e37,0x365b40,0x497047].map(color=>new THREE.MeshStandardMaterial({color,roughness:1,flatShading:true}));const moss=new THREE.MeshStandardMaterial({color:0x748251,roughness:1});
+progress(30,'Création du terrain et des matériaux…');
+const h=(x,z)=>Math.sin(x*.038)*Math.cos(z*.045)*5+Math.sin(x*.09+z*.063)*1.1+Math.cos(z*.012+x*.014)*3+Math.sin(x*.21+Math.cos(z*.12))*0.34;
+const grid=140, step=3;const verts=[],cols=[],uvs=[],indices=[];const c=new THREE.Color();for(let z=0;z<=grid;z++)for(let x=0;x<=grid;x++){let px=(x-grid/2)*step,pz=(z-grid/2)*step,y=h(px,pz);verts.push(px,y,pz);uvs.push(x/grid,z/grid);let v=Math.max(0,Math.min(1,(y+5)/21));c.setRGB(.16+v*.18,.24+v*.15,.13+v*.12);cols.push(c.r,c.g,c.b)}for(let z=0;z<grid;z++)for(let x=0;x<grid;x++){let a=z*(grid+1)+x,b=a+1,d=a+grid+1;indices.push(a,d,b,b,d,d+1)}const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();const mat=new THREE.MeshStandardMaterial({map:groundTexture(),roughness:1,color:0xffffff});const terrain=new THREE.Mesh(geo,mat);terrain.receiveShadow=true;scene.add(terrain);
+let seed=18299;function rand(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296}
+function mesh(geom,material,x,y,z){const m=new THREE.Mesh(geom,material);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m}
+// Organic procedural geometry: tapered branch clusters and irregular boulders.
+progress(52,'Génération de la végétation…');
+const trunkGeo=new THREE.CylinderGeometry(.2,.5,6,9);
+function irregularRock(){
+ const g=new THREE.IcosahedronGeometry(1,1),p=g.attributes.position;
+ for(let i=0;i<p.count;i++){let x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+ const distortion=1+0.14*Math.sin(x*8+z*4)*Math.cos(y*7-z*5)+0.07*Math.sin(y*13+x*3);
+ p.setXYZ(i,x*distortion,y*distortion,z*distortion)}
+ g.computeVertexNormals();return g;
+}
+const treeCrown=new THREE.IcosahedronGeometry(1,1),branchGeo=new THREE.CylinderGeometry(.04,.12,1,5);
+const firGeo=new THREE.ConeGeometry(1,2.8,8,3),firNeedles=new THREE.MeshStandardMaterial({color:0x294c37,roughness:1,flatShading:true});
+const shrubGeo=new THREE.IcosahedronGeometry(1,1);
+const shrubMat=new THREE.MeshStandardMaterial({color:0x405b30,roughness:1,flatShading:true});
+// Forest debris, mushrooms, fallen branches and ground-cover are seeded.
+const grassGeometry=new THREE.BufferGeometry();grassGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.11,0,0,.11,0,0,.035,.8,0, -.09,0,.03,.09,0,.03,-.025,.62,.03],3));grassGeometry.computeVertexNormals();
+
+const grassMaterial=new THREE.MeshStandardMaterial({color:0x526d37,side:THREE.DoubleSide,transparent:true,opacity:.92,roughness:1,depthWrite:false});
+const grassCount=6500,grass=new THREE.InstancedMesh(grassGeometry,grassMaterial,grassCount);
+const matrixDummy=new THREE.Object3D();
+const shrubInstances=new THREE.InstancedMesh(shrubGeo,shrubMat,280);
+for(let i=0;i<280;i++){
+ const x=(rand()-.5)*350,z=(rand()-.5)*350,scale=.3+rand()*.75;
+ matrixDummy.position.set(x,h(x,z)+scale*.5,z);matrixDummy.rotation.set(rand()*.15,rand()*6,rand()*.15);
+ matrixDummy.scale.set(scale,scale*.65,scale);matrixDummy.updateMatrix();shrubInstances.setMatrixAt(i,matrixDummy.matrix);
+}shrubInstances.instanceMatrix.needsUpdate=true;shrubInstances.frustumCulled=false;scene.add(shrubInstances);
+
+for(let i=0;i<grassCount;i++){
+ const x=(rand()-.5)*355,z=(rand()-.5)*355,scale=.4+rand()*.8;
+ matrixDummy.position.set(x,h(x,z)-.03,z);
+ matrixDummy.rotation.set(0,rand()*Math.PI*2,(rand()-.5)*.26);
+ matrixDummy.scale.set(scale,scale,scale);matrixDummy.updateMatrix();grass.setMatrixAt(i,matrixDummy.matrix);
+}
+grass.instanceMatrix.needsUpdate=true;grass.frustumCulled=false;scene.add(grass);
+
+// V12: instanced, varied trees to reduce Android draw calls.
+const treeTrunk = new THREE.CylinderGeometry(.17,.54,1,7,3);
+const treeBranch = new THREE.CylinderGeometry(.045,.14,1,5);
+const crownShape = new THREE.IcosahedronGeometry(1,2);
+const treeBarkMat = bark;
+const crownMats = [0x2d5636,0x426b40,0x557347,0x365c41].map(color=>new THREE.MeshStandardMaterial({color,roughness:1,flatShading:false}));
+const trunks=new THREE.InstancedMesh(treeTrunk,treeBarkMat,220);
+const branches=new THREE.InstancedMesh(treeBranch,treeBarkMat,1800);
+const crowns=crownMats.map(m=>new THREE.InstancedMesh(crownShape,m,700));
+const coniferMat=new THREE.MeshStandardMaterial({color:0x345740,roughness:1,flatShading:false,side:THREE.DoubleSide});
+const coniferLayers=new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,9),coniferMat,750);
+let nt=0,nb=0,nf=0;const nc=[0,0,0,0];
+function instanced(target,index,x,y,z,sx,sy,sz,rx=0,ry=0,rz=0){
+ matrixDummy.position.set(x,y,z);matrixDummy.rotation.set(rx,ry,rz);matrixDummy.scale.set(sx,sy,sz);matrixDummy.updateMatrix();target.setMatrixAt(index,matrixDummy.matrix);
+}
+function addTree(x,z,scale,conifer){
+ const y=h(x,z);const height=(conifer?8.3:7.4)*scale;
+ instanced(trunks,nt++,x,y+height*.5,z,scale,height,scale,0,rand()*6.28);
+ addBlocker(x,z,.45*scale);
+ if(conifer){
+  for(let j=0;j<5;j++){
+   const spread=(2.4-j*.36)*scale,layerHeight=(2.35-j*.21)*scale;
+   instanced(coniferLayers,nf++,x,y+(2.3+j*1.25)*scale,z,spread,layerHeight,spread,0,rand()*6.28);
+  }
+ }else{
+  const count=8+Math.floor(rand()*5);
+  for(let j=0;j<count;j++){
+   const angle=rand()*Math.PI*2,reach=(1.1+rand()*2.35)*scale,lev=(4.1+rand()*3.1)*scale;
+   const tx=x+Math.cos(angle)*reach,tz=z+Math.sin(angle)*reach;
+   const radius=(.73+rand()*.6)*scale,material=Math.floor(rand()*crownMats.length);
+   instanced(crowns[material],nc[material]++,tx,y+lev,tz,radius, (.65+rand()*.5)*scale,radius);
+   const dx=tx-x,dz=tz-z,dy=lev-height*.65,len=Math.hypot(dx,dy,dz);
+   const branchDirection=new THREE.Vector3(dx,dy,dz).normalize();
+   const quaternion=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),branchDirection);
+   matrixDummy.position.set(x+dx*.48,y+height*.65+dy*.48,z+dz*.48);
+   matrixDummy.quaternion.copy(quaternion);matrixDummy.scale.set(scale,len,scale);matrixDummy.updateMatrix();
+   branches.setMatrixAt(nb++,matrixDummy.matrix);
+   matrixDummy.quaternion.identity();
+  }
+ }
+}
+// Guaranteed surrounding woodland, leaving a clear 5m spawn area.
+for(let i=0;i<28;i++){
+ const angle=(i/28)*Math.PI*2+(rand()-.5)*.14;
+ const distance=11+rand()*23;
+ addTree(Math.cos(angle)*distance,7+Math.sin(angle)*distance,.78+rand()*.65,rand()<.42);
+}
+for(let i=0;i<125;i++){
+ const x=(rand()-.5)*370,z=(rand()-.5)*370;
+ if(Math.hypot(x,z-7)<8)continue;
+ addTree(x,z,.7+rand()*1.25,rand()<.43);
+}
+for(const [m,count] of [[trunks,nt],[branches,nb],[coniferLayers,nf],...crowns.map((m,i)=>[m,nc[i]])]){
+ m.count=count;m.instanceMatrix.needsUpdate=true;m.frustumCulled=false;scene.add(m);
+}
+const rocks=[irregularRock(),irregularRock()];for(let i=0;i<270;i++){let x=(rand()-.5)*400,z=(rand()-.5)*400; if(Math.hypot(x,z)<9)continue;let s=.2+rand()*1.9;let o=mesh(rocks[i%2],rock,x,h(x,z)+s*.35,z);o.scale.set(s*1.4,s*.8,s);o.rotation.set(rand()*2,rand()*6,rand());addBlocker(x,z,s*1.1);}
+// Procedural scattered stones and woodland debris.
+const pebbleMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),rock,650);
+for(let i=0;i<650;i++){
+ const x=(rand()-.5)*350,z=(rand()-.5)*350,k=.035+rand()*.14;
+ matrixDummy.position.set(x,h(x,z)+k*.28,z);
+ matrixDummy.rotation.set(rand()*2,rand()*6,rand());
+ matrixDummy.scale.set(k*1.8,k*.55,k*1.4);matrixDummy.updateMatrix();
+ pebbleMesh.setMatrixAt(i,matrixDummy.matrix);
+}
+pebbleMesh.instanceMatrix.needsUpdate=true;pebbleMesh.frustumCulled=false;scene.add(pebbleMesh);
+// Low-cost procedural warm forest floor details, batched as instanced meshes.
+const fallenLogMat=new THREE.MeshStandardMaterial({map:organicTexture('bark'),roughness:1});
+const deadwood=new THREE.InstancedMesh(new THREE.CylinderGeometry(.075,.11,1.8,6),fallenLogMat,85);
+for(let i=0;i<85;i++){const x=(rand()-.5)*345,z=(rand()-.5)*345,angle=rand()*6.28;
+ matrixDummy.position.set(x,h(x,z)+.12,z);matrixDummy.rotation.set(Math.PI/2,angle,0);
+ matrixDummy.scale.set(.7+rand(),.7+rand()*1.4,.7+rand());
+ matrixDummy.updateMatrix();deadwood.setMatrixAt(i,matrixDummy.matrix);
+}deadwood.instanceMatrix.needsUpdate=true;deadwood.frustumCulled=false;scene.add(deadwood);
+
+import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/loaders/GLTFLoader.js';
+const fernAsset='https://www.innerscene.com/api/library/fern-clumps-82a87bea/download';
+new GLTFLoader().load(fernAsset,({scene:plant})=>{
+  let total=0;
+  for(let i=0;i<12;i++){
+    const x=(rand()-.5)*65,z=(rand()-.5)*65;
+    if(blocked(x,z))continue;
+    const clone=plant.clone(true);
+    clone.scale.setScalar(.28+rand()*.3);
+    clone.position.set(x,h(x,z),z);
+    clone.rotation.y=rand()*Math.PI*2;
+    clone.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
+    scene.add(clone);total++;
+  }
+  console.info('Everwild V10: '+total+' fern models loaded');
+},undefined,e=>console.warn('GLB unavailable; procedural fallback preserved',e));
+progress(88,'Finalisation des commandes…');
+const settings=document.createElement('div');settings.style.cssText='position:absolute;right:12px;top:12px;background:#06131acc;padding:7px 9px;border-radius:9px;font:11px system-ui;color:white;z-index:2;max-width:158px';settings.innerHTML='<label>Caméra <input id="sensitivity" type="range" min="1" max="10" value="4" style="width:78px;vertical-align:middle"></label>';document.body.appendChild(settings);let sensitivity=.002;settings.querySelector('input').addEventListener('input',e=>{sensitivity=Number(e.target.value)*.0005});renderer.domElement.style.touchAction='none';document.body.style.overscrollBehavior='none';const keys=new Set();addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));let yaw=.5,pitch=-.09,px=0,pz=7,jx=0,jy=0;const joystick=document.querySelector('#stick'),thumb=document.querySelector('#thumb');let stickId=null,lookId=null,lastX=0,lastY=0;
+function stick(e){const b=joystick.getBoundingClientRect(),dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2),l=Math.max(1,Math.hypot(dx,dy)),amount=Math.min(l,38);jx=dx/l*amount/38;jy=dy/l*amount/38;thumb.style.transform=`translate(${jx*38}px,${jy*38}px)`}
+joystick.addEventListener('pointerdown',e=>{e.preventDefault();if(stickId!==null)return;stickId=e.pointerId;joystick.setPointerCapture(e.pointerId);stick(e)});
+joystick.addEventListener('pointermove',e=>{if(e.pointerId===stickId){e.preventDefault();stick(e)}});
+function resetStick(e){if(e.pointerId!==stickId)return;stickId=null;jx=jy=0;thumb.style.transform=''}
+joystick.addEventListener('pointerup',resetStick);joystick.addEventListener('pointercancel',resetStick);joystick.addEventListener('lostpointercapture',resetStick);
+renderer.domElement.addEventListener('pointerdown',e=>{if(lookId!==null)return;e.preventDefault();lookId=e.pointerId;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(lookId!==e.pointerId)return;e.preventDefault();const dx=Math.max(-65,Math.min(65,e.clientX-lastX)),dy=Math.max(-65,Math.min(65,e.clientY-lastY));yaw-=dx*sensitivity;pitch=Math.max(-1.1,Math.min(1.1,pitch-dy*sensitivity));lastX=e.clientX;lastY=e.clientY});
+function releaseLook(e){if(e.pointerId===lookId)lookId=null}
+renderer.domElement.addEventListener('pointerup',releaseLook);renderer.domElement.addEventListener('pointercancel',releaseLook);renderer.domElement.addEventListener('lostpointercapture',releaseLook);
+let prev=performance.now(),bobPhase=0;function loop(now){requestAnimationFrame(loop);let dt=Math.min(.045,(now-prev)/1000);prev=now;const f=(keys.has('w')||keys.has('z')?1:0)-(keys.has('s')?1:0)-jy,side=(keys.has('d')?1:0)-(keys.has('a')||keys.has('q')?1:0)+jx;let magnitude=Math.max(1,Math.hypot(f,side)),speed=(keys.has('shift')?11:6)*dt;const dx=(-Math.sin(yaw)*f+Math.cos(yaw)*side)*speed/magnitude,dz=(-Math.cos(yaw)*f-Math.sin(yaw)*side)*speed/magnitude;
+const nextX=px+dx,nextZ=pz+dz;
+// Independent axes retain sliding; height sampling keeps feet on the terrain.
+if(!blocked(nextX,pz))px=nextX;
+if(!blocked(px,nextZ))pz=nextZ;px=Math.max(-198,Math.min(198,px));pz=Math.max(-198,Math.min(198,pz));bobPhase+=Math.hypot(dx,dz)*1.6;const bob=Math.hypot(dx,dz)>.001?Math.sin(bobPhase)*.022:0;camera.position.set(px,h(px,pz)+1.7+bob,pz);camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;renderer.render(scene,camera)}requestAnimationFrame(loop);progress(100,'Bienvenue dans Everwild');requestAnimationFrame(()=>requestAnimationFrame(()=>loader.classList.add('hide')));addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>
