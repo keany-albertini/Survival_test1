@@ -27,7 +27,7 @@ const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),portrai
 let W=innerWidth,H=innerHeight,dpr=1,last=0,clock=0,cam=0,started=false;
 function resize(){W=innerWidth;H=innerHeight;dpr=Math.min(2,devicePixelRatio||1);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
 const rng=n=>{let x=Math.sin(n*127.1+32.8)*43758.5453;return x-Math.floor(x)};
-const world=Array.from({length:55},(_,i)=>({x:95+i*140+r:rng(i)*80,type:i%5===0?'rock':i%3===0?'bush':'tree',hp:3}));
+const world=Array.from({length:55},(_,i)=>({x:95+i*140+rng(i)*80,type:i%5===0?'rock':i%3===0?'bush':'tree',hp:3}));
 const p={x:160,y:0,vy:0,ground:true,dir:1,walk:0,hit:0,harvest:0,wood:0,stone:0,berries:0,hp:100,food:100,water:100,energy:100,stamina:100,name:'Survivant',skin:'#bd8a66',hair:'#31251f',hairStyle:'short',sex:'m',crouch:false};
 let stickX=0,stickY=0,joyPointer=null;const keys={};let structures=[],particles=[];
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
