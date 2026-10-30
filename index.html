@@ -101,7 +101,24 @@ const stats=[['Vie','hp','#be615d'],['Faim','food','#d2ac5e'],['Soif','water','#
 requestAnimationFrame(update)}requestAnimationFrame(update);
 function preview(){const o=document.getElementById('skin'),h=document.getElementById('hairColor');p.skin=o.value;p.hair=h.value;p.hairStyle=document.getElementById('hair').value;p.sex=document.getElementById('bodyType').value;pctx.clearRect(0,0,164,180);const grad=pctx.createLinearGradient(0,0,0,180);grad.addColorStop(0,'#3a5350');grad.addColorStop(1,'#111e1d');pctx.fillStyle=grad;pctx.fillRect(0,0,164,180);human(pctx,82,171,1.7,0,true)}
 for(const id of ['skin','hairColor','hair','bodyType'])document.getElementById(id).addEventListener('change',preview);
-let saved=null;try{saved=JSON.parse(localStorage.getItem('everwild-survivor-2d')||'null')}catch(err){console.warn('Sauvegarde indisponible',err)}if(saved){document.getElementById('name').value=saved.name||'';for(const [id,key] of [['skin','skin'],['hairColor','hair'],['hair','hairStyle'],['bodyType','sex']])if(saved[key])document.getElementById(id).value=saved[key]}preview();
-document.getElementById('start').onclick=()=>{p.name=document.getElementById('name').value.trim()||'Survivant';preview();try{localStorage.setItem('everwild-survivor-2d',JSON.stringify({name:p.name,skin:p.skin,hair:p.hair,hairStyle:p.hairStyle,sex:p.sex}))}catch(err){console.warn('Sauvegarde indisponible',err)}started=true;document.getElementById('menu').classList.add('hidden');document.getElementById('pause').style.display='block'};
-document.getElementById('pause').onclick=()=>{started=false;move=0;stickX=0;stickY=0;knob.style.transform='translate(0,0)';document.getElementById('menu').classList.remove('hidden');document.getElementById('pause').style.display='none';preview()};
+let saved=null;try{saved=JSON.parse(localStorage.getItem('everwild-survivor-2d')||'null')}catch(err){console.warn('Sauvegarde indisponible',err)}if(saved){document.getElementById('name').value=saved.name||'';for(const [id,key] of [['skin','skin'],['hairColor','hair'],['hair','hairStyle'],['bodyType','sex']])if(saved[key])document.getElementById(id).value=saved[key]}try{preview()}catch(err){console.error('Aperçu du personnage',err)}
+document.getElementById('start').onclick=()=>{p.name=document.getElementById('name').value.trim()||'Survivant';try{preview()}catch(err){console.error('Aperçu',err)}try{localStorage.setItem('everwild-survivor-2d',JSON.stringify({name:p.name,skin:p.skin,hair:p.hair,hairStyle:p.hairStyle,sex:p.sex}))}catch(err){console.warn('Sauvegarde indisponible',err)}started=true;document.getElementById('menu').classList.add('hidden');document.getElementById('pause').style.display='block'};
+document.getElementById('pause').onclick=()=>{started=false;move=0;stickX=0;stickY=0;knob.style.transform='translate(0,0)';document.getElementById('menu').classList.remove('hidden');document.getElementById('pause').style.display='none';try{preview()}catch(err){console.error(err)}};
+</script><script>
+(function(){
+const start=document.getElementById('start'),menu=document.getElementById('menu'),pause=document.getElementById('pause'),portrait=document.getElementById('portrait');
+if(start)start.addEventListener('click',function(){menu.classList.add('hidden');pause.style.display='block';try{started=true}catch(e){}});
+if(portrait){
+ const g=portrait.getContext('2d');
+ const draw=()=>{
+ if(!g)return;const data=g.getImageData(80,90,1,1).data;
+ if(data[3]>0)return;
+ g.clearRect(0,0,164,180);g.fillStyle='#34483d';g.fillRect(0,0,164,180);
+ g.fillStyle='#705e46';g.fillRect(68,91,30,64);g.fillStyle='#bd8a66';g.beginPath();g.ellipse(82,69,17,24,0,0,Math.PI*2);g.fill();
+ g.fillStyle='#30241e';g.beginPath();g.arc(82,57,18,Math.PI,2*Math.PI);g.fill();
+ g.fillStyle='#333129';g.fillRect(65,151,14,29);g.fillRect(87,151,14,29);
+ };
+ requestAnimationFrame(draw);
+}
+})();
 </script></body></html>
