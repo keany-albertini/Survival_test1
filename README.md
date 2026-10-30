@@ -1,28 +1,22 @@
-# EVERWILD — Prototype 3D 0.1
+# Everwild — Module 1 (navigateur)
 
-Nouvelle base **Godot 4.3+** pour un jeu de survie médiéval-fantastique réaliste stylisé. Ancien site Three.js supprimé de la branche principale ; récupérable dans l'historique Git.
+Prototype de survie 2D de profil, accessible dans le navigateur depuis `index.html`. Le code HTML5/JavaScript est autonome, sans installation ni moteur externe. Il utilise des classes `Terrain` et `Survivor` et un contrôleur tactile.
 
-## Démarrage
-1. Installer Godot 4.3 ou plus récent.
-2. Importer ce dossier via `project.godot`.
-3. Appuyer sur F6/F5 pour lancer la scène principale.
+## Fonctionnalités
+- Grille de 180 × 24 cases de 32 pixels : terre, roche et blocs de bois, avec minage et placement.
+- Gravité, collisions sur les blocs, saut, animations de marche simples, accroupissement.
+- Joystick gauche/droite, descendre pour s'accroupir ; boutons saut, miner, poser, manger.
+- Vie, faim et endurance mises à jour à chaque image.
+- Défilement latéral et décor en trois couches de parallaxe.
 
-## Ce qui existe
-- Déplacement FPS, sprint, saut, collisions, caméra souris.
-- Terrain de test, éclairage de jour, arbres et rochers procéduraux **temporaires**.
-- Récolte de bois/pierre par visée (E).
-- Faim, soif et santé.
-- Pose d'une fondation en bois (B, coût de 5 bois).
-- Interface de test.
+## Démarrer
+Lancer `index.html` dans un navigateur moderne ou activer GitHub Pages sur la branche main. Sur mobile, ouvrir directement le lien GitHub Pages du dépôt et toucher « Commencer l'aventure ».
 
-## Direction artistique et limites
-**Objectif** : matériaux PBR, végétation réaliste, humanoïdes animés et environnements naturels de qualité professionnelle. Les primitives géométriques actuellement présentes sont des *placeholders*, pas des assets réalistes finaux. Les remplacements GLB/glTF devront être optimisés et correctement licenciés. Pas de multijoueur, de sauvegarde ou d'export Android implémenté à ce stade. Code non testé dans l'éditeur Godot au moment de ce commit.
+## Bibliothèques gratuites CC0 pour remplacer les graphismes provisoires
+- Kenney New Platformer Pack (personnages, environnement, spritesheets) : https://kenney.nl/assets/new-platformer-pack (CC0).
+- Kenney Pixel Platformer (tilesets, terrain, personnages) : https://kenney.nl/assets/pixel-platformer (CC0).
+- Kenney Platformer Pack Remastered : https://kenney.nl/assets/platformer-pack-remastered (CC0).
 
-## Suite prioritaire
-1. Importer de vrais modèles 3D sous licences compatibles, avec fichier d'attribution et textures PBR.
-2. Terrain à relief, eau, biomes et végétation instanciée.
-3. Personnage riggé, animations et commandes tactiles Android.
-4. Inventaire, artisanat, construction modulaire et sauvegarde.
-5. Tests de performance et intégration continue.
+**État réel :** les sprites externes ne sont pas encore importés dans le dépôt. Les personnages et blocs sont dessinés par Canvas et constituent des graphismes de substitution. Il reste à intégrer les spritesheets, les effets sonores et les textures réalistes ; aucune qualité réaliste définitive n'est revendiquée.
 
-Le développement suit une approche de studio : vertical slice jouable, qualité mesurable, builds reproductibles, puis extension progressive.
+L'ancienne démo 3D HTML est conservée dans `legacy-3d/index.html` ; le projet Godot existant est conservé.
